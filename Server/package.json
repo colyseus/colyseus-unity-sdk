@@ -1,0 +1,22 @@
+{
+  "name": "colyseus-unity3d",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/gamestdio/colyseus.git"
+  },
+  "scripts": {
+    "start": "nodemon --harmony ./index.js"
+  },
+  "engines": {
+    "node": ">= 5.x"
+  },
+  "dependencies": {
+    "colyseus": "file:../../colyseus",
+    "colyseus": "*",
+    "express": "^4.13.3"
+  },
+  "devDependencies": {
+    "nodemon": "^1.7.1"
+  }
+}

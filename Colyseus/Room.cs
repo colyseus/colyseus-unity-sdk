@@ -7,6 +7,10 @@ namespace Colyseus
 		public Room ()
 		{
 		}
+
+		public void Leave () 
+		{
+		}
 	}
 }
 

@@ -6,7 +6,12 @@
 *.pidb
 *.resources
 test-results/
+bin
+obj
 
 #NuGet packages
 Colyseus/packages
 !packages/repositories.config
+
+# Node.js
+node_modules
