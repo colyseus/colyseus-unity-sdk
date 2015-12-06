@@ -8,8 +8,11 @@ var colyseus = require('colyseus')
 var server = http.createServer(app)
   , gameServer = new colyseus.Server({server: server})
 
-gameServer.on('connection', function(client) {
+gameServer.on('connect', function(client) {
   console.log(client.id, "connected");
+})
+gameServer.on('message', function(client, data) {
+  console.log(client.id, "send", data);
 })
 gameServer.on('disconnect', function(client) {
   console.log(client.id, "disconnected");

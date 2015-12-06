@@ -3,7 +3,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git://github.com/gamestdio/colyseus.git"
+    "url": "git://github.com/gamestdio/colyseus-unity3d.git"
   },
   "scripts": {
     "start": "nodemon --harmony ./index.js"
