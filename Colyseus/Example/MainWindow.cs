@@ -11,9 +11,11 @@ public partial class MainWindow: Gtk.Window
 	
 	public MainWindow () : base (Gtk.WindowType.Toplevel)
 	{
-		this.colyseus = new Client ("ws://localhost:2657");
 		Console.WriteLine("Main window!");
 		Build ();
+
+		this.colyseus = new Client ("ws://localhost:2657");
+		this.room = this.colyseus.Join ("chat");
 	}
 
 	protected void OnDeleteEvent (object sender, DeleteEventArgs a)

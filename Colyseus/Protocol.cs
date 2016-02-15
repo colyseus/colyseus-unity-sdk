@@ -8,7 +8,7 @@ namespace Colyseus
 
 		// Room-related (10~20)
 		public static int JOIN_ROOM = 10;
-		public static int JOIN_ERROR = 12;
+		public static int JOIN_ERROR = 11;
 		public static int LEAVE_ROOM = 12;
 		public static int ROOM_DATA = 13;
 		public static int ROOM_STATE = 14;
