@@ -1,14 +1,17 @@
 ﻿using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 
 using MsgPack;
 using MsgPack.Serialization.CollectionSerializers;
 
 using WebSocketSharp;
-using System.IO;
 using MsgPack.Serialization;
-using System.Reflection;
+
+using Newtonsoft.Json;
+using JsonDiffPatch;
 
 namespace Colyseus
 {
@@ -20,17 +23,24 @@ namespace Colyseus
 		protected Hashtable rooms = new Hashtable();
 		protected List<EnqueuedMethod> enqueuedMethods = new List<EnqueuedMethod>();
 
+		// Events
+		public event EventHandler OnOpen;
+		public event EventHandler OnClose;
+		public event EventHandler OnReconnect;
+		public event EventHandler<MessageEventArgs> OnMessage;
+		public event EventHandler<MessageEventArgs> OnError;
+
 		public Client (string url)
 		{
 			this.ws = new WebSocket (url);
 
-			this.ws.OnOpen += onOpen;
-			this.ws.OnMessage += onMessage;
+			this.ws.OnOpen += OnOpenHandler;
+			this.ws.OnMessage += OnMessageHandler;
 
 			this.ws.ConnectAsync ();
 		}
 
-		void onOpen (object sender, EventArgs e)
+		void OnOpenHandler (object sender, EventArgs e)
 		{
 			if (this.enqueuedMethods.Count > 0) {
 				for (int i = 0; i < this.enqueuedMethods.Count; i++) {
@@ -43,7 +53,7 @@ namespace Colyseus
 			}
 		}
 
-		void onMessage (object sender, MessageEventArgs e)
+		void OnMessageHandler (object sender, WebSocketSharp.MessageEventArgs e)
 		{
 			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (e.RawData);
 			Console.WriteLine (raw.ToString ());
@@ -52,18 +62,24 @@ namespace Colyseus
 				var message = raw.Value.AsList ();
 				var code = message [0].AsInt32 ();
 
+				// Parse roomId or roomName
 				int roomId = 0;
+				string roomName = null;
 				try {
 					roomId = message [1].AsInt32 ();
-				} catch	(InvalidOperationException exception) {
+				} catch (InvalidOperationException ex1) {
+					try {
+						roomName = message[1].AsString();
+					} catch (InvalidOperationException ex2) {
+					}
 				}
 
 				if (code == Protocol.USER_ID) {
 					this.id = message [1].AsString ();
-					// TODO: call OnOpen callback
+					this.OnOpen.Emit (this, EventArgs.Empty);
 
 				} else if (code == Protocol.JOIN_ROOM) {
-					var roomName = message [2].AsString ();
+					roomName = message[2].AsString();
 
 					if (this.rooms.ContainsKey (roomName)) {
 						this.rooms [roomId] = this.rooms [roomName];
@@ -72,34 +88,35 @@ namespace Colyseus
 
 					Room room = (Room) this.rooms [roomId];
 					room.id = roomId;
-					// TODO: emit room "join" event
 
 				} else if (code == Protocol.JOIN_ERROR) {
-					// this.rooms [roomId];
+					Room room = (Room) this.rooms [roomName];
 
-					// TODO: emit room "error" event;
+					this.OnError.Emit(this, new MessageEventArgs(room));
 
-					this.rooms.Remove (roomId);
+					this.rooms.Remove (roomName);
 
 				} else if (code == Protocol.LEAVE_ROOM) {
-					
-					// TODO emit room "leave" event;
+					Room room = (Room) this.rooms [roomId];
+					room.Leave (false);
 
 				} else if (code == Protocol.ROOM_STATE) {
+
+//					Newtonsoft.Json.Linq.JToken
 					object state = message [2];
 						
 					Room room = (Room)this.rooms [roomId];
-					Console.WriteLine ("room state!");
-					room.state = state;
-					// TODO: emit room "update" event.
+					room.state = Newtonsoft.Json.Linq.JToken.Parse (message [2].ToString ());
 
 				} else if (code == Protocol.ROOM_STATE_PATCH) {
-//					JsonDiffPatch
+					PatchDocument patches = PatchDocument.Parse (message [2].ToString());
+
+					Room room = (Room) this.rooms [roomId];
+					room.ApplyPatches(patches);
 
 				} else if (code == Protocol.ROOM_DATA) {
-					// this.rooms[ roomId ].emit('data', message[2])
-
-					// TODO: emit room "data" event.
+					Room room = (Room) this.rooms [roomId];
+					room.ReceiveData (message [2]);
 				}
 			}
 		}
@@ -137,18 +154,6 @@ namespace Colyseus
 			this.ws.SendAsync (stream.ToArray(), delegate(bool success) {
 				Console.WriteLine("Wrote?" + success.ToString());
 			});
-		}
-	}
-
-	public class ProtocolMessage {
-		public int code;
-		public object data;
-
-		public ProtocolMessage () {}
-		public ProtocolMessage (int code, object data) 
-		{
-			this.code = code;
-			this.data = data;
 		}
 	}
 

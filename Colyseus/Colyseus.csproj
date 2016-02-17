@@ -50,6 +50,7 @@
     <Compile Include="Protocol.cs" />
     <Compile Include="Room.cs" />
     <Compile Include="Client.cs" />
+    <Compile Include="MessageEventArgs.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

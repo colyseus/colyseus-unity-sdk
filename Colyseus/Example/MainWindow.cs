@@ -16,6 +16,12 @@ public partial class MainWindow: Gtk.Window
 
 		this.colyseus = new Client ("ws://localhost:2657");
 		this.room = this.colyseus.Join ("chat");
+		this.room.OnUpdate += Room_OnUpdate;
+	}
+
+	void Room_OnUpdate (object sender, RoomUpdateEventArgs e)
+	{
+//		Console.WriteLine (e.data);
 	}
 
 	protected void OnDeleteEvent (object sender, DeleteEventArgs a)
