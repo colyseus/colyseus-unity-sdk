@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Gtk;
 
 using Colyseus;
@@ -8,7 +8,7 @@ public partial class MainWindow: Gtk.Window
 
 	Client colyseus;
 	Room room;
-	
+
 	public MainWindow () : base (Gtk.WindowType.Toplevel)
 	{
 		Console.WriteLine("Main window!");
@@ -21,7 +21,8 @@ public partial class MainWindow: Gtk.Window
 
 	void Room_OnUpdate (object sender, RoomUpdateEventArgs e)
 	{
-//		Console.WriteLine (e.data);
+		// e.state
+		// e.patches
 	}
 
 	protected void OnDeleteEvent (object sender, DeleteEventArgs a)

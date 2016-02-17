@@ -21,13 +21,13 @@ namespace Colyseus
 	{
 		
 		public Room room = null;
-		public JToken data = null;
+		public JToken state = null;
 		public PatchDocument patches;
 
-		public RoomUpdateEventArgs (Room room, JToken data, PatchDocument patches = null)
+		public RoomUpdateEventArgs (Room room, JToken state, PatchDocument patches = null)
 		{
 			this.room = room;
-			this.data = data;
+			this.state = state;
 			this.patches = patches;
 		}
 	}

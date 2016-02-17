@@ -26,9 +26,11 @@ namespace Colyseus
 		// Events
 		public event EventHandler OnOpen;
 		public event EventHandler OnClose;
-		public event EventHandler OnReconnect;
 		public event EventHandler<MessageEventArgs> OnMessage;
 		public event EventHandler<MessageEventArgs> OnError;
+
+		// TODO: implement auto-reconnect feature
+		// public event EventHandler OnReconnect; 
 
 		public Client (string url)
 		{
@@ -36,6 +38,7 @@ namespace Colyseus
 
 			this.ws.OnOpen += OnOpenHandler;
 			this.ws.OnMessage += OnMessageHandler;
+			this.ws.OnClose += OnCloseHandler;
 
 			this.ws.ConnectAsync ();
 		}
@@ -51,6 +54,11 @@ namespace Colyseus
 					method.Invoke(this, enqueuedMethod.arguments);
 				}
 			}
+		}
+
+		void OnCloseHandler (object sender, CloseEventArgs e)
+		{
+			this.OnClose.Emit (this, e);
 		}
 
 		void OnMessageHandler (object sender, WebSocketSharp.MessageEventArgs e)
