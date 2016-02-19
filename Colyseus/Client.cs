@@ -64,68 +64,65 @@ namespace Colyseus
 		void OnMessageHandler (object sender, WebSocketSharp.MessageEventArgs e)
 		{
 			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (e.RawData);
-			Console.WriteLine (raw.ToString ());
 
-			if (raw.Value.IsList) {
-				var message = raw.Value.AsList ();
-				var code = message [0].AsInt32 ();
+			var message = raw.Value.AsList ();
+			var code = message [0].AsInt32 ();
 
-				// Parse roomId or roomName
-				int roomId = 0;
-				string roomName = null;
+			// Parse roomId or roomName
+			int roomId = 0;
+			string roomName = null;
+			try {
+				roomId = message [1].AsInt32 ();
+			} catch (InvalidOperationException ex1) {
 				try {
-					roomId = message [1].AsInt32 ();
-				} catch (InvalidOperationException ex1) {
-					try {
-						roomName = message[1].AsString();
-					} catch (InvalidOperationException ex2) {
-					}
+					roomName = message[1].AsString();
+				} catch (InvalidOperationException ex2) {
+				}
+			}
+
+			if (code == Protocol.USER_ID) {
+				this.id = message [1].AsString ();
+				this.OnOpen.Emit (this, EventArgs.Empty);
+
+			} else if (code == Protocol.JOIN_ROOM) {
+				roomName = message[2].AsString();
+
+				if (this.rooms.ContainsKey (roomName)) {
+					this.rooms [roomId] = this.rooms [roomName];
+					this.rooms.Remove (roomName);
 				}
 
-				if (code == Protocol.USER_ID) {
-					this.id = message [1].AsString ();
-					this.OnOpen.Emit (this, EventArgs.Empty);
+				Room room = (Room) this.rooms [roomId];
+				room.id = roomId;
 
-				} else if (code == Protocol.JOIN_ROOM) {
-					roomName = message[2].AsString();
+			} else if (code == Protocol.JOIN_ERROR) {
+				Room room = (Room) this.rooms [roomName];
 
-					if (this.rooms.ContainsKey (roomName)) {
-						this.rooms [roomId] = this.rooms [roomName];
-						this.rooms.Remove (roomName);
-					}
+				this.OnError.Emit(this, new MessageEventArgs(room));
 
-					Room room = (Room) this.rooms [roomId];
-					room.id = roomId;
+				this.rooms.Remove (roomName);
 
-				} else if (code == Protocol.JOIN_ERROR) {
-					Room room = (Room) this.rooms [roomName];
+			} else if (code == Protocol.LEAVE_ROOM) {
+				Room room = (Room) this.rooms [roomId];
+				room.Leave (false);
 
-					this.OnError.Emit(this, new MessageEventArgs(room));
-
-					this.rooms.Remove (roomName);
-
-				} else if (code == Protocol.LEAVE_ROOM) {
-					Room room = (Room) this.rooms [roomId];
-					room.Leave (false);
-
-				} else if (code == Protocol.ROOM_STATE) {
+			} else if (code == Protocol.ROOM_STATE) {
 
 //					Newtonsoft.Json.Linq.JToken
-					object state = message [2];
-						
-					Room room = (Room)this.rooms [roomId];
-					room.state = Newtonsoft.Json.Linq.JToken.Parse (message [2].ToString ());
+				object state = message [2];
+					
+				Room room = (Room)this.rooms [roomId];
+				room.state = Newtonsoft.Json.Linq.JToken.Parse (message [2].ToString ());
 
-				} else if (code == Protocol.ROOM_STATE_PATCH) {
-					PatchDocument patches = PatchDocument.Parse (message [2].ToString());
+			} else if (code == Protocol.ROOM_STATE_PATCH) {
+				PatchDocument patches = PatchDocument.Parse (message [2].ToString());
 
-					Room room = (Room) this.rooms [roomId];
-					room.ApplyPatches(patches);
+				Room room = (Room) this.rooms [roomId];
+				room.ApplyPatches(patches);
 
-				} else if (code == Protocol.ROOM_DATA) {
-					Room room = (Room) this.rooms [roomId];
-					room.ReceiveData (message [2]);
-				}
+			} else if (code == Protocol.ROOM_DATA) {
+				Room room = (Room) this.rooms [roomId];
+				room.ReceiveData (message [2]);
 			}
 		}
 
@@ -160,7 +157,6 @@ namespace Colyseus
 			serializer.Pack( stream, data );
 
 			this.ws.SendAsync (stream.ToArray(), delegate(bool success) {
-				Console.WriteLine("Wrote?" + success.ToString());
 			});
 		}
 	}

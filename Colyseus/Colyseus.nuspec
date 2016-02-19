@@ -1,18 +1,31 @@
-<?xml version="1.0" encoding="utf-8"?>
-<package >
+<?xml version="1.0"?>
+<package>
   <metadata>
-    <id>$id$</id>
-    <version>$version$</version>
-    <title>$title$</title>
-    <authors>$author$</authors>
-    <owners>$author$</owners>
-    <licenseUrl>http://LICENSE_URL_HERE_OR_DELETE_THIS_LINE</licenseUrl>
-    <projectUrl>http://PROJECT_URL_HERE_OR_DELETE_THIS_LINE</projectUrl>
-    <iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl>
+    <id>Colyseus</id>
+    <version>0.1.0-rc3</version>
+    <title>Colyseus</title>
+    <authors>Endel Dreyer</authors>
+    <owners>Endel Dreyer</owners>
+    <licenseUrl>https://github.com/gamestdio/colyseus-unity3d/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/gamestdio/colyseus-unity3d/</projectUrl>
+    <iconUrl>https://github.com/gamestdio/colyseus/raw/master/examples/logo-square.png?raw=true</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>$description$</description>
-    <releaseNotes>Summary of changes made in this release of the package.</releaseNotes>
-    <copyright>Copyright 2015</copyright>
-    <tags>Tag1 Tag2</tags>
+    <description>
+      C#/Unity3D client for Colyseus - a Minimalistic MMO Game Server.
+    </description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2016 Endel Dreyer</copyright>
+    <tags>multiplayer, mmo</tags>
+    <dependencies>
+      <dependency id="JsonDiffPatch" version="1.0.35" />
+      <dependency id="MsgPack.Cli" version="0.6.5" />
+      <dependency id="Newtonsoft.Json" version="7.0.1" />
+      <dependency id="Tavis.JsonPointer" version="0.5.0" />
+      <dependency id="WebSocketSharp" version="1.0.3-rc9" />
+    </dependencies>
   </metadata>
+  <files>
+    <file src="Properties/AssemblyInfo.cs" target="lib" />
+    <file src="*.cs" target="lib" />
+  </files>
 </package>
