@@ -1,7 +1,7 @@
 ﻿using System;
 
 using WebSocketSharp;
-using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using JsonDiffPatch;
 
 namespace Colyseus
@@ -12,7 +12,7 @@ namespace Colyseus
 		public String name;
 
 		private int _id = 0;
-		private Newtonsoft.Json.Linq.JToken _state = null;
+		private JToken _state = null;
 
 		public event EventHandler OnJoin;
 		public event EventHandler OnError;
@@ -36,7 +36,7 @@ namespace Colyseus
 			}
 		}
 
-		public Newtonsoft.Json.Linq.JToken state
+		public JToken state
 		{
 			get { return this._state; }
 			set {
@@ -68,7 +68,7 @@ namespace Colyseus
 			var patcher = new JsonPatcher();
 			patcher.Patch(ref this._state, patches);
 
-			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, this._state, patches));
+			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, (JToken) this._state, patches));
 			
 		}
 

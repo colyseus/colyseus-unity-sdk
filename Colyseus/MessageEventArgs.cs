@@ -1,10 +1,13 @@
 ﻿using System;
 
 using JsonDiffPatch;
-using Newtonsoft.Json.Linq;
 
 namespace Colyseus
 {
+	// Class aliases
+	using PatchDocument = JsonDiffPatch.PatchDocument;
+	using JToken = Newtonsoft.Json.Linq.JToken;
+
 	public class MessageEventArgs : EventArgs
 	{
 		public Room room = null;

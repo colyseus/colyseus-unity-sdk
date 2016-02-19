@@ -48,6 +48,15 @@
       <SpecificVersion>False</SpecificVersion>
     </Reference>
     <Reference Include="Mono.Posix" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Tavis.JsonPointer">
+      <HintPath>..\packages\Tavis.JsonPointer.0.5.0\lib\portable-wp71+sl4+netcore45+net4\Tavis.JsonPointer.dll</HintPath>
+    </Reference>
+    <Reference Include="JsonDiffPatch">
+      <HintPath>..\packages\JsonDiffPatch.1.0.35\lib\portable-net40+sl50+win+wp80+MonoAndroid10+xamarinios10+MonoTouch10\JsonDiffPatch.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="gtk-gui\gui.stetic">
@@ -67,5 +76,8 @@
       <Project>{12A4C604-7CF0-4922-8ECF-1CFF1A94D43A}</Project>
       <Name>Colyseus</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
