@@ -2,7 +2,7 @@
 <package>
   <metadata>
     <id>Colyseus</id>
-    <version>0.1.0-rc4</version>
+    <version>0.1.0-rc7</version>
     <title>Colyseus</title>
     <authors>Endel Dreyer</authors>
     <owners>Endel Dreyer</owners>
@@ -15,7 +15,7 @@
     </description>
     <releaseNotes></releaseNotes>
     <copyright>Copyright 2016 Endel Dreyer</copyright>
-    <tags>multiplayer, mmo</tags>
+    <tags>multiplayer, mmo, game, networking</tags>
     <dependencies>
       <dependency id="JsonDiffPatch" version="1.0.35" />
       <dependency id="MsgPack.Cli" version="0.6.5" />
@@ -25,6 +25,7 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="**/**" target="" />
+    <file src="*.cs;Properties/AssemblyInfo.cs" target="src" exclude="Example/**;obj/**;packages/**" />
+    <file src="bin/Release/Colyseus.dll" target="lib/net45" />
   </files>
 </package>

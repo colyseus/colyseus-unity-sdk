@@ -23,10 +23,13 @@ namespace Colyseus
 	/// </remarks>
 	public class Client
 	{
+		/// <summary>
+		/// Unique <see cref="Client"/> identifier.
+		/// </summary>
 		public string id = null;
 
-		protected WebSocket ws;
-		protected Hashtable rooms = new Hashtable();
+		private WebSocket ws;
+		private Hashtable rooms = new Hashtable();
 		private List<EnqueuedMethod> enqueuedMethods = new List<EnqueuedMethod>();
 
 		// Events

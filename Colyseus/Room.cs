@@ -6,9 +6,15 @@ using JsonDiffPatch;
 
 namespace Colyseus
 {
+	/// <summary>
+	/// </summary>
 	public class Room
 	{
-		protected Client client;
+		private Client client;
+
+		/// <summary>
+		/// Name of the <see cref="Room"/>.
+		/// </summary>
 		public String name;
 
 		private int _id = 0;
@@ -104,11 +110,13 @@ namespace Colyseus
 			this.client.Send(new object[]{Protocol.ROOM_DATA, this._id, data});
 		}
 
+		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void ReceiveData (object data)
 		{
 			this.OnData.Emit (this, new MessageEventArgs (this, data));
 		}
 
+		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void ApplyPatches (PatchDocument patches)
 		{
 			this.OnPatch.Emit (this, new MessageEventArgs(this, patches));
@@ -119,6 +127,7 @@ namespace Colyseus
 			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, (JToken) this._state, patches));
 		}
 
+		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void EmitError (MessageEventArgs args)
 		{
 			this.OnError.Emit (this, args);
