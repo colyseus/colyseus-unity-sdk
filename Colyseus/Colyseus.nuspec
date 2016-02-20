@@ -2,7 +2,7 @@
 <package>
   <metadata>
     <id>Colyseus</id>
-    <version>0.1.0-rc3</version>
+    <version>0.1.0-rc4</version>
     <title>Colyseus</title>
     <authors>Endel Dreyer</authors>
     <owners>Endel Dreyer</owners>
@@ -25,7 +25,6 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="Properties/AssemblyInfo.cs" target="lib" />
-    <file src="*.cs" target="lib" />
+    <file src="**/**" target="" />
   </files>
 </package>

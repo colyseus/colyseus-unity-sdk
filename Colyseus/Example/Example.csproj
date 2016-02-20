@@ -68,4 +68,10 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Colyseus.csproj">
+      <Project>{12A4C604-7CF0-4922-8ECF-1CFF1A94D43A}</Project>
+      <Name>Colyseus</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

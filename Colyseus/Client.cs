@@ -15,30 +15,60 @@ using JsonDiffPatch;
 
 namespace Colyseus
 {
+	/// <summary>
+	/// Colyseus.Client
+	/// </summary>
+	/// <remarks>
+	/// Provides integration between Colyseus Game Server through WebSocket protocol (<see href="http://tools.ietf.org/html/rfc6455">RFC 6455</see>).
+	/// </remarks>
 	public class Client
 	{
 		public string id = null;
 
 		protected WebSocket ws;
 		protected Hashtable rooms = new Hashtable();
-		protected List<EnqueuedMethod> enqueuedMethods = new List<EnqueuedMethod>();
+		private List<EnqueuedMethod> enqueuedMethods = new List<EnqueuedMethod>();
 
 		// Events
+
+		/// <summary>
+		/// Occurs when the <see cref="Client"/> connection has been established, and Client <see cref="id"/> is available.
+		/// </summary>
 		public event EventHandler OnOpen;
+
+		/// <summary>
+		/// Occurs when the <see cref="Client"/> connection has been closed.
+		/// </summary>
 		public event EventHandler OnClose;
+
+		/// <summary>
+		/// Occurs when the <see cref="Client"/> gets an error.
+		/// </summary>
+		public event EventHandler OnError;
+
+		/// <summary>
+		/// Occurs when the <see cref="Client"/> receives a message from server.
+		/// </summary>
 		public event EventHandler<MessageEventArgs> OnMessage;
-		public event EventHandler<MessageEventArgs> OnError;
 
 		// TODO: implement auto-reconnect feature
 		// public event EventHandler OnReconnect; 
 
-		public Client (string url)
+		/// <summary>
+		/// Initializes a new instance of the <see cref="Client"/> class with
+		/// the specified Colyseus Game Server Server endpoint.
+		/// </summary>
+		/// <param name="endpoint">
+		/// A <see cref="string"/> that represents the WebSocket URL to connect.
+		/// </param>
+		public Client (string endpoint)
 		{
-			this.ws = new WebSocket (url);
+			this.ws = new WebSocket (endpoint);
 
 			this.ws.OnOpen += OnOpenHandler;
 			this.ws.OnMessage += OnMessageHandler;
 			this.ws.OnClose += OnCloseHandler;
+			this.ws.OnError += OnErrorHandler;
 
 			this.ws.ConnectAsync ();
 		}
@@ -69,6 +99,7 @@ namespace Colyseus
 			var code = message [0].AsInt32 ();
 
 			// Parse roomId or roomName
+			Room room = null;
 			int roomId = 0;
 			string roomName = null;
 			try {
@@ -92,40 +123,47 @@ namespace Colyseus
 					this.rooms.Remove (roomName);
 				}
 
-				Room room = (Room) this.rooms [roomId];
+				room = (Room) this.rooms [roomId];
 				room.id = roomId;
 
 			} else if (code == Protocol.JOIN_ERROR) {
-				Room room = (Room) this.rooms [roomName];
+				room = (Room) this.rooms [roomName];
 
-				this.OnError.Emit(this, new MessageEventArgs(room));
+				MessageEventArgs error = new MessageEventArgs(room, message);
+				room.EmitError (error);
+				this.OnError.Emit(this, error);
 
 				this.rooms.Remove (roomName);
 
 			} else if (code == Protocol.LEAVE_ROOM) {
-				Room room = (Room) this.rooms [roomId];
+				room = (Room) this.rooms [roomId];
 				room.Leave (false);
 
 			} else if (code == Protocol.ROOM_STATE) {
-
-//					Newtonsoft.Json.Linq.JToken
 				object state = message [2];
 					
-				Room room = (Room)this.rooms [roomId];
+				room = (Room)this.rooms [roomId];
 				room.state = Newtonsoft.Json.Linq.JToken.Parse (message [2].ToString ());
 
 			} else if (code == Protocol.ROOM_STATE_PATCH) {
 				PatchDocument patches = PatchDocument.Parse (message [2].ToString());
 
-				Room room = (Room) this.rooms [roomId];
+				room = (Room) this.rooms [roomId];
 				room.ApplyPatches(patches);
 
 			} else if (code == Protocol.ROOM_DATA) {
-				Room room = (Room) this.rooms [roomId];
+				room = (Room) this.rooms [roomId];
 				room.ReceiveData (message [2]);
 			}
-		}
 
+			this.OnMessage.Emit (this, new MessageEventArgs(room, message));
+		}
+			
+		/// <summary>
+		/// Request <see cref="Client"/> to join in a <see cref="Room"/>.
+		/// </summary>
+		/// <param name="roomName">The name of the Room to join.</param>
+		/// <param name="options">Custom join request options</param>
 		public Room Join (string roomName, object options = null)
 		{
 			if (!this.rooms.ContainsKey (roomName)) {
@@ -136,20 +174,30 @@ namespace Colyseus
 				this.Send(new object[]{Protocol.JOIN_ROOM, roomName});
 
 			} else {
-				// WebSocket not connected.
-				// Enqueue it to be called when readyState == OPEN
+				// If WebSocket is not connected yet, enqueue call to when its ready.
 				this.enqueuedMethods.Add(new EnqueuedMethod("Join", new object[]{ roomName, options }));
 			}
 
 			return (Room) this.rooms[ roomName ];
 		}
 
+		private void OnErrorHandler(object sender, EventArgs args)
+		{
+			this.OnError.Emit (sender, args);
+		}
 
+		/// <summary>
+		/// Close <see cref="Client"/> connection and leave all joined rooms.
+		/// </summary>
 		public void Close ()
 		{
 			this.ws.CloseAsync ();
 		}
 
+		/// <summary>
+		/// Send data to all connected rooms.
+		/// </summary>
+		/// <param name="data">Data to be sent to all connected rooms.</param>
 		public void Send (object[] data) 
 		{
 			var stream = new MemoryStream();
@@ -157,11 +205,12 @@ namespace Colyseus
 			serializer.Pack( stream, data );
 
 			this.ws.SendAsync (stream.ToArray(), delegate(bool success) {
+				// sent successfully
 			});
 		}
 	}
 
-	public class EnqueuedMethod {
+	class EnqueuedMethod {
 		public string methodName;
 		public object[] arguments;
 
