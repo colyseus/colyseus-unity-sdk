@@ -3,6 +3,10 @@
 C#/Unity3D integration for [colyseus](https://github.com/gamestdio/colyseus) - a
 Minimalistic MMO Game Server.
 
+To download the binary .dll files, goto [the latest
+release](https://github.com/gamestdio/colyseus-unity3d/releases/latest) and
+download the file named `binaries.zip`.
+
 ## Usage
 
 ```csharp
