@@ -1,4 +1,4 @@
-# colyseus-c# [![Join the chat at https://gitter.im/gamestdio/colyseus](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gamestdio/colyseus?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# Colyseus for C# / Unity3D [![Join the chat at https://gitter.im/gamestdio/colyseus](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gamestdio/colyseus?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 C#/Unity3D integration for [colyseus](https://github.com/gamestdio/colyseus) - a
 Minimalistic MMO Game Server.
@@ -25,6 +25,11 @@ void Room_OnUpdate (object sender, RoomUpdateEventArgs e)
   }
 }
 ```
+
+## Change your Build Settings (Unity3D)
+
+Goto "File > Build Settings > Player Settings", and select ".NET 2.0" instead of
+".NET 2.0 Subset" on "Optimization > Api Compatibility Level" category.
 
 ## License
 

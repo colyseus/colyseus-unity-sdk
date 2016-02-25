@@ -1,13 +1,9 @@
 ﻿using System;
-using JsonDiffPatch;
 
 using Newtonsoft.Json.Linq;
 
 namespace Colyseus
 {
-	// Class aliases
-	using PatchDocument = JsonDiffPatch.PatchDocument;
-	using JToken = Newtonsoft.Json.Linq.JToken;
 
 	/// <summary>
 	/// Representation of a message received from the server.
@@ -51,11 +47,11 @@ namespace Colyseus
 		/// <summary>
 		/// Patches applied to the <see cref="Room" /> state.
 		/// </summary>
-		public PatchDocument patches = null;
+		public JArray patches = null;
 
 		/// <summary>
 		/// </summary>
-		public RoomUpdateEventArgs (Room room, JToken state, PatchDocument patches = null)
+		public RoomUpdateEventArgs (Room room, JToken state, JArray patches = null)
 		{
 			this.room = room;
 			this.state = state;

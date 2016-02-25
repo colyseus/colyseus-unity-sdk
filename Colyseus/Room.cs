@@ -2,7 +2,7 @@
 
 using WebSocketSharp;
 using Newtonsoft.Json.Linq;
-using JsonDiffPatch;
+//using JsonDiffPatch;
 
 namespace Colyseus
 {
@@ -19,6 +19,7 @@ namespace Colyseus
 
 		private int _id = 0;
 		private JToken _state = null;
+		private Patcher patcher;
 
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> successfully connects to the <see cref="Room"/>.
@@ -38,12 +39,12 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs when server send patched state, before <see cref="OnUpdate"/>.
 		/// </summary>
-		public event EventHandler OnPatch;
+		public event EventHandler<MessageEventArgs> OnPatch;
 
 		/// <summary>
 		/// Occurs when server sends a message to this <see cref="Room"/>
 		/// </summary>
-		public event EventHandler OnData;
+		public event EventHandler<MessageEventArgs> OnData;
 
 		/// <summary>
 		/// Occurs after applying the patched state on this <see cref="Room"/>.
@@ -62,6 +63,7 @@ namespace Colyseus
 		{
 			this.client = client;
 			this.name = name;
+			this.patcher = new Patcher ();
 		}
 
 		/// <summary>
@@ -117,13 +119,15 @@ namespace Colyseus
 		}
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
-		public void ApplyPatches (PatchDocument patches)
+		public void ApplyPatches (JArray patches)
 		{
 			this.OnPatch.Emit (this, new MessageEventArgs(this, patches));
 
-			var patcher = new JsonPatcher();
-			patcher.Patch(ref this._state, patches);
+			this.patcher.Patch (ref this._state, patches);
 
+//			var patcher = new JsonPatcher();
+//			patcher.Patch(ref this._state, patches);
+			
 			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, (JToken) this._state, patches));
 		}
 

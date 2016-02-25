@@ -30,9 +30,9 @@ public partial class MainWindow: Gtk.Window
 				textview1.Buffer.Text += messages[i] + "\n";
 			}
 		} else {
-			for (int i = 0; i < e.patches.Operations.Count; i++) {
-				AddOperation operation = (AddOperation) e.patches.Operations [i];
-				textview1.Buffer.Text += operation.Value + "\n";
+			Console.WriteLine (e.patches);
+			for (int i = 0; i < e.patches.Count; i++) {
+				textview1.Buffer.Text += e.patches[i]["value"].ToString() + "\n";
 			}
 		}
 	}

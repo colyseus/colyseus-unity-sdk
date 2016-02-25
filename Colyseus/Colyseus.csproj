@@ -7,7 +7,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>Colyseus</RootNamespace>
     <AssemblyName>Colyseus</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -29,20 +29,14 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="MsgPack">
-      <HintPath>packages\MsgPack.Cli.0.6.5\lib\net45\MsgPack.dll</HintPath>
-    </Reference>
     <Reference Include="websocket-sharp">
       <HintPath>packages\WebSocketSharp.1.0.3-rc9\lib\websocket-sharp.dll</HintPath>
     </Reference>
-    <Reference Include="Tavis.JsonPointer">
-      <HintPath>packages\Tavis.JsonPointer.0.5.0\lib\portable-wp71+sl4+netcore45+net4\Tavis.JsonPointer.dll</HintPath>
-    </Reference>
-    <Reference Include="JsonDiffPatch">
-      <HintPath>packages\JsonDiffPatch.1.0.35\lib\portable-net40+sl50+win+wp80+MonoAndroid10+xamarinios10+MonoTouch10\JsonDiffPatch.dll</HintPath>
+    <Reference Include="MsgPack">
+      <HintPath>packages\MsgPack.Cli.0.6.5\lib\net35-client\MsgPack.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>packages\Newtonsoft.Json.7.0.1\lib\net35\Newtonsoft.Json.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -51,6 +45,8 @@
     <Compile Include="Room.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="MessageEventArgs.cs" />
+    <Compile Include="Patcher.cs" />
+    <Compile Include="JsonPointer\JsonPointer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

@@ -10,8 +10,8 @@ using MsgPack.Serialization.CollectionSerializers;
 using WebSocketSharp;
 using MsgPack.Serialization;
 
-using Newtonsoft.Json;
-using JsonDiffPatch;
+using Newtonsoft.Json.Linq;
+//using JsonDiffPatch;
 
 namespace Colyseus
 {
@@ -144,15 +144,13 @@ namespace Colyseus
 
 			} else if (code == Protocol.ROOM_STATE) {
 				object state = message [2];
-					
+
 				room = (Room)this.rooms [roomId];
-				room.state = Newtonsoft.Json.Linq.JToken.Parse (message [2].ToString ());
+				room.state = JToken.Parse (message [2].ToString ());
 
 			} else if (code == Protocol.ROOM_STATE_PATCH) {
-				PatchDocument patches = PatchDocument.Parse (message [2].ToString());
-
 				room = (Room) this.rooms [roomId];
-				room.ApplyPatches(patches);
+				room.ApplyPatches(JArray.Parse ( message [2].ToString() ));
 
 			} else if (code == Protocol.ROOM_DATA) {
 				room = (Room) this.rooms [roomId];
@@ -161,7 +159,7 @@ namespace Colyseus
 
 			this.OnMessage.Emit (this, new MessageEventArgs(room, message));
 		}
-			
+
 		/// <summary>
 		/// Request <see cref="Client"/> to join in a <see cref="Room"/>.
 		/// </summary>
