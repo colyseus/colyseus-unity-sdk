@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
@@ -55,7 +55,7 @@ namespace Colyseus
 		public event EventHandler<MessageEventArgs> OnMessage;
 
 		// TODO: implement auto-reconnect feature
-		// public event EventHandler OnReconnect; 
+		// public event EventHandler OnReconnect;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Client"/> class with
@@ -171,13 +171,7 @@ namespace Colyseus
 				this.rooms.Add (roomName, new Room (this, roomName));
 			}
 
-			if (this.ws.ReadyState == WebSocketState.Open) {
-				this.Send(new object[]{Protocol.JOIN_ROOM, roomName});
-
-			} else {
-				// If WebSocket is not connected yet, enqueue call to when its ready.
-				this.enqueuedMethods.Add(new EnqueuedMethod("Join", new object[]{ roomName, options }));
-			}
+			this.Send(new object[]{Protocol.JOIN_ROOM, roomName});
 
 			return (Room) this.rooms[ roomName ];
 		}
@@ -199,15 +193,22 @@ namespace Colyseus
 		/// Send data to all connected rooms.
 		/// </summary>
 		/// <param name="data">Data to be sent to all connected rooms.</param>
-		public void Send (object[] data) 
+		public void Send (object[] data)
 		{
-			var stream = new MemoryStream();
-			var serializer = MessagePackSerializer.Get<object[]>();
-			serializer.Pack( stream, data );
+			if (this.ws.ReadyState == WebSocketState.Open) {
+				var stream = new MemoryStream();
+				var serializer = MessagePackSerializer.Get<object[]>();
+				serializer.Pack( stream, data );
 
-			this.ws.SendAsync (stream.ToArray(), delegate(bool success) {
-				// sent successfully
-			});
+				this.ws.SendAsync (stream.ToArray(), delegate(bool success) {
+					// sent successfully
+				});
+
+			} else {
+				// If WebSocket is not connected yet, enqueue call to when its ready.
+				this.enqueuedMethods.Add(new EnqueuedMethod("Send", data));
+			}
+
 		}
 	}
 
@@ -215,7 +216,7 @@ namespace Colyseus
 		public string methodName;
 		public object[] arguments;
 
-		public EnqueuedMethod (string methodName, object[] arguments) 
+		public EnqueuedMethod (string methodName, object[] arguments)
 		{
 			this.methodName = methodName;
 			this.arguments = arguments;

@@ -2,7 +2,7 @@
 <package>
   <metadata>
     <id>Colyseus</id>
-    <version>0.1.0-rc8</version>
+    <version>0.1.1-rc1</version>
     <title>Colyseus</title>
     <authors>Endel Dreyer</authors>
     <owners>Endel Dreyer</owners>
@@ -11,7 +11,7 @@
     <iconUrl>https://github.com/gamestdio/colyseus/raw/master/examples/logo-square.png?raw=true</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>
-      C#/Unity3D client for Colyseus - a Minimalistic MMO Game Server.
+      C#/Unity3D client for Colyseus - a Minimalist Multiplayer Game Server.
     </description>
     <releaseNotes></releaseNotes>
     <copyright>Copyright 2016 Endel Dreyer</copyright>
