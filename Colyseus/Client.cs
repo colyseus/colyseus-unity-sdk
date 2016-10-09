@@ -171,7 +171,7 @@ namespace Colyseus
 				this.rooms.Add (roomName, new Room (this, roomName));
 			}
 
-			this.Send(new object[]{Protocol.JOIN_ROOM, roomName});
+			this.Send(new object[]{Protocol.JOIN_ROOM, roomName, options});
 
 			return (Room) this.rooms[ roomName ];
 		}
