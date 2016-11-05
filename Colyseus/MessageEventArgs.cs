@@ -1,6 +1,6 @@
 ﻿using System;
 
-using Newtonsoft.Json.Linq;
+using MsgPack;
 
 namespace Colyseus
 {
@@ -42,16 +42,16 @@ namespace Colyseus
 		/// <summary>
 		/// New state of the <see cref="Room" />
 		/// </summary>
-		public JToken state = null;
+		public MessagePackObject state;
 
 		/// <summary>
 		/// Patches applied to the <see cref="Room" /> state.
 		/// </summary>
-		public JArray patches = null;
+		public string patches = null;
 
 		/// <summary>
 		/// </summary>
-		public RoomUpdateEventArgs (Room room, JToken state, JArray patches = null)
+		public RoomUpdateEventArgs (Room room, MessagePackObject state, string patches = null)
 		{
 			this.room = room;
 			this.state = state;

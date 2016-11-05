@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Colyseus", "Colyseus.csproj", "{12A4C604-7CF0-4922-8ECF-1CFF1A94D43A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example", "Example\Example.csproj", "{F8918BF5-1A57-4074-B72B-557DEA4C7BF3}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,9 +13,29 @@ Global
 		{12A4C604-7CF0-4922-8ECF-1CFF1A94D43A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12A4C604-7CF0-4922-8ECF-1CFF1A94D43A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12A4C604-7CF0-4922-8ECF-1CFF1A94D43A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F8918BF5-1A57-4074-B72B-557DEA4C7BF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F8918BF5-1A57-4074-B72B-557DEA4C7BF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F8918BF5-1A57-4074-B72B-557DEA4C7BF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F8918BF5-1A57-4074-B72B-557DEA4C7BF3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		Policies = $0
+		$0.DotNetNamingPolicy = $1
+		$1.DirectoryNamespaceAssociation = None
+		$1.ResourceNamePolicy = FileFormatDefault
+		$0.StandardHeader = $2
+		$2.Text = 
+		$2.IncludeInNewFiles = True
+		$0.NameConventionPolicy = $3
+		$3.Rules = $4
+		$4.NamingRule = $5
+		$5.Name = Type Parameters
+		$5.AffectedEntity = TypeParameter
+		$5.VisibilityMask = VisibilityMask
+		$5.NamingStyle = PascalCase
+		$5.IncludeInstanceMembers = True
+		$5.IncludeStaticEntities = True
+		$5.RequiredPrefixes = $6
+		$6.String = T
+		$5.RequiredSuffixes = $7
+		$7.String = Exception
+		$0.VersionControlPolicy = $8
+		$8.inheritsSet = Mono
 	EndGlobalSection
 EndGlobal

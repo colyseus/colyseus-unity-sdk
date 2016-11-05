@@ -3,11 +3,17 @@ var Room = require('colyseus').Room
 class ChatRoom extends Room {
 
   constructor (options) {
-    super(options, 1000)
+    super(options)
 
-    this.setState({ messages: [] })
+    this.setPatchRate( 1000 / 20 );
+
+    this.setState({ messages: [ "Welcome!" ] })
 
     console.log("ChatRoom created!", options)
+  }
+
+  requestJoin (options) {
+    return true;
   }
 
   onJoin (client) {
@@ -23,7 +29,7 @@ class ChatRoom extends Room {
       this.clients.filter(c => c.id !== client.id).forEach(other => other.close())
 
     } else {
-      this.state.messages.push(data.message)
+      this.state.messages.push(data)
     }
 
     console.log("ChatRoom:", client.id, data)

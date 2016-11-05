@@ -7,7 +7,6 @@
     <OutputType>Library</OutputType>
     <RootNamespace>Colyseus</RootNamespace>
     <AssemblyName>Colyseus</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -29,14 +28,14 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="websocket-sharp">
-      <HintPath>packages\WebSocketSharp.1.0.3-rc9\lib\websocket-sharp.dll</HintPath>
+    <Reference Include="Delta">
+      <HintPath>packages\FossilDelta.0.1.0\lib\net35\Delta.dll</HintPath>
     </Reference>
     <Reference Include="MsgPack">
-      <HintPath>packages\MsgPack.Cli.0.6.5\lib\net35-client\MsgPack.dll</HintPath>
+      <HintPath>packages\MsgPack.Cli.0.8.0\lib\net35-client\MsgPack.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>packages\Newtonsoft.Json.7.0.1\lib\net35\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="websocket-sharp">
+      <HintPath>WebSocket\websocket-sharp.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -45,8 +44,7 @@
     <Compile Include="Room.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="MessageEventArgs.cs" />
-    <Compile Include="Patcher.cs" />
-    <Compile Include="JsonPointer\JsonPointer.cs" />
+    <Compile Include="WebSocket\WebSocket.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

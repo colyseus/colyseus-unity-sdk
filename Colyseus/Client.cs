@@ -5,13 +5,10 @@ using System.Collections.Generic;
 using System.Reflection;
 
 using MsgPack;
+using MsgPack.Serialization;
 using MsgPack.Serialization.CollectionSerializers;
 
 using WebSocketSharp;
-using MsgPack.Serialization;
-
-using Newtonsoft.Json.Linq;
-//using JsonDiffPatch;
 
 namespace Colyseus
 {
@@ -27,9 +24,9 @@ namespace Colyseus
 		/// Unique <see cref="Client"/> identifier.
 		/// </summary>
 		public string id = null;
+		public WebSocket ws;
 
-		private WebSocket ws;
-		private Hashtable rooms = new Hashtable();
+		private Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
 		private List<EnqueuedMethod> enqueuedMethods = new List<EnqueuedMethod>();
 
 		// Events
@@ -72,8 +69,11 @@ namespace Colyseus
 			this.ws.OnMessage += OnMessageHandler;
 			this.ws.OnClose += OnCloseHandler;
 			this.ws.OnError += OnErrorHandler;
+		}
 
-			this.ws.ConnectAsync ();
+		void Connect()
+		{
+			this.ws.Connect();
 		}
 
 		void OnOpenHandler (object sender, EventArgs e)
@@ -81,10 +81,10 @@ namespace Colyseus
 			if (this.enqueuedMethods.Count > 0) {
 				for (int i = 0; i < this.enqueuedMethods.Count; i++) {
 					EnqueuedMethod enqueuedMethod = this.enqueuedMethods [i];
-
-					Type thisType = this.GetType();
-					MethodInfo method = thisType.GetMethod(enqueuedMethod.methodName);
-					method.Invoke(this, enqueuedMethod.arguments);
+					if (enqueuedMethod.methodName == "Send")
+					{
+						this.Send(enqueuedMethod.arguments);
+					}
 				}
 			}
 		}
@@ -96,17 +96,22 @@ namespace Colyseus
 
 		void OnMessageHandler (object sender, WebSocketSharp.MessageEventArgs e)
 		{
+			Console.WriteLine("OnMessageHandler");
+
 			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (e.RawData);
 
 			var message = raw.Value.AsList ();
 			var code = message [0].AsInt32 ();
 
+			Console.WriteLine(code);
+
 			// Parse roomId or roomName
 			Room room = null;
-			int roomId = 0;
+			string roomId = "0";
 			string roomName = null;
+
 			try {
-				roomId = message [1].AsInt32 ();
+				roomId = message [1].AsString ();
 			} catch (InvalidOperationException ex1) {
 				try {
 					roomName = message[1].AsString();
@@ -126,11 +131,11 @@ namespace Colyseus
 					this.rooms.Remove (roomName);
 				}
 
-				room = (Room) this.rooms [roomId];
-				room.id = roomId;
+				room = this.rooms [roomId];
+				room.id = int.Parse(roomId);
 
 			} else if (code == Protocol.JOIN_ERROR) {
-				room = (Room) this.rooms [roomName];
+				room = this.rooms [roomName];
 
 				MessageEventArgs error = new MessageEventArgs(room, message);
 				room.EmitError (error);
@@ -139,25 +144,39 @@ namespace Colyseus
 				this.rooms.Remove (roomName);
 
 			} else if (code == Protocol.LEAVE_ROOM) {
-				room = (Room) this.rooms [roomId];
+				room = this.rooms [roomId];
 				room.Leave (false);
 
 			} else if (code == Protocol.ROOM_STATE) {
-				object state = message [2];
 
-				room = (Room)this.rooms [roomId];
-				room.state = JToken.Parse (message [2].ToString ());
+				var state = message [2];
+				var remoteCurrentTime = message [3].AsInt32();
+				var remoteElapsedTime = message [4].AsInt32();
+
+				room = this.rooms [roomId];
+				// JToken.Parse (message [2].ToString ())
+				room.SetState (state, remoteCurrentTime, remoteElapsedTime);
 
 			} else if (code == Protocol.ROOM_STATE_PATCH) {
-				room = (Room) this.rooms [roomId];
-				room.ApplyPatches(JArray.Parse ( message [2].ToString() ));
+				room = this.rooms [roomId];
+
+				IList<MessagePackObject> patchBytes = message [2].AsList();
+				byte[] patches = new byte[patchBytes.Count];
+
+				int idx = 0;
+				foreach (MessagePackObject obj in patchBytes)
+				{
+					patches[idx] = obj.AsByte();
+					idx++;
+				}
+
+				room.ApplyPatch (patches);
 
 			} else if (code == Protocol.ROOM_DATA) {
-				room = (Room) this.rooms [roomId];
+				room = this.rooms [roomId];
 				room.ReceiveData (message [2]);
+				this.OnMessage.Emit(this, new MessageEventArgs(room, message[2]));
 			}
-
-			this.OnMessage.Emit (this, new MessageEventArgs(room, message));
 		}
 
 		/// <summary>
@@ -173,11 +192,12 @@ namespace Colyseus
 
 			this.Send(new object[]{Protocol.JOIN_ROOM, roomName, options});
 
-			return (Room) this.rooms[ roomName ];
+			return this.rooms[ roomName ];
 		}
 
 		private void OnErrorHandler(object sender, EventArgs args)
 		{
+			Console.WriteLine("OnErrorHandler");
 			this.OnError.Emit (sender, args);
 		}
 
@@ -196,11 +216,9 @@ namespace Colyseus
 		public void Send (object[] data)
 		{
 			if (this.ws.ReadyState == WebSocketState.Open) {
-				var stream = new MemoryStream();
 				var serializer = MessagePackSerializer.Get<object[]>();
-				serializer.Pack( stream, data );
-
-				this.ws.SendAsync (stream.ToArray(), delegate(bool success) {
+				this.ws.SendAsync(serializer.PackSingleObject(data), delegate (bool success)
+				{
 					// sent successfully
 				});
 
