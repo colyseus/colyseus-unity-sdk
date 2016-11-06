@@ -1,8 +1,9 @@
-﻿using System;
-
-using WebSocketSharp;
+using System;
 
 using MsgPack;
+using MsgPack.Serialization;
+
+using WebSocketSharp;
 
 namespace Colyseus
 {
@@ -52,7 +53,7 @@ namespace Colyseus
 		public event EventHandler<RoomUpdateEventArgs> OnUpdate;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="Room"/> class. 
+		/// Initializes a new instance of the <see cref="Room"/> class.
 		/// It synchronizes state automatically with the server and send and receive messaes.
 		/// </summary>
 		/// <param name="client">
@@ -83,20 +84,20 @@ namespace Colyseus
 		{
 			this.state = state;
 
-			// TODO: 
+			// TODO:
 			// Create a "clock" for remoteCurrentTime / remoteElapsedTime to match the JavaScript API.
 
 			// Creates serializer.
-			var serializer = MsgPack.Serialization.MessagePackSerializer.Get <byte[]>();
+			var serializer = MessagePackSerializer.Get <byte[]>();
 			this._previousState = serializer.PackSingleObject (state.ToByteArray (ByteOrder.Big));
 
 			this.OnUpdate.Emit (this, new RoomUpdateEventArgs (this, state, null));
 		}
 
 		/// <summary>
-		/// Leave the room. 
+		/// Leave the room.
 		/// </summary>
-		public void Leave (bool requestLeave = true) 
+		public void Leave (bool requestLeave = true)
 		{
 			if (requestLeave && this._id > 0) {
 				this.Send (new object[]{ Protocol.LEAVE_ROOM, this._id });
@@ -110,7 +111,7 @@ namespace Colyseus
 		/// Send data to this room.
 		/// </summary>
 		/// <param name="data">Data to be sent</param>
-		public void Send (object data) 
+		public void Send (object data)
 		{
 			this.client.Send(new object[]{Protocol.ROOM_DATA, this._id, data});
 		}
@@ -126,7 +127,7 @@ namespace Colyseus
 		{
 			this._previousState = Fossil.Delta.Apply (this._previousState, delta);
 
-			var serializer = MsgPack.Serialization.MessagePackSerializer.Get <MessagePackObject>();
+			var serializer = MessagePackSerializer.Get <MessagePackObject>();
 			var newState = serializer.UnpackSingleObject (this._previousState);
 
 			this.state = newState;
@@ -134,7 +135,7 @@ namespace Colyseus
 //			this.OnPatch.Emit (this, new MessageEventArgs(this, patches));
 
 //			this.patcher.Patch (ref this._state, patches);
-			
+
 			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, this.state, null));
 		}
 

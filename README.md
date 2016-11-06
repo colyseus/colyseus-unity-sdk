@@ -1,11 +1,25 @@
-# Colyseus for C# / Unity3D [![Join the chat at https://gitter.im/gamestdio/colyseus](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gamestdio/colyseus?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# Colyseus Client for Unity3D
+
+[![Join the chat at https://gitter.im/gamestdio/colyseus](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gamestdio/colyseus?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 C#/Unity3D integration for [colyseus](https://github.com/gamestdio/colyseus) - a
 Minimalist Multiplayer Game Server.
 
-To download the binary .dll files, goto [the latest
-release](https://github.com/gamestdio/colyseus-unity3d/releases/latest) and
-download the file named `binaries.zip`.
+## Installation
+
+Copy `Assets/Colyseus` into your project. See [usage
+example](Assets/ColyseusClient.cs).
+
+**Running the demo server**
+
+Ensure you have [Node v6+](http://nodejs.org/) installed. Then run these
+commands in your commandline:
+
+```
+cd Server
+npm install
+npm start
+```
 
 ## Usage
 
@@ -15,7 +29,7 @@ using Colyseus
 // [...]
 
 Client colyseus = new Colyseus.Client ("ws://localhost:2657");
-Room room = this.colyseus.Join ("room_name");
+Room room = colyseus.Join ("room_name");
 room.OnUpdate += Room_OnUpdate;
 
 void Room_OnUpdate (object sender, RoomUpdateEventArgs e)
