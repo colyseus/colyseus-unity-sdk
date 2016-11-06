@@ -6,9 +6,9 @@ using System.Reflection;
 
 using MsgPack;
 using MsgPack.Serialization;
-using MsgPack.Serialization.CollectionSerializers;
 
 using WebSocketSharp;
+using UnityEngine;
 
 namespace Colyseus
 {
@@ -25,9 +25,7 @@ namespace Colyseus
 		/// </summary>
 		public string id = null;
 		public WebSocket ws;
-
 		private Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
-		private List<EnqueuedMethod> enqueuedMethods = new List<EnqueuedMethod>();
 
 		// Events
 
@@ -63,29 +61,24 @@ namespace Colyseus
 		/// </param>
 		public Client (string endpoint)
 		{
-			this.ws = new WebSocket (endpoint);
+			this.ws = new WebSocket (new Uri(endpoint));
 
-			this.ws.OnOpen += OnOpenHandler;
-			this.ws.OnMessage += OnMessageHandler;
-			this.ws.OnClose += OnCloseHandler;
-			this.ws.OnError += OnErrorHandler;
+			//this.ws.OnMessage += OnMessageHandler;
+			//this.ws.OnClose += OnCloseHandler;
+			//this.ws.OnError += OnErrorHandler;
 		}
 
-		void Connect()
+		public IEnumerator Connect()
 		{
-			this.ws.Connect();
+			return this.ws.Connect();
 		}
 
-		void OnOpenHandler (object sender, EventArgs e)
+		public void Recv()
 		{
-			if (this.enqueuedMethods.Count > 0) {
-				for (int i = 0; i < this.enqueuedMethods.Count; i++) {
-					EnqueuedMethod enqueuedMethod = this.enqueuedMethods [i];
-					if (enqueuedMethod.methodName == "Send")
-					{
-						this.Send(enqueuedMethod.arguments);
-					}
-				}
+			byte[] data = this.ws.Recv();
+			if (data != null)
+			{
+				this.ParseMessage(data);
 			}
 		}
 
@@ -94,11 +87,9 @@ namespace Colyseus
 			this.OnClose.Emit (this, e);
 		}
 
-		void OnMessageHandler (object sender, WebSocketSharp.MessageEventArgs e)
+		void ParseMessage (byte[] recv)
 		{
-			Console.WriteLine("OnMessageHandler");
-
-			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (e.RawData);
+			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (recv);
 
 			var message = raw.Value.AsList ();
 			var code = message [0].AsInt32 ();
@@ -107,16 +98,17 @@ namespace Colyseus
 
 			// Parse roomId or roomName
 			Room room = null;
+			int roomIdInt32 = 0;
 			string roomId = "0";
 			string roomName = null;
 
 			try {
-				roomId = message [1].AsString ();
-			} catch (InvalidOperationException ex1) {
+				roomIdInt32 = message[1].AsInt32();
+				roomId = roomIdInt32.ToString();
+			} catch (InvalidOperationException) {
 				try {
 					roomName = message[1].AsString();
-				} catch (InvalidOperationException ex2) {
-				}
+				} catch (InvalidOperationException) {}
 			}
 
 			if (code == Protocol.USER_ID) {
@@ -132,7 +124,9 @@ namespace Colyseus
 				}
 
 				room = this.rooms [roomId];
-				room.id = int.Parse(roomId);
+				Debug.Log(roomId);
+				room.id = roomIdInt32;
+				Debug.Log(room.id);
 
 			} else if (code == Protocol.JOIN_ERROR) {
 				room = this.rooms [roomName];
@@ -197,16 +191,7 @@ namespace Colyseus
 
 		private void OnErrorHandler(object sender, EventArgs args)
 		{
-			Console.WriteLine("OnErrorHandler");
 			this.OnError.Emit (sender, args);
-		}
-
-		/// <summary>
-		/// Close <see cref="Client"/> connection and leave all joined rooms.
-		/// </summary>
-		public void Close ()
-		{
-			this.ws.CloseAsync ();
 		}
 
 		/// <summary>
@@ -215,29 +200,23 @@ namespace Colyseus
 		/// <param name="data">Data to be sent to all connected rooms.</param>
 		public void Send (object[] data)
 		{
-			if (this.ws.ReadyState == WebSocketState.Open) {
-				var serializer = MessagePackSerializer.Get<object[]>();
-				this.ws.SendAsync(serializer.PackSingleObject(data), delegate (bool success)
-				{
-					// sent successfully
-				});
-
-			} else {
-				// If WebSocket is not connected yet, enqueue call to when its ready.
-				this.enqueuedMethods.Add(new EnqueuedMethod("Send", data));
-			}
-
+			var serializer = MessagePackSerializer.Get<object[]>();
+			this.ws.Send(serializer.PackSingleObject(data));
 		}
-	}
 
-	class EnqueuedMethod {
-		public string methodName;
-		public object[] arguments;
 
-		public EnqueuedMethod (string methodName, object[] arguments)
+		/// <summary>
+		/// Close <see cref="Client"/> connection and leave all joined rooms.
+		/// </summary>
+		public void Close()
 		{
-			this.methodName = methodName;
-			this.arguments = arguments;
+			this.ws.Close();
+		}
+
+		public string error
+		{
+			get { return this.ws.error; }
 		}
 	}
+
 }

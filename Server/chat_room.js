@@ -21,18 +21,15 @@ class ChatRoom extends Room {
   }
 
   onLeave (client) {
-    this.state.messages.push(`${ client.id } leaved.`)
+    this.state.messages.push(`${ client.id } left.`)
   }
 
   onMessage (client, data) {
-    if (data.message == "kick") {
-      this.clients.filter(c => c.id !== client.id).forEach(other => other.close())
+    console.log("onMessage", data);
 
-    } else {
-      this.state.messages.push(data)
-    }
+    this.state.messages.push(data)
 
-    console.log("ChatRoom:", client.id, data)
+    console.log(this.state);
   }
 
   dispose () {

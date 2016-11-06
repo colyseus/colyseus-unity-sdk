@@ -18,7 +18,7 @@ gameServer.on('connect', function(client) {
 })
 
 gameServer.on('message', function(client, data) {
-  console.log(client.id, "send", data);
+  console.log(client.id, "sent", data);
 })
 
 gameServer.on('disconnect', function(client) {
