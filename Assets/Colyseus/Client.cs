@@ -127,9 +127,7 @@ namespace Colyseus
 				}
 
 				room = this.rooms [roomId];
-				Debug.Log(roomId);
 				room.id = roomIdInt32;
-				Debug.Log(room.id);
 
 			} else if (code == Protocol.JOIN_ERROR) {
 				room = this.rooms [roomName];

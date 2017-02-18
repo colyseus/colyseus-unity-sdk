@@ -24,11 +24,11 @@ namespace Colyseus
 
 		private Dictionary<string, Regex> matcherPlaceholders = new Dictionary<string, Regex>()
 		{
-			{ ":id", new Regex(@"/^([a-zA-Z0-9\-_]+)$/") },
-			{ ":number", new Regex(@"/^([0-9]+)$/") },
-			{ ":string", new Regex(@"/^(\w+)$/") },
-			{ ":axis", new Regex(@"/^([xyz])$/") },
-			{ "*", new Regex(@"/(.*)/") },
+			{ ":id", new Regex(@"^([a-zA-Z0-9\-_]+)$") },
+			{ ":number", new Regex(@"^([0-9]+)$") },
+			{ ":string", new Regex(@"^(\w+)$") },
+			{ ":axis", new Regex(@"^([xyz])$") },
+			{ "*", new Regex(@"(.*)") },
 		};
 
 		public DeltaContainer (MessagePackObject data)
@@ -150,10 +150,8 @@ namespace Colyseus
 				if (matches.Count == 0 || matches.Count > 2) {
 	                return new string[] { };
 
-				} else {
-					for (int j = 0; j < matches.Count; j++) {
-						pathVars.Add(matches[j].ToString());
-					}
+				} else if ( matches[0].Groups.Count > 1 ) {
+					pathVars.Add(matches[0].ToString());
 					// pathVars = pathVars.concat(matches.slice(1));
 	            }
 	        }

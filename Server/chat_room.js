@@ -28,11 +28,13 @@ class ChatRoom extends Room {
   }
 
   onMessage (client, data) {
-    console.log("message received from client", client, data);
+    console.log("message received from client", client.id, data);
   }
 
   update () {
-    console.log("update...");
+    for (var id in this.state.players) {
+      this.state.players[id].x++;
+    }
   }
 
   dispose () {
