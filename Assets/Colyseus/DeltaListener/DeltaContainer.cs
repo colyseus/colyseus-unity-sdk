@@ -51,32 +51,21 @@ namespace Colyseus
 			this.matcherPlaceholders[placeholder] = matcher;
 		}
 
-//		public FallbackPatchListener Listen(Action<string[], string, MessagePackObject> callback)
-//		{
-//			return this.Listen("", "", callback);
-//		}
+		public FallbackPatchListener Listen(Action<string[], string, MessagePackObject> callback)
+		{
+			FallbackPatchListener listener = new FallbackPatchListener {
+				callback = callback,
+				operation = "",
+				rules = new Regex[]{}
+			};
+
+			this.fallbackListeners.Add(listener);
+
+			return listener;
+		}
 
 		public PatchListener Listen(string segments, string operation, Action<string[], MessagePackObject> callback) {
-			string[] rules = segments.Split('/');
-
-			Regex[] regexpRules = new Regex[rules.Length];
-			for (int i = 0; i < rules.Length; i++)
-			{
-				var segment = rules[i];
-				if (segment.IndexOf(':') == 0)
-				{
-					if (this.matcherPlaceholders.ContainsKey(segment))
-					{
-						regexpRules[i] = this.matcherPlaceholders[segment];
-					}
-					else {
-						regexpRules[i] = this.matcherPlaceholders["*"];
-					}
-
-				} else {
-					regexpRules[i] = new Regex(segment);
-				}
-			}
+			var regexpRules = this.ParseRegexRules (segments.Split('/'));
 
 			PatchListener listener = new PatchListener {
 	            callback = callback,
@@ -103,6 +92,31 @@ namespace Colyseus
 		public void RemoveAllListeners()
 		{
 			this.Reset();
+		}
+
+		protected Regex[] ParseRegexRules (string[] rules)
+		{
+			Regex[] regexpRules = new Regex[rules.Length];
+
+			for (int i = 0; i < rules.Length; i++)
+			{
+				var segment = rules[i];
+				if (segment.IndexOf(':') == 0)
+				{
+					if (this.matcherPlaceholders.ContainsKey(segment))
+					{
+						regexpRules[i] = this.matcherPlaceholders[segment];
+					}
+					else {
+						regexpRules[i] = this.matcherPlaceholders["*"];
+					}
+
+				} else {
+					regexpRules[i] = new Regex(segment);
+				}
+			}
+
+			return regexpRules;
 		}
 
 		private void CheckPatches(PatchObject[] patches)

@@ -61,6 +61,7 @@ namespace Colyseus
 		/// </param>
 		public Client (string endpoint)
 		{
+			MessagePackSerializer.PrepareType<MessagePackObject>();
 			MessagePackSerializer.PrepareType<object[]>();
 			MessagePackSerializer.PrepareType<byte[]>();
 
@@ -204,7 +205,6 @@ namespace Colyseus
 			var serializer = MessagePackSerializer.Get<object[]>();
 			this.ws.Send(serializer.PackSingleObject(data));
 		}
-
 
 		/// <summary>
 		/// Close <see cref="Client"/> connection and leave all joined rooms.

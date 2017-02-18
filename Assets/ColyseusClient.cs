@@ -21,6 +21,8 @@ public class ColyseusClient : MonoBehaviour {
 
 		chatRoom.state.Listen ("players", "add", this.OnAddPlayer);
 		chatRoom.state.Listen ("players/:id/:axis", "replace", this.OnPlayerMove);
+		chatRoom.state.Listen ("players/:id", "remove", this.OnPlayerRemoved);
+		chatRoom.state.Listen (this.OnChangeFallback);
 
 		int i = 0;
 
@@ -38,7 +40,7 @@ public class ColyseusClient : MonoBehaviour {
 			i++;
 
 			if (i % 50 == 0) {
-				chatRoom.Send("Hey!");
+				chatRoom.Send("some_command");
 			}
 
 			yield return 0;
@@ -70,6 +72,21 @@ public class ColyseusClient : MonoBehaviour {
 		Debug.Log (path[0]);
 		Debug.Log (value);
 	}
+
+	void OnPlayerRemoved (string[] path, MessagePackObject value)
+	{
+		Debug.Log ("OnPlayerRemoved");
+		Debug.Log (value);
+	}
+
+	void OnChangeFallback (string[] path, string operation, MessagePackObject value) 
+	{
+		Debug.Log ("OnChangeFallback");
+		Debug.Log (operation);
+		Debug.Log (path[0]);
+		Debug.Log (value);
+	}
+		
 
 	void OnUpdateHandler (object sender, RoomUpdateEventArgs e)
 	{

@@ -24,30 +24,63 @@ npm start
 ## Usage
 
 ```csharp
-using Colyseus
-
-// [...]
-
 Client colyseus = new Colyseus.Client ("ws://localhost:2657");
-Room room = colyseus.Join ("room_name");
-room.OnUpdate += Room_OnUpdate;
 
-void Room_OnUpdate (object sender, RoomUpdateEventArgs e)
+Room room = colyseus.Join ("room_name");
+room.OnUpdate += OnUpdate;
+```
+
+**Getting the full room state**
+
+```csharp
+void OnUpdate (object sender, RoomUpdateEventArgs e)
 {
-  if (e.patches == null) {
-    // received first state
-    // e.state <- do something with e.state
-  } else {
-    // received patched state
-    // e.patches <- do something with e.patches
-  }
+	Debug.Log(e.state);
 }
 ```
 
-## Change your Build Settings (Unity3D)
+**Listening to additions on state**
 
-Goto "File > Build Settings > Player Settings", and select ".NET 2.0" instead of
-".NET 2.0 Subset" on "Optimization > Api Compatibility Level" category.
+````csharp
+room.state.Listen ("players", "add", OnAddPlayer);
+``
+
+```csharp
+void OnAddPlayer (string[] path, MessagePackObject value)
+{
+	Debug.Log ("OnAddPlayer");
+	Debug.Log (value);
+}
+```
+
+**Listening to updates on state**
+
+```csharp
+room.state.Listen ("players/:id/:axis", "replace", OnPlayerMove);
+```
+
+```csharp
+void OnPlayerMove (string[] path, MessagePackObject value)
+{
+	Debug.Log ("OnPlayerMove");
+	Debug.Log ("playerId: " + path[0] + ", axis: " + path[1]);
+	Debug.Log (value);
+}
+```
+
+**Listening to deletions on state**
+
+```csharp
+room.state.Listen ("players/:id", "remove", OnPlayerRemoved);
+```
+
+```csharp
+void OnPlayerRemoved (string[] path, MessagePackObject value)
+{
+	Debug.Log ("OnPlayerRemoved");
+	Debug.Log ("playerId: " + path[0]);
+}
+```
 
 ## License
 
