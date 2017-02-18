@@ -45,7 +45,7 @@ void OnUpdate (object sender, RoomUpdateEventArgs e)
 
 ````csharp
 room.state.Listen ("players", "add", OnAddPlayer);
-``
+```
 
 ```csharp
 void OnAddPlayer (string[] path, MessagePackObject value)
