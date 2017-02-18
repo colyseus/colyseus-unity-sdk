@@ -61,6 +61,9 @@ namespace Colyseus
 		/// </param>
 		public Client (string endpoint)
 		{
+			MessagePackSerializer.PrepareType<object[]>();
+			MessagePackSerializer.PrepareType<byte[]>();
+
 			this.ws = new WebSocket (new Uri(endpoint));
 
 			//this.ws.OnMessage += OnMessageHandler;

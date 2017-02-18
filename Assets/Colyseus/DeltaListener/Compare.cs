@@ -14,11 +14,8 @@ namespace Colyseus
 
 	public class Compare
 	{
-		public Compare()
-		{
-		}
 
-		public PatchObject[] DoCompare(MessagePackObject tree1, MessagePackObject tree2)
+		public static PatchObject[] GetPatchList(MessagePackObject tree1, MessagePackObject tree2)
 		{
 			List<PatchObject> patches = new List<PatchObject>();
 			List<string> path = new List<string>();
@@ -29,7 +26,7 @@ namespace Colyseus
 		}
 
 		// Dirty check if obj is different from mirror, generate patches and update mirror
-		protected void Generate(MessagePackObject mirrorPacked, MessagePackObject objPacked, List<PatchObject> patches, List<string> path)
+		protected static void Generate(MessagePackObject mirrorPacked, MessagePackObject objPacked, List<PatchObject> patches, List<string> path)
 		{
 			MessagePackObjectDictionary mirror = mirrorPacked.AsDictionary();
 			MessagePackObjectDictionary obj = objPacked.AsDictionary();

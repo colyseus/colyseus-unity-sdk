@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections;
 using System;
 using Colyseus;
+using MsgPack;
 
 public class ColyseusClient : MonoBehaviour {
 
@@ -17,6 +18,8 @@ public class ColyseusClient : MonoBehaviour {
 		chatRoom = colyseus.Join("chat");
 		chatRoom.OnJoin += OnRoomJoined;
 		chatRoom.OnUpdate += OnUpdateHandler;
+		chatRoom.state.Listen ("players", "add", this.OnAddPlayer);
+		chatRoom.state.Listen ("players/:id/:axis", "add", this.OnPlayerMove);
 
 		int i = 0;
 
@@ -41,6 +44,20 @@ public class ColyseusClient : MonoBehaviour {
 		}
 
 		OnApplicationQuit();
+	}
+
+	void OnAddPlayer (string[] path, MessagePackObject value)
+	{
+		Debug.Log ("OnAddPlayer");
+		Debug.Log (path[0]);
+		Debug.Log (value);
+	}
+
+	void OnPlayerMove (string[] path, MessagePackObject value)
+	{
+		Debug.Log ("OnPlayerMove");
+		Debug.Log (path[0]);
+		Debug.Log (value);
 	}
 
 	void OnRoomJoined (object sender, EventArgs e)

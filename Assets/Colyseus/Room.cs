@@ -17,7 +17,9 @@ namespace Colyseus
 		/// Name of the <see cref="Room"/>.
 		/// </summary>
 		public String name;
-		public MessagePackObject state;
+
+		public DeltaContainer state = new DeltaContainer(new MessagePackObject(new MessagePackObjectDictionary()));
+		//public MessagePackObject state;
 
 		private int _id = 0;
 		private byte[] _previousState = null;
@@ -64,7 +66,6 @@ namespace Colyseus
 		{
 			this.client = client;
 			this.name = name;
-//			this.patcher = new Patcher ();
 		}
 
 		/// <summary>
@@ -82,7 +83,7 @@ namespace Colyseus
 
 		public void SetState( MessagePackObject state, int remoteCurrentTime, int remoteElapsedTime)
 		{
-			this.state = state;
+			this.state.Set(state);
 
 			// TODO:
 			// Create a "clock" for remoteCurrentTime / remoteElapsedTime to match the JavaScript API.
@@ -130,26 +131,11 @@ namespace Colyseus
 			var serializer = MessagePackSerializer.Get <MessagePackObject>();
 			var newState = serializer.UnpackSingleObject (this._previousState);
 
-			this.state = newState;
+			this.state.Set(newState);
+			//this.state = state
 
-//			this.OnPatch.Emit (this, new MessageEventArgs(this, patches));
-
-//			this.patcher.Patch (ref this._state, patches);
-
-			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, this.state, null));
+			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, this.state.data, null));
 		}
-
-//		public void ApplyPatches (JArray patches)
-//		{
-//			this.OnPatch.Emit (this, new MessageEventArgs(this, patches));
-//
-//			this.patcher.Patch (ref this._state, patches);
-//
-//			//			var patcher = new JsonPatcher();
-//			//			patcher.Patch(ref this._state, patches);
-//
-//			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, (JToken) this._state, patches));
-//		}
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void EmitError (MessageEventArgs args)
