@@ -12,7 +12,7 @@ Multiplayer Game Server.
 Copy `Assets/Colyseus` into your project. See [usage
 example](Assets/ColyseusClient.cs).
 
-**Running the demo server**
+## Running the demo server
 
 Ensure you have [Node v6+](http://nodejs.org/) installed. Then run these
 commands in your commandline:

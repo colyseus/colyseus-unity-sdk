@@ -8,13 +8,6 @@ class ChatRoom extends Room {
     this.setPatchRate( 1000 / 20 );
     this.setSimulationInterval( this.update.bind(this) );
 
-    // remove player from state after 5 seconds
-    this.clock.setTimeout(() => {
-      for (var id in this.state.players) {
-        delete this.state.players[id];
-      }
-    }, 5000);
-
     this.setState({
       players: {}
     });

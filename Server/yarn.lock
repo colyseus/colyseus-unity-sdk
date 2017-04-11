@@ -18,17 +18,21 @@
   dependencies:
     "@types/node" "*"
 
-"@types/node@*", "@types/node@^7.0.4":
+"@types/node@*":
   version "7.0.5"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.5.tgz#96a0f0a618b7b606f1ec547403c00650210bfbb7"
+
+"@types/node@^7.0.12":
+  version "7.0.12"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.12.tgz#ae5f67a19c15f752148004db07cbbb372e69efc9"
 
 "@types/shortid@0.0.28":
   version "0.0.28"
   resolved "https://registry.yarnpkg.com/@types/shortid/-/shortid-0.0.28.tgz#b359e25348351f6bf736eed20d2e666528c248c6"
 
-"@types/ws@0.0.38":
-  version "0.0.38"
-  resolved "https://registry.yarnpkg.com/@types/ws/-/ws-0.0.38.tgz#42106fff4b422ca956734e29f0d73a6d893194d3"
+"@types/uws@^0.13.0":
+  version "0.13.0"
+  resolved "https://registry.yarnpkg.com/@types/uws/-/uws-0.13.0.tgz#657efe67ae34e417d903ce813a86ec09cd68cbee"
   dependencies:
     "@types/node" "*"
 
@@ -207,22 +211,22 @@ code-point-at@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
 
-colyseus@^0.4.3-rc5:
-  version "0.4.12"
-  resolved "https://registry.yarnpkg.com/colyseus/-/colyseus-0.4.12.tgz#589bdcb4b639faa56c2db1c22b7204642df47634"
+colyseus@^0.4.15:
+  version "0.4.15"
+  resolved "https://registry.yarnpkg.com/colyseus/-/colyseus-0.4.15.tgz#288474488d3ad27153076679c5b09fa51dcbc4de"
   dependencies:
     "@types/fossil-delta" "^0.2.1"
     "@types/mocha" "^2.2.32"
     "@types/msgpack-lite" "^0.1.1"
-    "@types/node" "^7.0.4"
+    "@types/node" "^7.0.12"
     "@types/shortid" "0.0.28"
-    "@types/ws" "0.0.38"
+    "@types/uws" "^0.13.0"
     clock-timer.js "^1.1.0"
     fossil-delta "^0.2.5"
     msgpack-lite "^0.1.26"
     shortid "^2.2.6"
     timeframe "^0.3.5"
-    uws "^0.12.0"
+    uws "^0.14.1"
 
 combined-stream@^1.0.5, combined-stream@~1.0.5:
   version "1.0.5"
@@ -289,13 +293,7 @@ dashdash@^1.12.0:
   dependencies:
     assert-plus "^1.0.0"
 
-debug@^2.2.0:
-  version "2.6.1"
-  resolved "https://registry.yarnpkg.com/debug/-/debug-2.6.1.tgz#79855090ba2c4e3115cc7d8769491d58f0491351"
-  dependencies:
-    ms "0.7.2"
-
-debug@~2.2.0:
+debug@^2.2.0, debug@~2.2.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/debug/-/debug-2.2.0.tgz#f87057e995b1a1f6ae6a4960664137bc56f039da"
   dependencies:
@@ -1558,9 +1556,9 @@ uuid@^3.0.0:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.0.1.tgz#6544bba2dfda8c1cf17e629a3a305e2bb1fee6c1"
 
-uws@^0.12.0:
-  version "0.12.0"
-  resolved "https://registry.yarnpkg.com/uws/-/uws-0.12.0.tgz#07163ea6e687d9731e66821107b5fdf1ee644cbd"
+uws@^0.14.1:
+  version "0.14.1"
+  resolved "https://registry.yarnpkg.com/uws/-/uws-0.14.1.tgz#89b8eb7bced272c65621472e878c57f4e0e00640"
 
 vary@~1.1.0:
   version "1.1.0"
