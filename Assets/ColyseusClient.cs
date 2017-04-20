@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System;
 using Colyseus;
@@ -8,13 +8,14 @@ public class ColyseusClient : MonoBehaviour {
 
 	Client colyseus;
     Room chatRoom;
-    public string serverName = "192.168.1.108";
-    public string port = "3553";
+    public string serverName = "192.168.137.1";
+    public string port = "2657";
 
 	// Use this for initialization
 	IEnumerator Start () {
-        String uri = "ws://" + serverName + ":" + port;
-        Debug.Log("Uri: " + uri);
+		//String uri = "ws://" + serverName + ":" + port;
+		String uri = "ws://192.168.137.1:2657";
+		Debug.Log("Uri: " + uri);
         colyseus = new Client(uri);
 		colyseus.OnOpen += OnOpenHandler;
 		yield return StartCoroutine(colyseus.Connect());
@@ -26,7 +27,7 @@ public class ColyseusClient : MonoBehaviour {
 		chatRoom.state.Listen ("players", "add", this.OnAddPlayer);
 		chatRoom.state.Listen ("players/:id/:axis", "replace", this.OnPlayerMove);
 		chatRoom.state.Listen ("players/:id", "remove", this.OnPlayerRemoved);
-		chatRoom.state.Listen (this.OnChangeFallback);
+		//chatRoom.state.Listen (this.OnChangeFallback);
 
 		int i = 0;
 
@@ -44,7 +45,7 @@ public class ColyseusClient : MonoBehaviour {
 			i++;
 
 			if (i % 50 == 0) {
-				chatRoom.Send("some_command");
+				//chatRoom.Send("some_command");
 			}
 
 			yield return 0;
@@ -94,7 +95,7 @@ public class ColyseusClient : MonoBehaviour {
 
 	void OnUpdateHandler (object sender, RoomUpdateEventArgs e)
 	{
-//		Debug.Log(e.state);
+		Debug.Log(e.state);
 	}
 
 	void OnApplicationQuit()

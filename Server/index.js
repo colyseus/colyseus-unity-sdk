@@ -6,7 +6,7 @@ var colyseus = require('colyseus')
   , express = require('express')
   // , cors = require('cors')
 
-  , port = process.env.PORT || 3553
+  , port = process.env.PORT || 2657
   , app = express()
   , server = http.createServer(app)
   , gameServer = new colyseus.Server({ server: server })

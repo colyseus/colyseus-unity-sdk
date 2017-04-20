@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
@@ -110,7 +110,7 @@ namespace Colyseus
 #if !WINDOWS_UWP
             Console.WriteLine(code);
 #else
-            Debug.Log(code);
+            Debug.Log("Message Code: "+code);
 #endif
 
             // Parse roomId or roomName

@@ -113,7 +113,7 @@ public class WebSocket
 	public IEnumerator Connect()
 	{
         m_Socket = new MessageWebSocket();
-        m_Socket.Control.MessageType = SocketMessageType.Utf8;
+        m_Socket.Control.MessageType = SocketMessageType.Binary;
         m_Socket.MessageReceived += M_Socket_MessageReceived;
         m_Socket.Closed += M_Socket_Closed;
 
@@ -169,6 +169,7 @@ public class WebSocket
         DataWriter messageWriter = new DataWriter(webSock.OutputStream);
         messageWriter.ByteOrder = ByteOrder.BigEndian;
         messageWriter.WriteBytes(buffer);
+		
         try {
             await messageWriter.StoreAsync();
         }

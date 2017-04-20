@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 
 using MsgPack;
 using MsgPack.Serialization;
+using UnityEngine;
 
 #if WINDOWS_UWP
 using Helper;
