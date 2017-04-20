@@ -7,11 +7,15 @@ using MsgPack;
 public class ColyseusClient : MonoBehaviour {
 
 	Client colyseus;
-	Room chatRoom;
+    Room chatRoom;
+    public string serverName = "192.168.1.108";
+    public string port = "3553";
 
 	// Use this for initialization
 	IEnumerator Start () {
-		colyseus = new Client("ws://localhost:3553");
+        String uri = "ws://" + serverName + ":" + port;
+        Debug.Log("Uri: " + uri);
+        colyseus = new Client(uri);
 		colyseus.OnOpen += OnOpenHandler;
 		yield return StartCoroutine(colyseus.Connect());
 

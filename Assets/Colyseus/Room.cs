@@ -1,9 +1,17 @@
 using System;
+using System.Runtime.InteropServices;
 
 using MsgPack;
 using MsgPack.Serialization;
 
+#if WINDOWS_UWP
+using Helper;
+using Windows.Storage.Streams;
+#endif
+
+#if !WINDOWS_UWP
 using WebSocketSharp;
+#endif
 
 namespace Colyseus
 {
@@ -76,9 +84,13 @@ namespace Colyseus
 			get { return this._id; }
 			set {
 				this._id = value;
-				this.OnJoin.Emit (this, EventArgs.Empty);
-			}
-		}
+#if !WINDOWS_UWP
+                this.OnJoin.Emit (this, EventArgs.Empty);
+#else
+                this.OnJoin.Invoke(this, EventArgs.Empty);
+#endif
+            }
+        }
 
 
 		public void SetState( MessagePackObject state, int remoteCurrentTime, int remoteElapsedTime)
@@ -87,24 +99,34 @@ namespace Colyseus
 
 			// TODO:
 			// Create a "clock" for remoteCurrentTime / remoteElapsedTime to match the JavaScript API.
-
+               
 			// Creates serializer.
 			var serializer = MessagePackSerializer.Get <byte[]>();
-			this._previousState = serializer.PackSingleObject (state.ToByteArray (ByteOrder.Big));
 
-			this.OnUpdate.Emit (this, new RoomUpdateEventArgs (this, state, null));
-		}
+
+#if !WINDOWS_UWP
+            this.OnUpdate.Emit (this, new RoomUpdateEventArgs (this, state, null));
+            this._previousState = serializer.PackSingleObject (state.ToByteArray (ByteOrder.Big));
+#else
+            this._previousState = serializer.PackSingleObject(state.ToByteArray(ByteOrder.BigEndian));
+            this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, state, null));
+#endif
+        }
 
 		/// <summary>
 		/// Leave the room.
 		/// </summary>
 		public void Leave (bool requestLeave = true)
-		{
+        { 
 			if (requestLeave && this._id > 0) {
 				this.Send (new object[]{ Protocol.LEAVE_ROOM, this._id });
 
 			} else {
-				this.OnLeave.Emit (this, EventArgs.Empty);
+#if !WINDOWS_UWP
+                this.OnLeave.Emit (this, EventArgs.Empty);
+#else
+                this.OnLeave.Invoke(this, EventArgs.Empty);
+#endif
 			}
 		}
 
@@ -120,8 +142,12 @@ namespace Colyseus
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void ReceiveData (object data)
 		{
-			this.OnData.Emit (this, new MessageEventArgs (this, data));
-		}
+#if !WINDOWS_UWP
+            this.OnData.Emit (this, new MessageEventArgs (this, data));
+#else
+            this.OnData.Invoke(this, new MessageEventArgs(this, data));
+#endif
+        }
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void ApplyPatch (byte[] delta)
@@ -132,15 +158,23 @@ namespace Colyseus
 			var newState = serializer.UnpackSingleObject (this._previousState);
 
 			this.state.Set(newState);
-			//this.state = state
+            //this.state = state
 
-			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, this.state.data, null));
-		}
+#if !WINDOWS_UWP
+            this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, this.state.data, null));
+#else
+            this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, this.state.data, null));
+#endif
+        }
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void EmitError (MessageEventArgs args)
 		{
-			this.OnError.Emit (this, args);
+#if !WINDOWS_UWP
+            this.OnError.Emit (this, args);
+#else
+            this.OnError.Invoke(this, args);
+#endif
 		}
 	}
 }
