@@ -20,7 +20,7 @@ public class ColyseusClient : MonoBehaviour {
 		colyseus.OnOpen += OnOpenHandler;
 		yield return StartCoroutine(colyseus.Connect());
 
-		chatRoom = colyseus.Join("chat");
+		chatRoom = colyseus.Join("mr_room");
 		chatRoom.OnJoin += OnRoomJoined;
 		chatRoom.OnUpdate += OnUpdateHandler;
 
