@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 using MsgPack;
 using MsgPack.Serialization;
@@ -89,8 +89,8 @@ namespace Colyseus
 			// Create a "clock" for remoteCurrentTime / remoteElapsedTime to match the JavaScript API.
 
 			// Creates serializer.
-			var serializer = MessagePackSerializer.Get <byte[]>();
-			this._previousState = serializer.PackSingleObject (state.ToByteArray (ByteOrder.Big));
+			var serializer = MessagePackSerializer.Get <MessagePackObject>();
+			this._previousState = serializer.PackSingleObject (state);
 
 			this.OnUpdate.Emit (this, new RoomUpdateEventArgs (this, state, null));
 		}
