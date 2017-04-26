@@ -4,11 +4,6 @@ using MsgPack;
 using MsgPack.Serialization;
 using UnityEngine;
 
-#if WINDOWS_UWP
-using Helper;
-using Windows.Storage.Streams;
-#endif
-
 #if !WINDOWS_UWP
 using WebSocketSharp;
 #endif

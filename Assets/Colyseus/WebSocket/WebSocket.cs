@@ -129,8 +129,6 @@ public class WebSocket
         try
         {
             await m_Socket.ConnectAsync(mUrl);
-            //Uri serverUri = new Uri("ws://192.168.1.108");
-            //await m_Socket.ConnectAsync(serverUri);
             m_IsConnected = true;
             Debug.Log("Connected");
         }
@@ -152,7 +150,7 @@ public class WebSocket
     {
         DataReader messageReader = args.GetDataReader();
         messageReader.UnicodeEncoding = Windows.Storage.Streams.UnicodeEncoding.Utf8;
-        //string messageString = messageReader.ReadString(messageReader.UnconsumedBufferLength);
+
         byte[] message = new byte[messageReader.UnconsumedBufferLength];
         messageReader.ReadBytes(message);
 
