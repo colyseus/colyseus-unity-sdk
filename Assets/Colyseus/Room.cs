@@ -79,9 +79,9 @@ namespace Colyseus
 			get { return this._id; }
 			set {
 				this._id = value;
-                this.OnJoin.Invoke(this, EventArgs.Empty);
-            }
-        }
+				this.OnJoin.Invoke(this, EventArgs.Empty);
+      }
+    }
 
 
 		public void SetState( MessagePackObject state, int remoteCurrentTime, int remoteElapsedTime)
@@ -93,20 +93,19 @@ namespace Colyseus
 
 			// Creates serializer.
 			var serializer = MessagePackSerializer.Get <MessagePackObject>();
-            this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, state, null));
-            this._previousState = serializer.PackSingleObject (state);
-        }
+			this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, state, null));
+			this._previousState = serializer.PackSingleObject (state);
+		}
 
 		/// <summary>
 		/// Leave the room.
 		/// </summary>
 		public void Leave (bool requestLeave = true)
-        { 
+		{
 			if (requestLeave && this._id > 0) {
 				this.Send (new object[]{ Protocol.LEAVE_ROOM, this._id });
-
 			} else {
-                this.OnLeave.Invoke(this, EventArgs.Empty);
+				this.OnLeave.Invoke(this, EventArgs.Empty);
 			}
 		}
 
@@ -122,8 +121,8 @@ namespace Colyseus
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void ReceiveData (object data)
 		{
-            this.OnData.Invoke(this, new MessageEventArgs(this, data));
-        }
+			this.OnData.Invoke(this, new MessageEventArgs(this, data));
+    }
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void ApplyPatch (byte[] delta)
@@ -134,16 +133,14 @@ namespace Colyseus
 			var newState = serializer.UnpackSingleObject (this._previousState);
 
 			this.state.Set(newState);
-            //this.state = state
-
-            this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, this.state.data, null));
-        }
+			//this.state = state
+			this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, this.state.data, null));
+		}
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void EmitError (MessageEventArgs args)
 		{
-            this.OnError.Invoke(this, args);
+			this.OnError.Invoke(this, args);
 		}
 	}
 }
-

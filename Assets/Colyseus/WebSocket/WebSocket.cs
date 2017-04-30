@@ -85,7 +85,7 @@ public class WebSocket
 		while (SocketState(m_NativeRef) == 0)
 			yield return 0;
 	}
- 
+
 	public void Close()
 	{
 		SocketClose(m_NativeRef);
@@ -101,45 +101,44 @@ public class WebSocket
 			if (result == 0)
 				return null;
 
-			return Encoding.UTF8.GetString (buffer);				
+			return Encoding.UTF8.GetString (buffer);
 		}
 	}
 #elif WINDOWS_UWP
-    MessageWebSocket m_Socket;
+  MessageWebSocket m_Socket;
 	Queue<byte[]> m_Messages = new Queue<byte[]>();
 	bool m_IsConnected = false;
 	string m_Error = null;
 
 	public IEnumerator Connect()
 	{
-        m_Socket = new MessageWebSocket();
-        m_Socket.Control.MessageType = SocketMessageType.Binary;
-        m_Socket.MessageReceived += M_Socket_MessageReceived;
-        m_Socket.Closed += M_Socket_Closed;
+		m_Socket = new MessageWebSocket();
+		m_Socket.Control.MessageType = SocketMessageType.Binary;
+    m_Socket.MessageReceived += M_Socket_MessageReceived;
+    m_Socket.Closed += M_Socket_Closed;
+    TryConnect();
 
-        TryConnect();
-
-        while (!m_IsConnected && m_Error == null)
-            yield return 0;
+    while (!m_IsConnected && m_Error == null)
+      yield return 0;
 	}
 
-    private async void TryConnect()
+	private async void TryConnect()
+	{
+		Debug.Log("Trying to connect to: " + mUrl.ToString());
+    try
     {
-        Debug.Log("Trying to connect to: " + mUrl.ToString());
-        try
-        {
-            await m_Socket.ConnectAsync(mUrl);
-            m_IsConnected = true;
-            Debug.Log("Connected");
-        }
-        catch (Exception ex)
-        {
-            Debug.Log("Error while connecting!");
-            Debug.Log(ex.Source);
-            Debug.Log(ex.Message);
-            //Add code here to handle any exceptions
-        }
+        await m_Socket.ConnectAsync(mUrl);
+        m_IsConnected = true;
+        Debug.Log("Connected");
     }
+    catch (Exception ex)
+    {
+        Debug.Log("Error while connecting!");
+        Debug.Log(ex.Source);
+        Debug.Log(ex.Message);
+        //Add code here to handle any exceptions
+    }
+  }
 
     private void M_Socket_Closed(IWebSocket sender, WebSocketClosedEventArgs args)
     {
@@ -167,7 +166,7 @@ public class WebSocket
         DataWriter messageWriter = new DataWriter(webSock.OutputStream);
         messageWriter.ByteOrder = ByteOrder.BigEndian;
         messageWriter.WriteBytes(buffer);
-		
+
         try {
             await messageWriter.StoreAsync();
         }
