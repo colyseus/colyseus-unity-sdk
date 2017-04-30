@@ -79,11 +79,7 @@ namespace Colyseus
 			get { return this._id; }
 			set {
 				this._id = value;
-#if !WINDOWS_UWP
-                this.OnJoin.Emit (this, EventArgs.Empty);
-#else
                 this.OnJoin.Invoke(this, EventArgs.Empty);
-#endif
             }
         }
 
@@ -94,17 +90,10 @@ namespace Colyseus
 
 			// TODO:
 			// Create a "clock" for remoteCurrentTime / remoteElapsedTime to match the JavaScript API.
-               
+
 			// Creates serializer.
-
 			var serializer = MessagePackSerializer.Get <MessagePackObject>();
-
-#if !WINDOWS_UWP
-            this.OnUpdate.Emit(this, new RoomUpdateEventArgs(this, state, null));
-#else
             this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, state, null));
-#endif
-
             this._previousState = serializer.PackSingleObject (state);
         }
 
@@ -117,11 +106,7 @@ namespace Colyseus
 				this.Send (new object[]{ Protocol.LEAVE_ROOM, this._id });
 
 			} else {
-#if !WINDOWS_UWP
-                this.OnLeave.Emit (this, EventArgs.Empty);
-#else
                 this.OnLeave.Invoke(this, EventArgs.Empty);
-#endif
 			}
 		}
 
@@ -137,11 +122,7 @@ namespace Colyseus
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void ReceiveData (object data)
 		{
-#if !WINDOWS_UWP
-            this.OnData.Emit (this, new MessageEventArgs (this, data));
-#else
             this.OnData.Invoke(this, new MessageEventArgs(this, data));
-#endif
         }
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
@@ -155,21 +136,13 @@ namespace Colyseus
 			this.state.Set(newState);
             //this.state = state
 
-#if !WINDOWS_UWP
-            this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, this.state.data, null));
-#else
             this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, this.state.data, null));
-#endif
         }
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void EmitError (MessageEventArgs args)
 		{
-#if !WINDOWS_UWP
-            this.OnError.Emit (this, args);
-#else
             this.OnError.Invoke(this, args);
-#endif
 		}
 	}
 }

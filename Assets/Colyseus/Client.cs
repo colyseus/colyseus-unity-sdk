@@ -107,12 +107,6 @@ namespace Colyseus
 			var message = raw.Value.AsList ();
 			var code = message [0].AsInt32 ();
 
-#if !WINDOWS_UWP
-            Console.WriteLine(code);
-#else
-            Debug.Log("Message Code: "+code);
-#endif
-
             // Parse roomId or roomName
             Room room = null;
 			int roomIdInt32 = 0;
@@ -130,12 +124,7 @@ namespace Colyseus
 
 			if (code == Protocol.USER_ID) {
 				this.id = message [1].AsString ();
-#if !WINDOWS_UWP
-                this.OnOpen.Emit (this, EventArgs.Empty);
-#else
                 this.OnOpen.Invoke(this, EventArgs.Empty);
-#endif
-
             } else if (code == Protocol.JOIN_ROOM) {
 				roomName = message[2].AsString();
 
@@ -152,12 +141,7 @@ namespace Colyseus
 
 				MessageEventArgs error = new MessageEventArgs(room, message);
 				room.EmitError (error);
-#if !WINDOWS_UWP
-                this.OnError.Emit(this, error);
-#else
                 this.OnError.Invoke(this, error);
-#endif
-
                 this.rooms.Remove (roomName);
 
 			} else if (code == Protocol.LEAVE_ROOM) {
@@ -192,11 +176,7 @@ namespace Colyseus
 			} else if (code == Protocol.ROOM_DATA) {
 				room = this.rooms [roomId];
 				room.ReceiveData (message [2]);
-#if !WINDOWS_UWP
-                this.OnMessage.Emit(this, new MessageEventArgs(room, message[2]));
-#else
                 this.OnMessage.Invoke(this, new MessageEventArgs(room, message[2]));
-#endif
             }
 		}
 
@@ -218,11 +198,7 @@ namespace Colyseus
 
 		private void OnErrorHandler(object sender, EventArgs args)
 		{
-#if !WINDOWS_UWP
-            this.OnError.Emit (sender, args);
-#else
             this.OnError.Invoke(sender, args);
-#endif
         }
 
 		/// <summary>

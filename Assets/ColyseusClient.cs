@@ -32,7 +32,7 @@ public class ColyseusClient : MonoBehaviour {
 
 		while (true)
 		{
-			colyseus.Recv();
+            colyseus.Recv();
 
 			// string reply = colyseus.RecvString();
 			if (colyseus.error != null)
