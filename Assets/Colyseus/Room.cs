@@ -4,10 +4,6 @@ using MsgPack;
 using MsgPack.Serialization;
 using UnityEngine;
 
-#if !WINDOWS_UWP
-using WebSocketSharp;
-#endif
-
 namespace Colyseus
 {
 	/// <summary>
