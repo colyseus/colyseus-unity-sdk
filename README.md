@@ -32,6 +32,7 @@ Room room = colyseus.Join ("room_name");
 room.OnUpdate += OnUpdate;
 ```
 
+
 **Getting the full room state**
 
 ```csharp
@@ -43,7 +44,7 @@ void OnUpdate (object sender, RoomUpdateEventArgs e)
 
 **Listening to additions on state**
 
-````csharp
+```csharp
 room.state.Listen ("players", "add", OnAddPlayer);
 ```
 
@@ -84,6 +85,13 @@ void OnPlayerRemoved (string[] path, MessagePackObject value)
 }
 ```
 
+## Building for Windows Store (Universal 10 / UWP)
+Build steps for UWP:
+- rename Colyseus/MsgPack/MsgPack.dll to something like MsgPack2.dll.
+- rename Colyseus/MsgPack/MsgPackUWP.dll to MsgPack.dll
+
+Otherwise, build process for Windows Store (Universal 10) will fail because the MsgPack-namespace can't be found.
+The Unity Player however should work as expected after this, despite the renaming.
 ## License
 
 MIT

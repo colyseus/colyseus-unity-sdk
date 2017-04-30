@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,7 +7,9 @@ using System.Reflection;
 using MsgPack;
 using MsgPack.Serialization;
 
+#if !WINDOWS_UWP
 using WebSocketSharp;
+#endif
 using UnityEngine;
 
 namespace Colyseus
@@ -86,22 +88,27 @@ namespace Colyseus
 			}
 		}
 
-		void OnCloseHandler (object sender, CloseEventArgs e)
+#if !WINDOWS_UWP
+        void OnCloseHandler (object sender, CloseEventArgs e)
 		{
 			this.OnClose.Emit (this, e);
 		}
+#else 
+        void OnCloseHandler(object sender, EventArgs e)
+        {
+            this.OnClose.Invoke(this, e);
+        }
+#endif
 
-		void ParseMessage (byte[] recv)
+        void ParseMessage (byte[] recv)
 		{
 			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (recv);
 
 			var message = raw.Value.AsList ();
 			var code = message [0].AsInt32 ();
 
-			Console.WriteLine(code);
-
-			// Parse roomId or roomName
-			Room room = null;
+            // Parse roomId or roomName
+            Room room = null;
 			int roomIdInt32 = 0;
 			string roomId = "0";
 			string roomName = null;
@@ -117,9 +124,8 @@ namespace Colyseus
 
 			if (code == Protocol.USER_ID) {
 				this.id = message [1].AsString ();
-				this.OnOpen.Emit (this, EventArgs.Empty);
-
-			} else if (code == Protocol.JOIN_ROOM) {
+                this.OnOpen.Invoke(this, EventArgs.Empty);
+            } else if (code == Protocol.JOIN_ROOM) {
 				roomName = message[2].AsString();
 
 				if (this.rooms.ContainsKey (roomName)) {
@@ -135,9 +141,8 @@ namespace Colyseus
 
 				MessageEventArgs error = new MessageEventArgs(room, message);
 				room.EmitError (error);
-				this.OnError.Emit(this, error);
-
-				this.rooms.Remove (roomName);
+                this.OnError.Invoke(this, error);
+                this.rooms.Remove (roomName);
 
 			} else if (code == Protocol.LEAVE_ROOM) {
 				room = this.rooms [roomId];
@@ -171,8 +176,8 @@ namespace Colyseus
 			} else if (code == Protocol.ROOM_DATA) {
 				room = this.rooms [roomId];
 				room.ReceiveData (message [2]);
-				this.OnMessage.Emit(this, new MessageEventArgs(room, message[2]));
-			}
+                this.OnMessage.Invoke(this, new MessageEventArgs(room, message[2]));
+            }
 		}
 
 		/// <summary>
@@ -193,8 +198,8 @@ namespace Colyseus
 
 		private void OnErrorHandler(object sender, EventArgs args)
 		{
-			this.OnError.Emit (sender, args);
-		}
+            this.OnError.Invoke(sender, args);
+        }
 
 		/// <summary>
 		/// Send data to all connected rooms.

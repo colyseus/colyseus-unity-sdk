@@ -7,6 +7,11 @@ using System.Text;
 using System.Collections;
 using UnityEngine;
 using System.Runtime.InteropServices;
+#if WINDOWS_UWP
+using System.Threading.Tasks;
+using Windows.Storage.Streams;
+using Windows.Networking.Sockets;
+#endif
 
 public class WebSocket
 {
@@ -80,7 +85,7 @@ public class WebSocket
 		while (SocketState(m_NativeRef) == 0)
 			yield return 0;
 	}
- 
+
 	public void Close()
 	{
 		SocketClose(m_NativeRef);
@@ -96,11 +101,101 @@ public class WebSocket
 			if (result == 0)
 				return null;
 
-			return Encoding.UTF8.GetString (buffer);				
+			return Encoding.UTF8.GetString (buffer);
+		}
+	}
+#elif WINDOWS_UWP
+  MessageWebSocket m_Socket;
+	Queue<byte[]> m_Messages = new Queue<byte[]>();
+	bool m_IsConnected = false;
+	string m_Error = null;
+
+	public IEnumerator Connect()
+	{
+		m_Socket = new MessageWebSocket();
+		m_Socket.Control.MessageType = SocketMessageType.Binary;
+    m_Socket.MessageReceived += M_Socket_MessageReceived;
+    m_Socket.Closed += M_Socket_Closed;
+    TryConnect();
+
+    while (!m_IsConnected && m_Error == null)
+      yield return 0;
+	}
+
+	private async void TryConnect()
+	{
+		Debug.Log("Trying to connect to: " + mUrl.ToString());
+    try
+    {
+        await m_Socket.ConnectAsync(mUrl);
+        m_IsConnected = true;
+        Debug.Log("Connected");
+    }
+    catch (Exception ex)
+    {
+        Debug.Log("Error while connecting!");
+        Debug.Log(ex.Source);
+        Debug.Log(ex.Message);
+        //Add code here to handle any exceptions
+    }
+  }
+
+    private void M_Socket_Closed(IWebSocket sender, WebSocketClosedEventArgs args)
+    {
+        m_Error = args.Reason;
+    }
+
+    private void M_Socket_MessageReceived(MessageWebSocket sender, MessageWebSocketMessageReceivedEventArgs args)
+    {
+        DataReader messageReader = args.GetDataReader();
+        messageReader.UnicodeEncoding = Windows.Storage.Streams.UnicodeEncoding.Utf8;
+
+        byte[] message = new byte[messageReader.UnconsumedBufferLength];
+        messageReader.ReadBytes(message);
+
+        m_Messages.Enqueue (message);
+    }
+
+    public void Send(byte[] buffer)
+	{
+        SendMessage(m_Socket, buffer);
+	}
+
+    private async Task SendMessage(MessageWebSocket webSock, byte[] buffer)
+    {
+        DataWriter messageWriter = new DataWriter(webSock.OutputStream);
+        messageWriter.ByteOrder = ByteOrder.BigEndian;
+        messageWriter.WriteBytes(buffer);
+
+        try {
+            await messageWriter.StoreAsync();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    public byte[] Recv()
+	{
+		if (m_Messages.Count == 0)
+			return null;
+		return m_Messages.Dequeue();
+	}
+
+	public void Close()
+	{
+        m_Socket.Close(1000, "");
+	}
+
+	public string error
+	{
+		get {
+			return m_Error;
 		}
 	}
 #else
-	WebSocketSharp.WebSocket m_Socket;
+    WebSocketSharp.WebSocket m_Socket;
 	Queue<byte[]> m_Messages = new Queue<byte[]>();
 	bool m_IsConnected = false;
 	string m_Error = null;
@@ -139,5 +234,5 @@ public class WebSocket
 			return m_Error;
 		}
 	}
-#endif 
+#endif
 }

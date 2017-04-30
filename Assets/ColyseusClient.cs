@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System;
 using Colyseus;
@@ -6,97 +6,98 @@ using MsgPack;
 
 public class ColyseusClient : MonoBehaviour {
 
-	Client colyseus;
-	Room chatRoom;
+    Client colyseus;
+    Room chatRoom;
+    public string serverName = "localhost";
+    public string port = "3553";
+    public string roomName = "chat";
 
-	// Use this for initialization
-	IEnumerator Start () {
-		colyseus = new Client("ws://localhost:3553");
-		colyseus.OnOpen += OnOpenHandler;
-		yield return StartCoroutine(colyseus.Connect());
+    // Use this for initialization
+    IEnumerator Start () {
+        String uri = "ws://" + serverName + ":" + port;
+        colyseus = new Client(uri);
+        colyseus.OnOpen += OnOpenHandler;
+        yield return StartCoroutine(colyseus.Connect());
 
-		chatRoom = colyseus.Join("chat");
-		chatRoom.OnJoin += OnRoomJoined;
-		chatRoom.OnUpdate += OnUpdateHandler;
+        chatRoom = colyseus.Join(roomName);
+        chatRoom.OnJoin += OnRoomJoined;
+        chatRoom.OnUpdate += OnUpdateHandler;
 
-		chatRoom.state.Listen ("players", "add", this.OnAddPlayer);
-		chatRoom.state.Listen ("players/:id/:axis", "replace", this.OnPlayerMove);
-		chatRoom.state.Listen ("players/:id", "remove", this.OnPlayerRemoved);
-		chatRoom.state.Listen (this.OnChangeFallback);
+        chatRoom.state.Listen ("players", "add", this.OnAddPlayer);
+        chatRoom.state.Listen ("players/:id/:axis", "replace", this.OnPlayerMove);
+        chatRoom.state.Listen ("players/:id", "remove", this.OnPlayerRemoved);
+        chatRoom.state.Listen (this.OnChangeFallback);
 
-		int i = 0;
+        int i = 0;
 
-		while (true)
-		{
-			colyseus.Recv();
+        while (true)
+        {
+            colyseus.Recv();
 
-			// string reply = colyseus.RecvString();
-			if (colyseus.error != null)
-			{
-				Debug.LogError ("Error: "+colyseus.error);
-				break;
-			}
+            // string reply = colyseus.RecvString();
+            if (colyseus.error != null)
+            {
+                Debug.LogError ("Error: "+colyseus.error);
+                break;
+            }
 
-			i++;
+            i++;
 
-			if (i % 50 == 0) {
-				chatRoom.Send("some_command");
-			}
+            if (i % 50 == 0) {
+                chatRoom.Send("some_command");
+            }
+            yield return 0;
+        }
 
-			yield return 0;
-		}
+        OnApplicationQuit();
+    }
 
-		OnApplicationQuit();
-	}
+    void OnOpenHandler (object sender, EventArgs e)
+    {
+        Debug.Log("Connected to server. Client id: " + colyseus.id);
+    }
 
-	void OnOpenHandler (object sender, EventArgs e)
-	{
-		Debug.Log("Connected to server. Client id: " + colyseus.id);
-	}
+    void OnRoomJoined (object sender, EventArgs e)
+    {
+        Debug.Log("Joined room successfully.");
+    }
 
-	void OnRoomJoined (object sender, EventArgs e)
-	{
-		Debug.Log("Joined room successfully.");
-	}
+    void OnAddPlayer (string[] path, MessagePackObject value)
+    {
+        Debug.Log ("OnAddPlayer");
+        Debug.Log (path[0]);
+        Debug.Log (value);
+    }
 
-	void OnAddPlayer (string[] path, MessagePackObject value)
-	{
-		Debug.Log ("OnAddPlayer");
-		Debug.Log (path[0]);
-		Debug.Log (value);
-	}
-
-	void OnPlayerMove (string[] path, MessagePackObject value)
-	{
-		Debug.Log ("OnPlayerMove");
-		Debug.Log (path[0]);
-		Debug.Log (value);
-	}
+    void OnPlayerMove (string[] path, MessagePackObject value)
+    {
+        Debug.Log ("OnPlayerMove");
+        Debug.Log (path[0]);
+        Debug.Log (value);
+    }
 
 	void OnPlayerRemoved (string[] path, MessagePackObject value)
-	{
-		Debug.Log ("OnPlayerRemoved");
-		Debug.Log (value);
-	}
+    {
+        Debug.Log ("OnPlayerRemoved");
+        Debug.Log (value);
+    }
 
-	void OnChangeFallback (string[] path, string operation, MessagePackObject value) 
-	{
-		Debug.Log ("OnChangeFallback");
-		Debug.Log (operation);
-		Debug.Log (path[0]);
-		Debug.Log (value);
-	}
-		
+    void OnChangeFallback (string[] path, string operation, MessagePackObject value)
+    {
+        Debug.Log ("OnChangeFallback");
+        Debug.Log (operation);
+        Debug.Log (path[0]);
+        Debug.Log (value);
+    }
 
-	void OnUpdateHandler (object sender, RoomUpdateEventArgs e)
-	{
-//		Debug.Log(e.state);
-	}
+    void OnUpdateHandler (object sender, RoomUpdateEventArgs e)
+    {
+        //Debug.Log(e.state);
+    }
 
-	void OnApplicationQuit()
-	{
-		// Ensure the connection with server is closed immediatelly
-		colyseus.Close();
-	}
-
+    void OnApplicationQuit()
+    {
+        // Ensure the connection with server is closed immediatelly
+        colyseus.Close();
+    }
 }

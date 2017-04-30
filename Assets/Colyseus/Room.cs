@@ -2,8 +2,7 @@
 
 using MsgPack;
 using MsgPack.Serialization;
-
-using WebSocketSharp;
+using UnityEngine;
 
 namespace Colyseus
 {
@@ -76,9 +75,9 @@ namespace Colyseus
 			get { return this._id; }
 			set {
 				this._id = value;
-				this.OnJoin.Emit (this, EventArgs.Empty);
-			}
-		}
+				this.OnJoin.Invoke(this, EventArgs.Empty);
+      }
+    }
 
 
 		public void SetState( MessagePackObject state, int remoteCurrentTime, int remoteElapsedTime)
@@ -90,9 +89,8 @@ namespace Colyseus
 
 			// Creates serializer.
 			var serializer = MessagePackSerializer.Get <MessagePackObject>();
+			this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, state, null));
 			this._previousState = serializer.PackSingleObject (state);
-
-			this.OnUpdate.Emit (this, new RoomUpdateEventArgs (this, state, null));
 		}
 
 		/// <summary>
@@ -102,9 +100,8 @@ namespace Colyseus
 		{
 			if (requestLeave && this._id > 0) {
 				this.Send (new object[]{ Protocol.LEAVE_ROOM, this._id });
-
 			} else {
-				this.OnLeave.Emit (this, EventArgs.Empty);
+				this.OnLeave.Invoke(this, EventArgs.Empty);
 			}
 		}
 
@@ -120,8 +117,8 @@ namespace Colyseus
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void ReceiveData (object data)
 		{
-			this.OnData.Emit (this, new MessageEventArgs (this, data));
-		}
+			this.OnData.Invoke(this, new MessageEventArgs(this, data));
+    }
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void ApplyPatch (byte[] delta)
@@ -133,15 +130,13 @@ namespace Colyseus
 
 			this.state.Set(newState);
 			//this.state = state
-
-			this.OnUpdate.Emit (this, new RoomUpdateEventArgs(this, this.state.data, null));
+			this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, this.state.data, null));
 		}
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
 		public void EmitError (MessageEventArgs args)
 		{
-			this.OnError.Emit (this, args);
+			this.OnError.Invoke(this, args);
 		}
 	}
 }
-
