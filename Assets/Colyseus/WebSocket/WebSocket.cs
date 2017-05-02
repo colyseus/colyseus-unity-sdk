@@ -114,31 +114,31 @@ public class WebSocket
 	{
 		m_Socket = new MessageWebSocket();
 		m_Socket.Control.MessageType = SocketMessageType.Binary;
-    m_Socket.MessageReceived += M_Socket_MessageReceived;
-    m_Socket.Closed += M_Socket_Closed;
-    TryConnect();
+		m_Socket.MessageReceived += M_Socket_MessageReceived;
+		m_Socket.Closed += M_Socket_Closed;
+		TryConnect();
 
-    while (!m_IsConnected && m_Error == null)
-      yield return 0;
+		while (!m_IsConnected && m_Error == null)
+		  yield return 0;
 	}
 
 	private async void TryConnect()
 	{
 		Debug.Log("Trying to connect to: " + mUrl.ToString());
-    try
-    {
-        await m_Socket.ConnectAsync(mUrl);
-        m_IsConnected = true;
-        Debug.Log("Connected");
-    }
-    catch (Exception ex)
-    {
-        Debug.Log("Error while connecting!");
-        Debug.Log(ex.Source);
-        Debug.Log(ex.Message);
-        //Add code here to handle any exceptions
-    }
-  }
+		try
+		{
+			await m_Socket.ConnectAsync(mUrl);
+			m_IsConnected = true;
+			Debug.Log("Connected");
+		}
+		catch (Exception ex)
+		{
+			Debug.Log("Error while connecting!");
+			Debug.Log(ex.Source);
+			Debug.Log(ex.Message);
+			//Add code here to handle any exceptions
+		}
+	}
 
     private void M_Socket_Closed(IWebSocket sender, WebSocketClosedEventArgs args)
     {
@@ -164,7 +164,6 @@ public class WebSocket
 		catch(Exception e){
 			Debug.Log("Exception while sending, error: " + e.Message);
 		}
-
 	}
 
     private async Task SendMessage(MessageWebSocket webSock, byte[] buffer)
@@ -174,13 +173,13 @@ public class WebSocket
         messageWriter.WriteBytes(buffer);
 
         try {
-					await messageWriter.StoreAsync();
-					await messageWriter.FlushAsync();
-					messageWriter.DetachStream();
+			await messageWriter.StoreAsync();
+			await messageWriter.FlushAsync();
+			messageWriter.DetachStream();
         }
         catch (Exception e)
         {
-					Debug.Log("Exception while sending message, error: " + e.Message);
+			Debug.Log("Exception while sending message, error: " + e.Message);
         }
     }
 
