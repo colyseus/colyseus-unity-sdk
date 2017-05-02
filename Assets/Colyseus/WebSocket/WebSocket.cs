@@ -156,9 +156,15 @@ public class WebSocket
         m_Messages.Enqueue (message);
     }
 
-    public void Send(byte[] buffer)
+    public async void Send(byte[] buffer)
 	{
-        SendMessage(m_Socket, buffer);
+		try {
+			await SendMessage(m_Socket, buffer);
+		}
+		catch(Exception e){
+			Debug.Log("Exception while sending, error: " + e.Message);
+		}
+
 	}
 
     private async Task SendMessage(MessageWebSocket webSock, byte[] buffer)
@@ -168,11 +174,13 @@ public class WebSocket
         messageWriter.WriteBytes(buffer);
 
         try {
-            await messageWriter.StoreAsync();
+					await messageWriter.StoreAsync();
+					await messageWriter.FlushAsync();
+					messageWriter.DetachStream();
         }
         catch (Exception e)
         {
-
+					Debug.Log("Exception while sending message, error: " + e.Message);
         }
     }
 
