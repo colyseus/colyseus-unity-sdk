@@ -3,6 +3,7 @@
 > Multiplayer Game Client for Unity.
 
 [![Join the chat at https://gitter.im/gamestdio/colyseus](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gamestdio/colyseus?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=N9C36SSE9ZCTS)
 
 C#/Unity client for [Colyseus](https://github.com/gamestdio/colyseus)
 Multiplayer Game Server.
