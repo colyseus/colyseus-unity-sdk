@@ -54,3 +54,6 @@ sysinfo.txt
 .vscode
 VSCode
 VSCode.meta
+
+# JetBrains
+.idea
