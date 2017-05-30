@@ -30,7 +30,7 @@ namespace Colyseus
             var s = mirrorPacked.GetType();
             var obj = (IndexedDictionary<string, object>)objPacked;
             if (mirrorPacked.GetType() == typeof(IndexedDictionary<string, object>))
-                mirrorPacked = Room.ConvertDictionary((IndexedDictionary<string, object>)mirrorPacked);
+                mirrorPacked = Utils.ConvertDictionary((IndexedDictionary<string, object>)mirrorPacked);
             var mirror = (Dictionary<string, object>)mirrorPacked;
 
 

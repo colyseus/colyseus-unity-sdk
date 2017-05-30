@@ -91,29 +91,17 @@ namespace Colyseus
             // Creates serializer.
             var stream = new MemoryStream();
             var s = (IndexedDictionary<string, object>)state;
-            var ss = ConvertDictionary(s);
+            var ss = Utils.ConvertDictionary(s);
 
             MsgPack.Serialize(ss, stream);
-            var ser = Client.StreamToBytes(stream);
+            var ser = stream.ToArray();
 
 
             this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, state, null));
             this._previousState = ser;
         }
 
-        public static Dictionary<string, object> ConvertDictionary(IndexedDictionary<string, object> dic)
-        {
-            var ss = new Dictionary<string, object>();
-            foreach (var keyValue in dic)
-            {
-                if (keyValue.Value.GetType() == typeof(IndexedDictionary<string, object>))
-                    ss.Add(keyValue.Key, ConvertDictionary((IndexedDictionary<string, object>)keyValue.Value));
-                else
-                    ss.Add(keyValue.Key, keyValue.Value);
-            }
 
-            return ss;
-        }
 
         /// <summary>
         /// Leave the room.

@@ -228,14 +228,11 @@ namespace Colyseus
         {
             var stream = new MemoryStream();
             MsgPack.Serialize(data, stream);
-            var ser = StreamToBytes(stream);
+            var ser = stream.ToArray();
             this.ws.Send(ser);
         }
 
-        public static byte[] StreamToBytes(MemoryStream input)
-        {
-            return input.ToArray();
-        }
+
 
         /// <summary>
         /// Close <see cref="Client"/> connection and leave all joined rooms.
