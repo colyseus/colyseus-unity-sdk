@@ -1,0 +1,266 @@
+[33mcommit 012a063a821bb6432f65a5db1c90f0a48a29914e[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Thu May 25 18:29:26 2017 +0200
+
+    update README: add PayPal donate button
+
+[33mcommit eea960251cf604b70eb73fccf49620e9381cc4bc[m
+Merge: 441432a 3951bc8
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Tue May 2 16:01:00 2017 +0200
+
+    Merge pull request #11 from niklaswolf/master
+    
+    (UWP) performance improvements and bugfix for SendMessage
+
+[33mcommit 3951bc8523abf25d84241c4ed52491b92b6a2683[m
+Author: Niklas Wolf <wolfniklas@web.de>
+Date:   Tue May 2 15:47:37 2017 +0200
+
+    tried to fix weird indentation problems
+
+[33mcommit b99fdc661f662682d3e9bf44ced6cac7e5905067[m
+Author: Niklas Wolf <wolfniklas@web.de>
+Date:   Tue May 2 15:43:06 2017 +0200
+
+    performance improvements and bugfix for SendMessage
+
+[33mcommit 441432a17341fddd2f2e9247a74e06c2b6c6e52f[m
+Merge: 0608369 1fc8b68
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sun Apr 30 14:40:58 2017 +0200
+
+    Merge pull request #10 from niklaswolf/master
+    
+    UWP (Win10) support
+
+[33mcommit 1fc8b6808fe1e48e3cf0ff13fe6ec27972b09051[m
+Merge: 8a67288 c26df05
+Author: Niklas Wolf <Niklas Wolf>
+Date:   Sun Apr 30 13:33:55 2017 +0200
+
+    Merge branch 'master' of https://github.com/niklaswolf/colyseus-unity3d-uwp
+
+[33mcommit 8a67288f2c4a68b292b1499be736bb731ac87e64[m
+Author: Niklas Wolf <Niklas Wolf>
+Date:   Sun Apr 30 13:33:38 2017 +0200
+
+    removed unused using directive of WebsocketSharp
+
+[33mcommit c26df05fbab66d0ba190fd2c8dc85a9ca60b1a46[m
+Author: Niklas Wolf <wolfniklas94@web.de>
+Date:   Sun Apr 30 13:27:15 2017 +0200
+
+    Added build steps for UWP
+
+[33mcommit 6662fbe794220c8b36f317ff3e6f6687449880a4[m
+Author: Niklas Wolf <Niklas Wolf>
+Date:   Sun Apr 30 13:21:02 2017 +0200
+
+    tried to fix indentation errors
+
+[33mcommit d135f393979fd0b183b4dc2f669ddfd27200b084[m
+Author: Niklas Wolf <Niklas Wolf>
+Date:   Sun Apr 30 13:03:27 2017 +0200
+
+    removed Emit-function calls in favour of Invoke
+
+[33mcommit c76f9057c96fa871b0de78bfe79828b37d59caa7[m
+Merge: cfee65a 0608369
+Author: Niklas Wolf <Niklas Wolf>
+Date:   Sun Apr 30 12:25:38 2017 +0200
+
+    Merge remote-tracking branch 'endel/master'
+
+[33mcommit cfee65afdb853823554aa21cc9620b18b6d91152[m
+Author: Niklas Wolf <wolfniklas@web.de>
+Date:   Wed Apr 26 12:07:21 2017 +0200
+
+    further cleanup
+
+[33mcommit 61fd13715c6780f6661a5d3439a49d063ad20d36[m
+Author: Niklas Wolf <wolfniklas@web.de>
+Date:   Wed Apr 26 11:31:59 2017 +0200
+
+    cleanup
+
+[33mcommit 06083696e4f65dd3125a5ef045b446182dcb13d6[m[33m ([m[1;33mtag: 0.4.1[m[33m)[m
+Merge: f349f3b 26c9400
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Tue Apr 25 20:48:20 2017 +0200
+
+    Merge pull request #9 from niklaswolf/dev
+    
+    fixed error for setting first state (issue #7)
+
+[33mcommit e5ffc6980b6abb271591f51504d380a0c0194105[m
+Author: Niklas Wolf <wolfniklas@web.de>
+Date:   Tue Apr 25 11:32:38 2017 +0200
+
+    removed helper as it's not needed anymore
+
+[33mcommit 5a0a6ced3f4eb06006ab79dbec3d558a51762861[m
+Merge: 790b494 26c9400
+Author: Niklas Wolf <wolfniklas@web.de>
+Date:   Tue Apr 25 11:30:34 2017 +0200
+
+    Merge branch 'dev'
+
+[33mcommit 26c940080b19e2651473cb4c2e075c1c4c13c1c9[m
+Author: Niklas Wolf <wolfniklas@web.de>
+Date:   Tue Apr 25 11:22:56 2017 +0200
+
+    fixed error for setting state
+
+[33mcommit 790b494cd9e02f6fc7f8f7c23379ce05f4f97ab8[m
+Author: Niklas Wolf <wolfniklas@web.de>
+Date:   Fri Apr 21 14:49:45 2017 +0200
+
+    Updated room name to match server
+
+[33mcommit fa200c39672b9f25860e20db20ec08b62fa9fd6f[m
+Author: Niklas Wolf <wolfniklas@web.de>
+Date:   Thu Apr 20 15:30:36 2017 +0200
+
+    Working connection
+
+[33mcommit 7f22b5d989d45816c49cd78fcade8b1b4afc6aee[m
+Author: Niklas Wolf <Niklas Wolf>
+Date:   Thu Apr 20 10:58:49 2017 +0200
+
+    =Rewrite UWP
+
+[33mcommit f349f3b55b41028f414aeed197262afc04a1976d[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Tue Apr 11 21:40:35 2017 +0200
+
+    upgrade colyseus server. fix server example.
+
+[33mcommit 1f1f54d091556140a0ff80cb8ee89fce2ba59f88[m[33m ([m[1;33mtag: 0.4.0[m[33m)[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sat Feb 18 23:01:49 2017 +0100
+
+    update README
+
+[33mcommit bcde1141c8f3e168dd1c0ecd34b41d14cc49361b[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sat Feb 18 23:01:22 2017 +0100
+
+    remove Makefile
+
+[33mcommit 656ec3850e020f5d6f69b3da420f5fbb2a193881[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sat Feb 18 23:00:10 2017 +0100
+
+    update README.
+
+[33mcommit 6c6b05b8525dc060c6ce674a40da75f4ad90e062[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sat Feb 18 22:56:28 2017 +0100
+
+    support fallback listener. #2
+
+[33mcommit 8fe6ba0393d2cff5e236bc0967fbce32bcb9f61d[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sat Feb 18 20:59:08 2017 +0100
+
+    fix matching path variables on listeners #2
+
+[33mcommit 15c9c1b2093d1bfff7226d0a903040abe3fa9b1a[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sat Feb 18 20:32:17 2017 +0100
+
+    porting delta-listener from javascript to c-sharp. #2
+
+[33mcommit b92adafd9518852442e67b3f8f3939492c6e69ca[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Thu Feb 16 23:20:33 2017 +0100
+
+    add yarn.lock file for dummy server
+
+[33mcommit 9d934179f670b635995520bc1dff37254c985bc0[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Thu Feb 16 23:20:16 2017 +0100
+
+    porting delta-listener to C#
+
+[33mcommit 72b42b7226f07543927184c2c24ae5dbbc7a64f2[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sun Nov 6 21:48:36 2016 +0100
+
+    add ExampleScene. update README.
+
+[33mcommit bc691a475dec175b72816c2392acd0c299c43179[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sun Nov 6 18:56:25 2016 +0100
+
+    major update for compatibility with server v0.4.0 #2
+    
+    - deprecate JSON libraries
+    - added Unity usage example
+    - using fixed DLL version of dependencies (MsgPack.Cli, websocket-sharp,
+    FossilDelta)
+
+[33mcommit 2a39435a2246d0fa23a8e8832d1be1f19b9d49db[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sat Nov 5 21:26:01 2016 +0100
+
+    refactoring to use FossilDelta
+
+[33mcommit be5333516708159ee1b223eebffbaf6058bfc54e[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sun Oct 9 04:01:07 2016 +0200
+
+    fix missing options on Client#join method
+
+[33mcommit 6a6ef5be3b2c51d5f4f1b9b7895f08ec70e50439[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Wed Mar 9 11:07:42 2016 +0000
+
+    add Makefile to publish nuget package
+
+[33mcommit c3ea41079ff3ad9a4dbbd5b8cc41b90fcb4d0119[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Thu Feb 25 23:37:31 2016 +0000
+
+    add binary dll file link to README.
+
+[33mcommit 69d0721a6a1ea020f2a723a085fe0c11b9ee0886[m[33m ([m[1;33mtag: 0.1.0[m[33m)[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Thu Feb 25 21:41:47 2016 +0000
+
+    add simple json patching method. working on net35 and Unity
+
+[33mcommit 11c76cb57090996825b3e7bce678df07cf86192d[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sat Feb 20 18:59:37 2016 +0000
+
+    fix nuspec files section. working on net45.
+
+[33mcommit cd4a1c506ee9d1d854483e9152c8628012b0f371[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Sat Feb 20 14:32:30 2016 +0000
+
+    add documentation to public methods
+
+[33mcommit db0acc5423156ca42a5f16e66feb1308920d5098[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Fri Feb 19 22:08:38 2016 +0000
+
+    update nuspec. refactor onmessage callback
+
+[33mcommit 5d05e7a1ec9d338517e65b401bd97ed4c612df77[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Fri Feb 19 00:57:30 2016 +0000
+
+    chat example working on gtk project
+
+[33mcommit 7ce2a10f0b0bdfa77358e2b96a59f59c8d2b0188[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Wed Feb 17 00:19:41 2016 +0000
+
+    rename RoomUpdateEventArgs state variable.
+
+[33mcommit 0c25eacf831c08db4c3da84bdf0ba6f685056234[m
+Author: Endel Dreyer <endel.dreyer@gmail.com>
+Date:   Wed Feb
