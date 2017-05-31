@@ -1,7 +1,7 @@
 ﻿using System;
-
-using MsgPack;
-using MsgPack.Serialization;
+using System.Collections.Generic;
+using System.IO;
+using GameDevWare.Serialization;
 using UnityEngine;
 
 namespace Colyseus
@@ -17,8 +17,8 @@ namespace Colyseus
 		/// </summary>
 		public String name;
 
-		public DeltaContainer state = new DeltaContainer(new MessagePackObject(new MessagePackObjectDictionary()));
-		//public MessagePackObject state;
+		public DeltaContainer state = new DeltaContainer(new IndexedDictionary<string, object>());
+		//public IndexedDictionary<string, object> state;
 
 		private int _id = 0;
 		private byte[] _previousState = null;
@@ -61,7 +61,7 @@ namespace Colyseus
 		/// The <see cref="Client"/> client connection instance.
 		/// </param>
 		/// <param name="name">The name of the room</param>
-		public Room (Client client, String name)
+		public Room(Client client, String name)
 		{
 			this.client = client;
 			this.name = name;
@@ -73,14 +73,15 @@ namespace Colyseus
 		public int id
 		{
 			get { return this._id; }
-			set {
+			set
+			{
 				this._id = value;
 				this.OnJoin.Invoke(this, EventArgs.Empty);
-      }
-    }
+			}
+		}
 
 
-		public void SetState( MessagePackObject state, int remoteCurrentTime, int remoteElapsedTime)
+		public void SetState(IndexedDictionary<string, object> state, double remoteCurrentTime, int remoteElapsedTime)
 		{
 			this.state.Set(state);
 
@@ -88,19 +89,29 @@ namespace Colyseus
 			// Create a "clock" for remoteCurrentTime / remoteElapsedTime to match the JavaScript API.
 
 			// Creates serializer.
-			var serializer = MessagePackSerializer.Get <MessagePackObject>();
+			var stream = new MemoryStream();
+			var s = (IndexedDictionary<string, object>) state;
+			var dic = Utils.ConvertIndexedDictionary(s);
+
+			MsgPack.Serialize(dic, stream);
+			var ser = stream.ToArray();
+
 			this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, state, null));
-			this._previousState = serializer.PackSingleObject (state);
+			this._previousState = ser;
 		}
+
 
 		/// <summary>
 		/// Leave the room.
 		/// </summary>
-		public void Leave (bool requestLeave = true)
+		public void Leave(bool requestLeave = true)
 		{
-			if (requestLeave && this._id > 0) {
-				this.Send (new object[]{ Protocol.LEAVE_ROOM, this._id });
-			} else {
+			if (requestLeave && this._id > 0)
+			{
+				this.Send(new object[] {Protocol.LEAVE_ROOM, this._id});
+			}
+			else
+			{
 				this.OnLeave.Invoke(this, EventArgs.Empty);
 			}
 		}
@@ -109,24 +120,24 @@ namespace Colyseus
 		/// Send data to this room.
 		/// </summary>
 		/// <param name="data">Data to be sent</param>
-		public void Send (object data)
+		public void Send(object data)
 		{
-			this.client.Send(new object[]{Protocol.ROOM_DATA, this._id, data});
+			this.client.Send(new object[] {Protocol.ROOM_DATA, this._id, data});
 		}
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
-		public void ReceiveData (object data)
+		public void ReceiveData(object data)
 		{
 			this.OnData.Invoke(this, new MessageEventArgs(this, data));
-    }
+		}
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
-		public void ApplyPatch (byte[] delta)
+		public void ApplyPatch(byte[] delta)
 		{
-			this._previousState = Fossil.Delta.Apply (this._previousState, delta);
+			this._previousState = Fossil.Delta.Apply(this._previousState, delta);
 
-			var serializer = MessagePackSerializer.Get <MessagePackObject>();
-			var newState = serializer.UnpackSingleObject (this._previousState);
+			var stream = new MemoryStream(this._previousState);
+			var newState = (IndexedDictionary<string, object>) MsgPack.Deserialize<object>(stream);
 
 			this.state.Set(newState);
 			//this.state = state
@@ -134,7 +145,7 @@ namespace Colyseus
 		}
 
 		/// <summary>Internal usage, shouldn't be called.</summary>
-		public void EmitError (MessageEventArgs args)
+		public void EmitError(MessageEventArgs args)
 		{
 			this.OnError.Invoke(this, args);
 		}

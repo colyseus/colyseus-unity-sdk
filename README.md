@@ -50,7 +50,7 @@ room.state.Listen ("players", "add", OnAddPlayer);
 ```
 
 ```csharp
-void OnAddPlayer (string[] path, MessagePackObject value)
+void OnAddPlayer (string[] path, Object value)
 {
 	Debug.Log ("OnAddPlayer");
 	Debug.Log (value);
@@ -64,7 +64,7 @@ room.state.Listen ("players/:id/:axis", "replace", OnPlayerMove);
 ```
 
 ```csharp
-void OnPlayerMove (string[] path, MessagePackObject value)
+void OnPlayerMove (string[] path, Object value)
 {
 	Debug.Log ("OnPlayerMove");
 	Debug.Log ("playerId: " + path[0] + ", axis: " + path[1]);
@@ -79,7 +79,7 @@ room.state.Listen ("players/:id", "remove", OnPlayerRemoved);
 ```
 
 ```csharp
-void OnPlayerRemoved (string[] path, MessagePackObject value)
+void OnPlayerRemoved (string[] path, Object value)
 {
 	Debug.Log ("OnPlayerRemoved");
 	Debug.Log ("playerId: " + path[0]);

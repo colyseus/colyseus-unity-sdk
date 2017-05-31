@@ -1,10 +1,8 @@
 ﻿using System;
-
-using MsgPack;
+using GameDevWare.Serialization;
 
 namespace Colyseus
 {
-
 	/// <summary>
 	/// Representation of a message received from the server.
 	/// </summary>
@@ -22,7 +20,7 @@ namespace Colyseus
 
 		/// <summary>
 		/// </summary>
-		public MessageEventArgs (Room room, object data = null)
+		public MessageEventArgs(Room room, object data = null)
 		{
 			this.room = room;
 			this.data = data;
@@ -42,7 +40,7 @@ namespace Colyseus
 		/// <summary>
 		/// New state of the <see cref="Room" />
 		/// </summary>
-		public MessagePackObject state;
+		public IndexedDictionary<string, object> state;
 
 		/// <summary>
 		/// Patches applied to the <see cref="Room" /> state.
@@ -51,7 +49,7 @@ namespace Colyseus
 
 		/// <summary>
 		/// </summary>
-		public RoomUpdateEventArgs (Room room, MessagePackObject state, string patches = null)
+		public RoomUpdateEventArgs(Room room, IndexedDictionary<string, object> state, string patches = null)
 		{
 			this.room = room;
 			this.state = state;
@@ -59,4 +57,3 @@ namespace Colyseus
 		}
 	}
 }
-

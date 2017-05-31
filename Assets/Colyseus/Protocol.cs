@@ -32,9 +32,9 @@ namespace Colyseus
 		/// <summary>When server sends <see cref="Room"/> state to its clients.</summary>
 		public static int ROOM_STATE_PATCH = 15;
 
-		// 
+		//
 		// Generic messages (50~60)
-		// 
+		//
 
 		/// <summary>When server doesn't understand a request, it returns <see cref="BAD_REQUEST"/> to the <see cref="Client"/></summary>
 		public static int BAD_REQUEST = 50;
@@ -42,4 +42,3 @@ namespace Colyseus
 		// public Protocol (){}
 	}
 }
-

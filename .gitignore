@@ -49,3 +49,11 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+
+# VSCode
+.vscode
+VSCode
+VSCode.meta
+
+# JetBrains
+.idea
