@@ -17,8 +17,8 @@ namespace Colyseus
         /// </summary>
         public String name;
 
-        public DeltaContainer state = new DeltaContainer(new Dictionary<string, object>());
-        //public Object state;
+        public DeltaContainer state = new DeltaContainer(new IndexedDictionary<string, object>());
+        //public IndexedDictionary<string, object> state;
 
         private int _id = 0;
         private byte[] _previousState = null;
@@ -81,7 +81,7 @@ namespace Colyseus
         }
 
 
-        public void SetState(object state, double remoteCurrentTime, int remoteElapsedTime)
+        public void SetState(IndexedDictionary<string, object> state, double remoteCurrentTime, int remoteElapsedTime)
         {
             this.state.Set(state);
 
@@ -91,7 +91,7 @@ namespace Colyseus
             // Creates serializer.
             var stream = new MemoryStream();
             var s = (IndexedDictionary<string, object>)state;
-            var ss = Utils.ConvertDictionary(s);
+            var ss = ConvertDictionary(s);
 
             MsgPack.Serialize(ss, stream);
             var ser = stream.ToArray();
@@ -99,6 +99,20 @@ namespace Colyseus
 
             this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, state, null));
             this._previousState = ser;
+        }
+
+        public static Dictionary<string, object> ConvertDictionary(IndexedDictionary<string, object> dic)
+        {
+            var newDic = new Dictionary<string, object>();
+            foreach (var keyValue in dic)
+            {
+                if (keyValue.Value.GetType() == typeof(IndexedDictionary<string, object>))
+                    newDic.Add(keyValue.Key, ConvertDictionary((IndexedDictionary<string, object>)keyValue.Value));
+                else
+                    newDic.Add(keyValue.Key, keyValue.Value);
+            }
+
+            return newDic;
         }
 
 
@@ -138,7 +152,7 @@ namespace Colyseus
             this._previousState = Fossil.Delta.Apply(this._previousState, delta);
 
             var stream = new MemoryStream(this._previousState);
-            var newState = MsgPack.Deserialize<object>(stream);
+            var newState = (IndexedDictionary<string, object>)MsgPack.Deserialize<object>(stream);
 
             this.state.Set(newState);
             //this.state = state
