@@ -108,20 +108,21 @@ namespace Colyseus
 			string roomId = "0";
 			string roomName = null;
 
-			// try
-			// {
-			//     var nInt = message[1] as int?;
-			//     roomIdInt32 = nInt.Value;
-			//     roomId = roomIdInt32.ToString();
-			// }
-			// catch (InvalidOperationException)
-			// {
-			//     try
-			//     {
-			//         roomName = (string)message[1];
-			//     }
-			//     catch (InvalidOperationException) { }
-			// }
+			try
+			{
+				roomIdInt32 = (byte) message[1];
+				roomId = roomIdInt32.ToString();
+			}
+			catch (Exception)
+			{
+				try
+				{
+					roomName = (string) message[1];
+				}
+				catch (Exception)
+				{
+				}
+			}
 
 			if (code == Protocol.USER_ID)
 			{
