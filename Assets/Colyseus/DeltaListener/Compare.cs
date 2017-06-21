@@ -86,7 +86,7 @@ namespace Colyseus
 				else
 				{
 					List<string> removePath = new List<string>(path);
-					removePath.Add(key.AsString());
+					removePath.Add(MessagePackObjectToStringKey(key));
 
 					patches.Add(new PatchObject
 					{
@@ -109,15 +109,7 @@ namespace Colyseus
 				{
 					List<string> addPath = new List<string>(path);
 					
-					if (key.UnderlyingType == typeof(string))
-					{
-						addPath.Add(key.AsString());
-					}
-					else if (key.UnderlyingType == typeof(Int32))
-					{
-						addPath.Add(key.AsInt32().ToString());
-					}
-					else throw new Exception("Invalid type of key");
+					addPath.Add(MessagePackObjectToStringKey(key));
 
 					patches.Add(new PatchObject
 					{
@@ -129,6 +121,19 @@ namespace Colyseus
 			}
 		}
 
+		private static string MessagePackObjectToStringKey(MessagePackObject key)
+		{
+			if (key.UnderlyingType == typeof(string))
+			{
+				return key.AsString();
+			}
+			else if (key.UnderlyingType == typeof(Int32))
+			{
+				return key.AsInt32().ToString();
+			}
+			else throw new Exception("Invalid type of key");
+		}
+
 		private static void ProcessValuePair(List<PatchObject> patches, List<string> path, MessagePackObject oldVal, MessagePackObject newVal,
 			MessagePackObject key)
 		{
@@ -136,7 +141,7 @@ namespace Colyseus
 			    (oldVal.IsArray && !oldVal.IsNil && newVal.IsArray && !newVal.IsNil))
 			{
 				List<string> deeperPath = new List<string>(path);
-				deeperPath.Add(key.AsString());
+				deeperPath.Add(MessagePackObjectToStringKey(key));
 
 				Generate(oldVal, newVal, patches, deeperPath);
 			}
@@ -147,7 +152,7 @@ namespace Colyseus
 					//changed = true;
 
 					List<string> replacePath = new List<string>(path);
-					replacePath.Add(key.AsString());
+					replacePath.Add(MessagePackObjectToStringKey(key));
 
 					patches.Add(new PatchObject
 					{
