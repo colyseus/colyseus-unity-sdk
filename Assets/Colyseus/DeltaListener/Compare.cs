@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MsgPack;
 using MsgPack.Serialization;
 
@@ -28,14 +29,51 @@ namespace Colyseus
 		// Dirty check if obj is different from mirror, generate patches and update mirror
 		protected static void Generate(MessagePackObject mirrorPacked, MessagePackObject objPacked, List<PatchObject> patches, List<string> path)
 		{
-			MessagePackObjectDictionary mirror = mirrorPacked.AsDictionary();
-			MessagePackObjectDictionary obj = objPacked.AsDictionary();
-			
-			var newKeys = obj.Keys;
-			var oldKeys = mirror.Keys;
-			//var changed = false;
-			var deleted = false;
+			if (mirrorPacked.IsArray && objPacked.IsArray)
+			{
+				//this is fix for arrays & lists
+				var mirrorList = mirrorPacked.AsList();
+				var objList = objPacked.AsList();
 
+				//fake the dictionaries for ProcessCollection
+				int i = 0;
+				var mirrorDict = mirrorList.ToDictionary(k =>
+				{
+					MessagePackObject key = MessagePackObject.FromObject(i);
+					i++;
+					return key;
+				}, v=>v);
+				i = 0;
+				var objDict = objList.ToDictionary(k =>
+				{
+					MessagePackObject key = MessagePackObject.FromObject(i);
+					i++;
+					return key;
+				}, v => v);
+
+				var newKeys = objDict.Keys;
+				var oldKeys = mirrorDict.Keys;
+
+				//do it the same way - original way as it was - as with dictionary
+				ProcessCollection(objPacked, patches, path, oldKeys, objDict, mirrorDict, newKeys);
+			}
+			else
+			{
+				//this was originally here - just for dictionaries
+				MessagePackObjectDictionary mirrorDict = mirrorPacked.AsDictionary();
+				MessagePackObjectDictionary objDict = objPacked.AsDictionary();
+
+				var newKeys = objDict.Keys;
+				var oldKeys = mirrorDict.Keys;
+
+				ProcessCollection(objPacked, patches, path, oldKeys, objDict, mirrorDict, newKeys);
+			}
+		}
+
+		private static void ProcessCollection(MessagePackObject objPacked, List<PatchObject> patches, List<string> path, ICollection<MessagePackObject> oldKeys,
+			IDictionary<MessagePackObject, MessagePackObject> obj, IDictionary<MessagePackObject, MessagePackObject> mirror, ICollection<MessagePackObject> newKeys)
+		{
+			bool deleted = false;
 			foreach (var key in oldKeys)
 			{
 				if (obj.ContainsKey(key) && !(!obj.ContainsKey(key) && mirror.ContainsKey(key) && !objPacked.IsArray))
@@ -43,30 +81,10 @@ namespace Colyseus
 					var oldVal = mirror[key];
 					var newVal = obj[key];
 
-					if (oldVal.IsDictionary && !oldVal.IsNil && newVal.IsDictionary  && !newVal.IsNil)
-					{
-						List<string> deeperPath = new List<string>(path);
-						deeperPath.Add(key.AsString());
-
-						Generate(oldVal, newVal, patches, deeperPath);
-					} else {
-						if (oldVal != newVal)
-						{
-							//changed = true;
-
-							List<string> replacePath = new List<string>(path);
-							replacePath.Add(key.AsString());
-
-							patches.Add(new PatchObject
-							{
-								op = "replace",
-								path = replacePath.ToArray(),
-								value = newVal
-							});
-						}
-					}
+					ProcessValuePair(patches, path, oldVal, newVal, key);
 				}
-				else {
+				else
+				{
 					List<string> removePath = new List<string>(path);
 					removePath.Add(key.AsString());
 
@@ -80,17 +98,26 @@ namespace Colyseus
 				}
 			}
 
-			if (!deleted && newKeys.Count == oldKeys.Count) {
-		        return;
-		    }
+			if (!deleted && newKeys.Count == oldKeys.Count)
+			{
+				return;
+			}
 
 			foreach (var key in newKeys)
 			{
-
 				if (!mirror.ContainsKey(key) && obj.ContainsKey(key))
 				{
 					List<string> addPath = new List<string>(path);
-					addPath.Add(key.AsString());
+					
+					if (key.UnderlyingType == typeof(string))
+					{
+						addPath.Add(key.AsString());
+					}
+					else if (key.UnderlyingType == typeof(Int32))
+					{
+						addPath.Add(key.AsInt32().ToString());
+					}
+					else throw new Exception("Invalid type of key");
 
 					patches.Add(new PatchObject
 					{
@@ -100,7 +127,36 @@ namespace Colyseus
 					});
 				}
 			}
+		}
 
+		private static void ProcessValuePair(List<PatchObject> patches, List<string> path, MessagePackObject oldVal, MessagePackObject newVal,
+			MessagePackObject key)
+		{
+			if ((oldVal.IsDictionary && !oldVal.IsNil && newVal.IsDictionary && !newVal.IsNil) ||
+			    (oldVal.IsArray && !oldVal.IsNil && newVal.IsArray && !newVal.IsNil))
+			{
+				List<string> deeperPath = new List<string>(path);
+				deeperPath.Add(key.AsString());
+
+				Generate(oldVal, newVal, patches, deeperPath);
+			}
+			else
+			{
+				if (oldVal != newVal)
+				{
+					//changed = true;
+
+					List<string> replacePath = new List<string>(path);
+					replacePath.Add(key.AsString());
+
+					patches.Add(new PatchObject
+					{
+						op = "replace",
+						path = replacePath.ToArray(),
+						value = newVal
+					});
+				}
+			}
 		}
 	}
 }

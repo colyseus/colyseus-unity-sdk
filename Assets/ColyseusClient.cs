@@ -23,7 +23,7 @@ public class ColyseusClient : MonoBehaviour {
         chatRoom.OnJoin += OnRoomJoined;
         chatRoom.OnUpdate += OnUpdateHandler;
 
-        chatRoom.state.Listen ("players", "add", this.OnAddPlayer);
+        chatRoom.state.Listen ("players/:id", "add", this.OnAddPlayer);
         chatRoom.state.Listen ("players/:id/:axis", "replace", this.OnPlayerMove);
         chatRoom.state.Listen ("players/:id", "remove", this.OnPlayerRemoved);
         chatRoom.state.Listen (this.OnChangeFallback);
