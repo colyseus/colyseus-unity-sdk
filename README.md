@@ -7,10 +7,10 @@
 	<a href="https://npmjs.com/package/colyseus">
 		<img src="https://img.shields.io/npm/dm/colyseus.svg">
 	</a>
-  <a href="#sponsors">
+	<a href="https://github.com/gamestdio/colyseus#sponsors">
 		<img src="https://opencollective.com/colyseus/sponsors/badge.svg">
 	</a>
-	<a href="#backers">
+	<a href="https://github.com/gamestdio/colyseus#backers">
 		<img src="https://opencollective.com/colyseus/backers/badge.svg">
 	</a>
 	<a href="https://gitter.im/gamestdio/colyseus">
