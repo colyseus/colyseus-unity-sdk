@@ -8,7 +8,7 @@ namespace Colyseus
 	public struct PatchObject
 	{
 		public string[] path;
-		public string op; // : "add" | "remove" | "replace";
+		public string operation; // : "add" | "remove" | "replace";
 		public MessagePackObject value;
 	}
 
@@ -59,7 +59,7 @@ namespace Colyseus
 
 							patches.Add(new PatchObject
 							{
-								op = "replace",
+								operation = "replace",
 								path = replacePath.ToArray(),
 								value = newVal
 							});
@@ -72,7 +72,7 @@ namespace Colyseus
 
 					patches.Add(new PatchObject
 					{
-						op = "remove",
+						operation = "remove",
 						path = removePath.ToArray()
 					});
 
@@ -94,7 +94,7 @@ namespace Colyseus
 
 					patches.Add(new PatchObject
 					{
-						op = "add",
+						operation = "add",
 						path = addPath.ToArray(),
 						value = obj[key]
 					});

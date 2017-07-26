@@ -1,26 +1,34 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
+using System.Collections;
 using System.Collections.Generic;
 
 using MsgPack;
 
 namespace Colyseus
 {
-	using PatchListener = Listener<Action<string[], MessagePackObject>>;
-	using FallbackPatchListener = Listener<Action<string[], string, MessagePackObject>>;
+	using PatchListener = Listener<Action<DataChange>>;
+	using FallbackPatchListener = Listener<Action<PatchObject>>;
+
+	public struct DataChange
+	{
+		public Dictionary<string, string> path;
+		public string operation; // : "add" | "remove" | "replace";
+		public MessagePackObject value;
+	}
 
 	public struct Listener<T>
 	{
 		public T callback;
-		public string operation;
 		public Regex[] rules;
+		public string[] rawRules;
 	}
 
 	public class DeltaContainer
 	{
 		public MessagePackObject data;
-		private Dictionary<string, List<PatchListener>> listeners;
-		private List<FallbackPatchListener> fallbackListeners;
+		private List<PatchListener> listeners;
+		private FallbackPatchListener defaultListener;
 
 		private Dictionary<string, Regex> matcherPlaceholders = new Dictionary<string, Regex>()
 		{
@@ -28,7 +36,7 @@ namespace Colyseus
 			{ ":number", new Regex(@"^([0-9]+)$") },
 			{ ":string", new Regex(@"^(\w+)$") },
 			{ ":axis", new Regex(@"^([xyz])$") },
-			{ "*", new Regex(@"(.*)") },
+			{ ":*", new Regex(@"(.*)") },
 		};
 
 		public DeltaContainer (MessagePackObject data)
@@ -55,11 +63,10 @@ namespace Colyseus
 		{
 			FallbackPatchListener listener = new FallbackPatchListener {
 				callback = callback,
-				operation = "",
 				rules = new Regex[]{}
 			};
 
-			this.fallbackListeners.Add(listener);
+			this.defaultListener = listener;
 
 			return listener;
 		}
@@ -69,22 +76,21 @@ namespace Colyseus
 
 			PatchListener listener = new PatchListener {
 	            callback = callback,
-	            operation = operation,
 	            rules = regexpRules
 			};
 
-			this.listeners[operation].Add(listener);
+			this.listeners.Add(listener);
 
 	        return listener;
 		}
 
 		public void RemoveListener(PatchListener listener)
 		{
-			for (var i = this.listeners[listener.operation].Count - 1; i >= 0; i--)
+			for (var i = this.listeners.Count - 1; i >= 0; i--)
 			{
-				if (this.listeners[listener.operation][i].Equals(listener))
+				if (this.listeners[i].Equals(listener))
 				{
-					this.listeners[listener.operation].RemoveAt(i);
+					this.listeners.RemoveAt(i);
 				}
 			}
 		}
@@ -108,7 +114,7 @@ namespace Colyseus
 						regexpRules[i] = this.matcherPlaceholders[segment];
 					}
 					else {
-						regexpRules[i] = this.matcherPlaceholders["*"];
+						regexpRules[i] = this.matcherPlaceholders[":*"];
 					}
 
 				} else {
@@ -125,63 +131,59 @@ namespace Colyseus
 			for (var i = patches.Length - 1; i >= 0; i--)
 			{
 				var matched = false;
-				var op = patches[i].op;
-				for (var j = 0; j < this.listeners[op].Count; j++)
+
+				for (var j = 0; j < this.listeners.Count; j++)
 				{
-					var listener = this.listeners[op][j];
-					var matches = this.CheckPatch(patches[i], listener);
-					if (matches.Length > 0)
+					var listener = this.listeners[j];
+					var pathVariables = this.GetPathVariables(patches[i], listener);
+					if (pathVariables.Count > 0)
 					{
-						listener.callback.Invoke (matches, patches[i].value);
+						var dataChange = new DataChange ();
+						dataChange.path = pathVariables;
+						dataChange.operation = patches [i].operation;
+						dataChange.value = patches [i].value;
+
+						listener.callback.Invoke (dataChange);
 						matched = true;
 					}
 				}
 
 				// check for fallback listener
-				var fallbackListenersCount = this.fallbackListeners.Count;
-				if (!matched && fallbackListenersCount > 0)
+				if (!matched && this.defaultListener != null)
 				{
-					for (var j = 0; j < fallbackListenersCount; j++)
-					{
-						this.fallbackListeners [j].callback.Invoke (patches [i].path, patches [i].op, patches [i].value);
-					}
+					this.defaultListener.callback.Invoke (patches [i]);
 				}
 
 			}
 
 		}
 
-		private string[] CheckPatch(PatchObject patch, PatchListener listener) {
+		private Dictionary<string, string> GetPathVariables(PatchObject patch, PatchListener listener) {
+			var result = new Dictionary<string, string> ();
+
 	        // skip if rules count differ from patch
 	        if (patch.path.Length != listener.rules.Length) {
-				return new string[] { };
+				return result;
 	        }
-
-			List<string> pathVars = new List<string>();
 
 			for (var i = 0; i < listener.rules.Length; i++) {
 				var matches = listener.rules[i].Matches(patch.path[i]);
 				if (matches.Count == 0 || matches.Count > 2) {
-	                return new string[] { };
+					return result;
 
-				} else if ( matches[0].Groups.Count > 1 ) {
-					pathVars.Add(matches[0].ToString());
-					// pathVars = pathVars.concat(matches.slice(1));
+
+				} else if (listener.rawRules[i][0] == ":") {
+					result.Add ( listener.rawRules[i].Substring(1), matches[0].ToString() );
 	            }
 	        }
 
-			return pathVars.ToArray();
+			return result;
 	    }
 
 	    private void Reset()
 		{
-			this.listeners = new Dictionary<string, List<PatchListener>>()
-			{
-				{ "add", new List<PatchListener>() },
-				{ "remove", new List<PatchListener>() },
-				{ "replace", new List<PatchListener>() }
-	        };
-			this.fallbackListeners = new List<FallbackPatchListener>();
+			this.listeners = new List<PatchListener> ();
+			this.defaultListener = null;
 	    }
 
 	}
