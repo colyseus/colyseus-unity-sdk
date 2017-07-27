@@ -118,7 +118,7 @@ namespace Colyseus
 					}
 
 				} else {
-					regexpRules[i] = new Regex(segment);
+					regexpRules[i] = new Regex("^" + segment + "$");
 				}
 			}
 

@@ -7,9 +7,6 @@ using System.Reflection;
 using MsgPack;
 using MsgPack.Serialization;
 
-#if !WINDOWS_UWP
-using WebSocketSharp;
-#endif
 using UnityEngine;
 
 namespace Colyseus
@@ -25,11 +22,13 @@ namespace Colyseus
 		/// <summary>
 		/// Unique <see cref="Client"/> identifier.
 		/// </summary>
-		public string id = null;
-		public WebSocket ws;
-		private Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
+		public string id;
+		protected UriBuilder endpoint;
 
-		// Events
+		protected Room room;
+		protected Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
+
+		protected Connection connection;
 
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> connection has been established, and Client <see cref="id"/> is available.
@@ -51,9 +50,6 @@ namespace Colyseus
 		/// </summary>
 		public event EventHandler<MessageEventArgs> OnMessage;
 
-		// TODO: implement auto-reconnect feature
-		// public event EventHandler OnReconnect;
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Client"/> class with
 		/// the specified Colyseus Game Server Server endpoint.
@@ -61,123 +57,32 @@ namespace Colyseus
 		/// <param name="endpoint">
 		/// A <see cref="string"/> that represents the WebSocket URL to connect.
 		/// </param>
-		public Client (string endpoint)
+		public Client (string endpoint, string id = "")
 		{
+			this.id = id;
+
+			// Prepare MessagePack Serializers
 			MessagePackSerializer.PrepareType<MessagePackObject>();
 			MessagePackSerializer.PrepareType<object[]>();
 			MessagePackSerializer.PrepareType<byte[]>();
 
-			this.ws = new WebSocket (new Uri(endpoint));
-
-			//this.ws.OnMessage += OnMessageHandler;
-			//this.ws.OnClose += OnCloseHandler;
-			//this.ws.OnError += OnErrorHandler;
+			this.endpoint = new UriBuilder(new Uri (endpoint));
+			this.endpoint.Query = "colyseusid=" + this.id;
+			this.connection = new Connection (this.endpoint.Uri);
 		}
 
 		public IEnumerator Connect()
 		{
-			return this.ws.Connect();
+			return this.connection.Connect ();
 		}
 
 		public void Recv()
 		{
-			byte[] data = this.ws.Recv();
+			byte[] data = this.connection.Recv();
 			if (data != null)
 			{
 				this.ParseMessage(data);
 			}
-		}
-
-#if !WINDOWS_UWP
-        void OnCloseHandler (object sender, CloseEventArgs e)
-		{
-			this.OnClose.Emit (this, e);
-		}
-#else 
-        void OnCloseHandler(object sender, EventArgs e)
-        {
-            this.OnClose.Invoke(this, e);
-        }
-#endif
-
-        void ParseMessage (byte[] recv)
-		{
-			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (recv);
-
-			var message = raw.Value.AsList ();
-			var code = message [0].AsInt32 ();
-
-            // Parse roomId or roomName
-            Room room = null;
-			int roomIdInt32 = 0;
-			string roomId = "0";
-			string roomName = null;
-
-			try {
-				roomIdInt32 = message[1].AsInt32();
-				roomId = roomIdInt32.ToString();
-			} catch (InvalidOperationException) {
-				try {
-					roomName = message[1].AsString();
-				} catch (InvalidOperationException) {}
-			}
-
-			if (code == Protocol.USER_ID) {
-				this.id = message [1].AsString ();
-                this.OnOpen.Invoke(this, EventArgs.Empty);
-            } else if (code == Protocol.JOIN_ROOM) {
-				roomName = message[2].AsString();
-
-				if (this.rooms.ContainsKey (roomName)) {
-					this.rooms [roomId] = this.rooms [roomName];
-					this.rooms.Remove (roomName);
-				}
-
-				room = this.rooms [roomId];
-				room.id = roomIdInt32;
-
-			} else if (code == Protocol.JOIN_ERROR) {
-				room = this.rooms [roomName];
-
-				MessageEventArgs error = new MessageEventArgs(room, message);
-				room.EmitError (error);
-                this.OnError.Invoke(this, error);
-                this.rooms.Remove (roomName);
-
-			} else if (code == Protocol.LEAVE_ROOM) {
-				room = this.rooms [roomId];
-				room.Leave (false);
-
-			} else if (code == Protocol.ROOM_STATE) {
-
-				var state = message [2];
-				var remoteCurrentTime = message [3].AsInt32();
-				var remoteElapsedTime = message [4].AsInt32();
-
-				room = this.rooms [roomId];
-				// JToken.Parse (message [2].ToString ())
-				room.SetState (state, remoteCurrentTime, remoteElapsedTime);
-
-			} else if (code == Protocol.ROOM_STATE_PATCH) {
-				room = this.rooms [roomId];
-
-				IList<MessagePackObject> patchBytes = message [2].AsList();
-				byte[] patches = new byte[patchBytes.Count];
-
-				int idx = 0;
-				foreach (MessagePackObject obj in patchBytes)
-				{
-					patches[idx] = obj.AsByte();
-					idx++;
-				}
-
-				room.ApplyPatch (patches);
-
-			} else if (code == Protocol.ROOM_DATA) {
-				room = this.rooms [roomId];
-				room.ReceiveData (message [2]);
-                this.OnMessage.Invoke(this, new MessageEventArgs(room, message[2]));
-            }
 		}
 
 		/// <summary>
@@ -187,19 +92,52 @@ namespace Colyseus
 		/// <param name="options">Custom join request options</param>
 		public Room Join (string roomName, object options = null)
 		{
-			if (!this.rooms.ContainsKey (roomName)) {
-				this.rooms.Add (roomName, new Room (this, roomName));
-			}
+			this.room = new Room (roomName);
 
-			this.Send(new object[]{Protocol.JOIN_ROOM, roomName, options});
+			this.connection.Send (new object[]{Protocol.JOIN_ROOM, roomName, options});
 
-			return this.rooms[ roomName ];
+			return this.room;
 		}
 
-		private void OnErrorHandler(object sender, EventArgs args)
+        void ParseMessage (byte[] recv)
 		{
-            this.OnError.Invoke(sender, args);
-        }
+			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (recv);
+
+			var message = raw.Value.AsList ();
+			var code = message [0].AsInt32 ();
+
+			if (code == Protocol.USER_ID) {
+				this.id = message [1].AsString ();
+
+				if (this.OnOpen != null)
+					this.OnOpen.Invoke (this, EventArgs.Empty);
+
+			} else if (code == Protocol.JOIN_ROOM) {
+				var room = this.room;
+				room.id = message [1].AsString ();
+
+				this.endpoint.Path = "/" + room.id;
+				this.endpoint.Query = "colyseusid=" + this.id;
+
+				room.Connect (new Connection (this.endpoint.Uri));
+				room.OnLeave += OnLeaveRoom;
+
+				this.rooms.Add (room.id, room);
+
+			} else if (code == Protocol.JOIN_ERROR) {
+				if (this.OnError != null)
+					this.OnError.Invoke (this, new ErrorEventArgs (message [2].AsString ()));
+
+			} else {
+				if (this.OnMessage != null)
+					this.OnMessage.Invoke (this, new MessageEventArgs (message));
+            }
+		}
+
+		protected void OnLeaveRoom (Room sender) 
+		{
+			this.rooms.Remove (sender.id);
+		}
 
 		/// <summary>
 		/// Send data to all connected rooms.
@@ -208,7 +146,8 @@ namespace Colyseus
 		public void Send (object[] data)
 		{
 			var serializer = MessagePackSerializer.Get<object[]>();
-			this.ws.Send(serializer.PackSingleObject(data));
+
+			this.connection.Send(serializer.PackSingleObject(data));
 		}
 
 		/// <summary>
@@ -216,12 +155,12 @@ namespace Colyseus
 		/// </summary>
 		public void Close()
 		{
-			this.ws.Close();
+			this.connection.Close();
 		}
 
 		public string error
 		{
-			get { return this.ws.error; }
+			get { return this.connection.error; }
 		}
 	}
 

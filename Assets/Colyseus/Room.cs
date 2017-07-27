@@ -1,5 +1,5 @@
-﻿using System;
-
+using System;
+using System.Collections.Generic;
 using MsgPack;
 using MsgPack.Serialization;
 using UnityEngine;
@@ -8,20 +8,14 @@ namespace Colyseus
 {
 	/// <summary>
 	/// </summary>
-	public class Room
+	public class Room : DeltaContainer
 	{
-		private Client client;
+		public string id;
+		public string name;
+		public string sessionId;
 
-		/// <summary>
-		/// Name of the <see cref="Room"/>.
-		/// </summary>
-		public String name;
-
-		public DeltaContainer state = new DeltaContainer(new MessagePackObject(new MessagePackObjectDictionary()));
-		//public MessagePackObject state;
-
-		private int _id = 0;
-		private byte[] _previousState = null;
+		protected Connection connection;
+		protected byte[] _previousState = null;
 
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> successfully connects to the <see cref="Room"/>.
@@ -61,47 +55,39 @@ namespace Colyseus
 		/// The <see cref="Client"/> client connection instance.
 		/// </param>
 		/// <param name="name">The name of the room</param>
-		public Room (Client client, String name)
+		public Room (String name) 
+			: base(new MessagePackObject(new MessagePackObjectDictionary()))
 		{
-			this.client = client;
 			this.name = name;
 		}
 
-		/// <summary>
-		/// Contains the id of this room, used internally for communication.
-		/// </summary>
-		public int id
+		public void Connect (Connection connection)
 		{
-			get { return this._id; }
-			set {
-				this._id = value;
-				this.OnJoin.Invoke(this, EventArgs.Empty);
-      }
-    }
-
+			this.connection = connection;
+//			this.connection.onmessage = this.onMessageCallback.bind(this);
+//			this.connection.onclose = (e) => this.onLeave.dispatch();
+		}
 
 		public void SetState( MessagePackObject state, int remoteCurrentTime, int remoteElapsedTime)
 		{
-			this.state.Set(state);
-
-			// TODO:
-			// Create a "clock" for remoteCurrentTime / remoteElapsedTime to match the JavaScript API.
+			this.Set(state);
 
 			// Creates serializer.
 			var serializer = MessagePackSerializer.Get <MessagePackObject>();
-			this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, state, null));
+
+			if (this.OnUpdate != null)
+				this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(state, true));
+
 			this._previousState = serializer.PackSingleObject (state);
 		}
 
 		/// <summary>
 		/// Leave the room.
 		/// </summary>
-		public void Leave (bool requestLeave = true)
+		public void Leave ()
 		{
-			if (requestLeave && this._id > 0) {
-				this.Send (new object[]{ Protocol.LEAVE_ROOM, this._id });
-			} else {
-				this.OnLeave.Invoke(this, EventArgs.Empty);
+			if (this.id != null) {
+				this.Send (new object[]{ Protocol.LEAVE_ROOM, this.id });
 			}
 		}
 
@@ -111,32 +97,66 @@ namespace Colyseus
 		/// <param name="data">Data to be sent</param>
 		public void Send (object data)
 		{
-			this.client.Send(new object[]{Protocol.ROOM_DATA, this._id, data});
+			this.connection.Send(new object[]{Protocol.ROOM_DATA, this.id, data});
 		}
 
-		/// <summary>Internal usage, shouldn't be called.</summary>
-		public void ReceiveData (object data)
+		protected void ParseMessage (byte[] recv)
 		{
-			this.OnData.Invoke(this, new MessageEventArgs(this, data));
-    }
+			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (recv);
 
-		/// <summary>Internal usage, shouldn't be called.</summary>
-		public void ApplyPatch (byte[] delta)
+			var message = raw.Value.AsList ();
+			var code = message [0].AsInt32 ();
+
+			if (code == Protocol.JOIN_ROOM) {
+				this.sessionId = message [1].AsString ();
+
+				if (this.OnJoin != null)
+					this.OnJoin.Invoke (this);
+
+			} else if (code == Protocol.JOIN_ERROR) {
+				if (this.OnError != null)
+					this.OnError.Invoke (this, new ErrorEventArgs(message [2].AsString ()));
+
+			} else if (code == Protocol.LEAVE_ROOM) {
+				this.Leave ();
+
+			} else if (code == Protocol.ROOM_STATE) {
+				var state = message [2];
+				var remoteCurrentTime = message [3].AsInt32();
+				var remoteElapsedTime = message [4].AsInt32();
+
+				this.SetState (state, remoteCurrentTime, remoteElapsedTime);
+
+			} else if (code == Protocol.ROOM_STATE_PATCH) {
+				IList<MessagePackObject> patchBytes = message [2].AsList();
+				byte[] patches = new byte[patchBytes.Count];
+
+				int idx = 0;
+				foreach (MessagePackObject obj in patchBytes)
+				{
+					patches[idx] = obj.AsByte();
+					idx++;
+				}
+
+				this.Patch (patches);
+
+			} else if (code == Protocol.ROOM_DATA) {
+				if (this.OnData != null)
+					this.OnData.Invoke(this, new MessageEventArgs(message[2]));
+			}
+		}
+
+		protected void Patch (byte[] delta)
 		{
 			this._previousState = Fossil.Delta.Apply (this._previousState, delta);
 
 			var serializer = MessagePackSerializer.Get <MessagePackObject>();
 			var newState = serializer.UnpackSingleObject (this._previousState);
 
-			this.state.Set(newState);
-			//this.state = state
-			this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this, this.state.data, null));
-		}
+			this.Set(newState);
 
-		/// <summary>Internal usage, shouldn't be called.</summary>
-		public void EmitError (MessageEventArgs args)
-		{
-			this.OnError.Invoke(this, args);
+			if (this.OnUpdate != null)
+				this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this.data));
 		}
 	}
 }

@@ -4,6 +4,23 @@ using MsgPack;
 
 namespace Colyseus
 {
+	/// <summary>
+	/// Representation of a message received from the server.
+	/// </summary>
+	public class ErrorEventArgs : EventArgs
+	{
+		/// <summary>
+		/// The error message
+		/// </summary>
+		public string message = null;
+
+		/// <summary>
+		/// </summary>
+		public ErrorEventArgs (string message)
+		{
+			this.message = message;
+		}
+	}
 
 	/// <summary>
 	/// Representation of a message received from the server.
@@ -11,20 +28,14 @@ namespace Colyseus
 	public class MessageEventArgs : EventArgs
 	{
 		/// <summary>
-		/// Target <see cref="Room"/> affected by this message. May be null.
-		/// </summary>
-		public Room room = null;
-
-		/// <summary>
 		/// Data coming from the server.
 		/// </summary>
 		public object data = null;
 
 		/// <summary>
 		/// </summary>
-		public MessageEventArgs (Room room, object data = null)
+		public MessageEventArgs (object data)
 		{
-			this.room = room;
 			this.data = data;
 		}
 	}
@@ -35,27 +46,21 @@ namespace Colyseus
 	public class RoomUpdateEventArgs : EventArgs
 	{
 		/// <summary>
-		/// Affected <see cref="Room" /> instance.
-		/// </summary>
-		public Room room = null;
-
-		/// <summary>
 		/// New state of the <see cref="Room" />
 		/// </summary>
 		public MessagePackObject state;
 
 		/// <summary>
-		/// Patches applied to the <see cref="Room" /> state.
+		/// Boolean representing if the event is setting the state of the <see cref="Room" /> for the first time.
 		/// </summary>
-		public string patches = null;
+		public bool isFirstState;
 
 		/// <summary>
 		/// </summary>
-		public RoomUpdateEventArgs (Room room, MessagePackObject state, string patches = null)
+		public RoomUpdateEventArgs (MessagePackObject state, bool isFirstState = false)
 		{
-			this.room = room;
 			this.state = state;
-			this.patches = patches;
+			this.isFirstState = isFirstState;
 		}
 	}
 }

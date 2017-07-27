@@ -9,7 +9,8 @@ class ChatRoom extends Room {
     this.setSimulationInterval( this.update.bind(this) );
 
     this.setState({
-      players: {}
+      players: {},
+      messages: []
     });
 
     console.log("ChatRoom created!", options);
@@ -21,9 +22,11 @@ class ChatRoom extends Room {
 
   onJoin (client) {
     this.state.players[client.id] = { x: 0, y: 0 };
+    this.state.messages.push("client " + client.id + " joined");
   }
 
   onLeave (client) {
+    this.state.messages.push("client " + client.id + " left");
     delete this.state.players[client.id];
   }
 
