@@ -59,7 +59,7 @@ namespace Colyseus
 			this.matcherPlaceholders[placeholder] = matcher;
 		}
 
-		public FallbackPatchListener Listen(Action<string[], string, MessagePackObject> callback)
+		public FallbackPatchListener Listen(Action<PatchObject> callback)
 		{
 			FallbackPatchListener listener = new FallbackPatchListener {
 				callback = callback,
@@ -71,7 +71,7 @@ namespace Colyseus
 			return listener;
 		}
 
-		public PatchListener Listen(string segments, string operation, Action<string[], MessagePackObject> callback) {
+		public PatchListener Listen(string segments, Action<DataChange> callback) {
 			var regexpRules = this.ParseRegexRules (segments.Split('/'));
 
 			PatchListener listener = new PatchListener {
@@ -149,7 +149,7 @@ namespace Colyseus
 				}
 
 				// check for fallback listener
-				if (!matched && this.defaultListener != null)
+				if (!matched && !object.Equals(this.defaultListener, default(FallbackPatchListener)))
 				{
 					this.defaultListener.callback.Invoke (patches [i]);
 				}
@@ -172,7 +172,7 @@ namespace Colyseus
 					return result;
 
 
-				} else if (listener.rawRules[i][0] == ":") {
+				} else if (listener.rawRules[i][0] == ':') {
 					result.Add ( listener.rawRules[i].Substring(1), matches[0].ToString() );
 	            }
 	        }
@@ -183,7 +183,8 @@ namespace Colyseus
 	    private void Reset()
 		{
 			this.listeners = new List<PatchListener> ();
-			this.defaultListener = null;
+
+			this.defaultListener = default(FallbackPatchListener);
 	    }
 
 	}

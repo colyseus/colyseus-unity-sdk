@@ -106,7 +106,7 @@ public class WebSocket
 		}
 	}
 #elif WINDOWS_UWP
-  MessageWebSocket m_Socket;
+	MessageWebSocket m_Socket;
 	Queue<byte[]> m_Messages = new Queue<byte[]>();
 	bool m_IsConnected = false;
 	string m_Error = null;

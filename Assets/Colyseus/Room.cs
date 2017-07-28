@@ -33,11 +33,6 @@ namespace Colyseus
 		public event EventHandler OnLeave;
 
 		/// <summary>
-		/// Occurs when server send patched state, before <see cref="OnUpdate"/>.
-		/// </summary>
-		public event EventHandler<MessageEventArgs> OnPatch;
-
-		/// <summary>
 		/// Occurs when server sends a message to this <see cref="Room"/>
 		/// </summary>
 		public event EventHandler<MessageEventArgs> OnData;
@@ -111,7 +106,7 @@ namespace Colyseus
 				this.sessionId = message [1].AsString ();
 
 				if (this.OnJoin != null)
-					this.OnJoin.Invoke (this);
+					this.OnJoin.Invoke (this, new EventArgs());
 
 			} else if (code == Protocol.JOIN_ERROR) {
 				if (this.OnError != null)

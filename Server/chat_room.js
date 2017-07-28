@@ -2,16 +2,18 @@ var Room = require('colyseus').Room;
 
 class ChatRoom extends Room {
 
-  constructor (options) {
-    super(options);
-
-    this.setPatchRate( 1000 / 20 );
-    this.setSimulationInterval( this.update.bind(this) );
+  constructor () {
+    super();
 
     this.setState({
       players: {},
       messages: []
     });
+  }
+
+  onInit (options) {
+    this.setPatchRate( 1000 / 20 );
+    this.setSimulationInterval( this.update.bind(this) );
 
     console.log("ChatRoom created!", options);
   }

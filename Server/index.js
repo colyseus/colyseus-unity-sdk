@@ -13,21 +13,9 @@ var colyseus = require('colyseus')
 
   , ChatRoom = require('./chat_room');
 
-gameServer.on('connect', function(client) {
-  console.log(client.id, "connected");
-})
-
-gameServer.on('message', function(client, data) {
-  console.log(client.id, "sent", data);
-})
-
-gameServer.on('disconnect', function(client) {
-  console.log(client.id, "disconnected");
-})
-
 gameServer.register('chat', ChatRoom)
 
 app.use(express.static( __dirname ))
-server.listen(port, '127.0.0.1');
+gameServer.listen(port, '127.0.0.1');
 
 console.log(`Listening on http://localhost:${ port }`)

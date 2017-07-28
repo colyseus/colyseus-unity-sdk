@@ -23,10 +23,10 @@ public class ColyseusClient : MonoBehaviour {
         chatRoom.OnJoin += OnRoomJoined;
         chatRoom.OnUpdate += OnUpdateHandler;
 
-        chatRoom.state.Listen ("players", "add", this.OnAddPlayer);
-        chatRoom.state.Listen ("players/:id/:axis", "replace", this.OnPlayerMove);
-        chatRoom.state.Listen ("players/:id", "remove", this.OnPlayerRemoved);
-        chatRoom.state.Listen (this.OnChangeFallback);
+        chatRoom.Listen ("players", this.OnAddPlayer);
+        chatRoom.Listen ("players/:id/:axis", this.OnPlayerMove);
+        chatRoom.Listen ("players/:id", this.OnPlayerRemoved);
+        chatRoom.Listen (this.OnChangeFallback);
 
         int i = 0;
 
@@ -62,32 +62,33 @@ public class ColyseusClient : MonoBehaviour {
         Debug.Log("Joined room successfully.");
     }
 
-    void OnAddPlayer (string[] path, MessagePackObject value)
+	void OnAddPlayer (DataChange change)
     {
         Debug.Log ("OnAddPlayer");
-        Debug.Log (path[0]);
-        Debug.Log (value);
+		Debug.Log (change.path);
+        Debug.Log (change.value);
     }
 
-    void OnPlayerMove (string[] path, MessagePackObject value)
+	void OnPlayerMove (DataChange change)
     {
         Debug.Log ("OnPlayerMove");
-        Debug.Log (path[0]);
-        Debug.Log (value);
+		Debug.Log (change.path);
+		Debug.Log (change.value);
     }
 
-	void OnPlayerRemoved (string[] path, MessagePackObject value)
+	void OnPlayerRemoved (DataChange change)
     {
         Debug.Log ("OnPlayerRemoved");
-        Debug.Log (value);
+		Debug.Log (change.path);
+		Debug.Log (change.value);
     }
 
-    void OnChangeFallback (string[] path, string operation, MessagePackObject value)
+	void OnChangeFallback (PatchObject change)
     {
         Debug.Log ("OnChangeFallback");
-        Debug.Log (operation);
-        Debug.Log (path[0]);
-        Debug.Log (value);
+		Debug.Log (change.operation);
+		Debug.Log (change.path);
+		Debug.Log (change.value);
     }
 
     void OnUpdateHandler (object sender, RoomUpdateEventArgs e)

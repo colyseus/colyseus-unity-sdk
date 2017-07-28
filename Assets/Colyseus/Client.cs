@@ -61,11 +61,6 @@ namespace Colyseus
 		{
 			this.id = id;
 
-			// Prepare MessagePack Serializers
-			MessagePackSerializer.PrepareType<MessagePackObject>();
-			MessagePackSerializer.PrepareType<object[]>();
-			MessagePackSerializer.PrepareType<byte[]>();
-
 			this.endpoint = new UriBuilder(new Uri (endpoint));
 			this.endpoint.Query = "colyseusid=" + this.id;
 			this.connection = new Connection (this.endpoint.Uri);
@@ -90,8 +85,12 @@ namespace Colyseus
 		/// </summary>
 		/// <param name="roomName">The name of the Room to join.</param>
 		/// <param name="options">Custom join request options</param>
-		public Room Join (string roomName, object options = null)
+		public Room Join (string roomName, Dictionary<string, object> options = null)
 		{
+			if (options == null) {
+				options = new Dictionary<string, object> ();
+			}
+			
 			this.room = new Room (roomName);
 
 			this.connection.Send (new object[]{Protocol.JOIN_ROOM, roomName, options});
@@ -134,20 +133,10 @@ namespace Colyseus
             }
 		}
 
-		protected void OnLeaveRoom (Room sender) 
+		protected void OnLeaveRoom (object sender, EventArgs args) 
 		{
-			this.rooms.Remove (sender.id);
-		}
-
-		/// <summary>
-		/// Send data to all connected rooms.
-		/// </summary>
-		/// <param name="data">Data to be sent to all connected rooms.</param>
-		public void Send (object[] data)
-		{
-			var serializer = MessagePackSerializer.Get<object[]>();
-
-			this.connection.Send(serializer.PackSingleObject(data));
+			Room room = (Room)sender;
+			this.rooms.Remove (room.id);
 		}
 
 		/// <summary>
