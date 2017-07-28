@@ -23,6 +23,8 @@ namespace Colyseus
 			MessagePackSerializer.PrepareType<byte[]>();
 
 			this.serializer = MessagePackSerializer.Get<object[]>();
+
+			this.Connect ();
 		}
 
 		public void Send(object[] data)
