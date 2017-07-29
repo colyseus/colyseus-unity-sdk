@@ -1,7 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+
 using MsgPack;
 using MsgPack.Serialization;
+
 using UnityEngine;
 
 namespace Colyseus
@@ -16,6 +19,11 @@ namespace Colyseus
 
 		protected Connection connection;
 		protected byte[] _previousState = null;
+
+		/// <summary>
+		/// Occurs when <see cref="Room"/> is able to connect to the server.
+		/// </summary>
+		public event EventHandler OnReadyToConnect;
 
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> successfully connects to the <see cref="Room"/>.
@@ -65,10 +73,15 @@ namespace Colyseus
 			}
 		}
 
-		public void Connect (Connection connection)
+		public IEnumerator Connect ()
+		{
+			return this.connection.Connect ();
+		}
+
+		public void SetConnection (Connection connection) 
 		{
 			this.connection = connection;
-			this.connection.Connect ();
+			this.OnReadyToConnect.Invoke (this, new EventArgs());
 		}
 
 		public void SetState( MessagePackObject state, int remoteCurrentTime, int remoteElapsedTime)

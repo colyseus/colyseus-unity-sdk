@@ -72,11 +72,13 @@ namespace Colyseus
 		}
 
 		public PatchListener Listen(string segments, Action<DataChange> callback) {
-			var regexpRules = this.ParseRegexRules (segments.Split('/'));
+			var rawRules = segments.Split ('/');
+			var regexpRules = this.ParseRegexRules (rawRules);
 
 			PatchListener listener = new PatchListener {
 	            callback = callback,
-	            rules = regexpRules
+	            rules = regexpRules,
+				rawRules = rawRules
 			};
 
 			this.listeners.Add(listener);
@@ -170,7 +172,6 @@ namespace Colyseus
 				var matches = listener.rules[i].Matches(patch.path[i]);
 				if (matches.Count == 0 || matches.Count > 2) {
 					return result;
-
 
 				} else if (listener.rawRules[i][0] == ':') {
 					result.Add ( listener.rawRules[i].Substring(1), matches[0].ToString() );

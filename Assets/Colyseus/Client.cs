@@ -68,7 +68,6 @@ namespace Colyseus
 			}
 
 			this.connection = new Connection (this.endpoint.Uri);
-			this.connection.Connect ();
 		}
 
 		public IEnumerator Connect()
@@ -128,7 +127,7 @@ namespace Colyseus
 				this.endpoint.Path = "/" + room.id;
 				this.endpoint.Query = "colyseusid=" + this.id;
 
-				room.Connect (new Connection (this.endpoint.Uri));
+				room.SetConnection (new Connection (this.endpoint.Uri));
 				room.OnLeave += OnLeaveRoom;
 
 				this.rooms.Add (room.id, room);

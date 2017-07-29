@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System;
 using Colyseus;
@@ -17,9 +17,11 @@ public class ColyseusClient : MonoBehaviour {
         String uri = "ws://" + serverName + ":" + port;
         colyseus = new Client(uri);
         colyseus.OnOpen += OnOpenHandler;
+
         yield return StartCoroutine(colyseus.Connect());
 
         chatRoom = colyseus.Join(roomName);
+        chatRoom.OnReadyToConnect += (sender, e) => StartCoroutine ( chatRoom.Connect() );
         chatRoom.OnJoin += OnRoomJoined;
         chatRoom.OnUpdate += OnUpdateHandler;
 
@@ -46,6 +48,7 @@ public class ColyseusClient : MonoBehaviour {
             if (i % 50 == 0) {
                 chatRoom.Send("some_command");
             }
+
             yield return 0;
         }
 
@@ -65,14 +68,14 @@ public class ColyseusClient : MonoBehaviour {
 	void OnAddPlayer (DataChange change)
     {
         Debug.Log ("OnAddPlayer");
-		Debug.Log (change.path);
+		Debug.Log (change.path.ToString());
         Debug.Log (change.value);
     }
 
 	void OnPlayerMove (DataChange change)
     {
         Debug.Log ("OnPlayerMove");
-		Debug.Log (change.path);
+		Debug.Log ("playerId: " + change.path["id"] + ", Axis: " + change.path["axis"]);
 		Debug.Log (change.value);
     }
 
