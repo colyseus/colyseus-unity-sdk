@@ -56,11 +56,19 @@ namespace Colyseus
 			this.name = name;
 		}
 
+		public void Recv () 
+		{
+			byte[] data = this.connection.Recv();
+			if (data != null)
+			{
+				this.ParseMessage(data);
+			}
+		}
+
 		public void Connect (Connection connection)
 		{
 			this.connection = connection;
-//			this.connection.onmessage = this.onMessageCallback.bind(this);
-//			this.connection.onclose = (e) => this.onLeave.dispatch();
+			this.connection.Connect ();
 		}
 
 		public void SetState( MessagePackObject state, int remoteCurrentTime, int remoteElapsedTime)

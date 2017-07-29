@@ -93,7 +93,8 @@ public class ColyseusClient : MonoBehaviour {
 
     void OnUpdateHandler (object sender, RoomUpdateEventArgs e)
     {
-        //Debug.Log(e.state);
+		Debug.Log("Update!");
+        Debug.Log(e.state);
     }
 
     void OnApplicationQuit()

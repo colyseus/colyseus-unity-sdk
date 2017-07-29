@@ -57,13 +57,18 @@ namespace Colyseus
 		/// <param name="endpoint">
 		/// A <see cref="string"/> that represents the WebSocket URL to connect.
 		/// </param>
-		public Client (string endpoint, string id = "")
+		public Client (string endpoint, string id = null)
 		{
 			this.id = id;
-
 			this.endpoint = new UriBuilder(new Uri (endpoint));
-			this.endpoint.Query = "colyseusid=" + this.id;
+
+			// append client id to query string
+			if (this.id != null) {
+				this.endpoint.Query = "colyseusid=" + this.id;
+			}
+
 			this.connection = new Connection (this.endpoint.Uri);
+			this.connection.Connect ();
 		}
 
 		public IEnumerator Connect()
@@ -77,6 +82,11 @@ namespace Colyseus
 			if (data != null)
 			{
 				this.ParseMessage(data);
+			}
+
+			// TODO: this may not be a good idea?
+			foreach (var room in this.rooms) {
+				room.Value.Recv ();
 			}
 		}
 

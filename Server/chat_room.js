@@ -19,10 +19,12 @@ class ChatRoom extends Room {
   }
 
   requestJoin (options) {
+    console.log("request join!", options);
     return true;
   }
 
   onJoin (client) {
+    console.log("client joined!", client.id);
     this.state.players[client.id] = { x: 0, y: 0 };
     this.state.messages.push("client " + client.id + " joined");
   }
