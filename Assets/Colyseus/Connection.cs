@@ -26,9 +26,6 @@ namespace Colyseus
 		{
 			this.uri = uri;
 
-			Debug.Log ("CONSTRUCTING CONNECTION!");
-			Debug.Log (uri.ToString());
-
 			// Prepare MessagePack Serializers
 			MessagePackSerializer.PrepareType<MessagePackObject>();
 			MessagePackSerializer.PrepareType<object[]>();
@@ -42,8 +39,6 @@ namespace Colyseus
 
 		public void Send(object[] data)
 		{
-			Debug.Log ("Sending data: IsOpen? " + ((IsOpen) ? "YES" : "NO"));
-			Debug.Log (data);
 			var packedData = this.serializer.PackSingleObject(data);
 
 			if (!this.IsOpen) {
@@ -57,8 +52,6 @@ namespace Colyseus
 
 		protected void _OnOpen (object sender, EventArgs e)
 		{
-			Debug.Log ("Connection opened!");
-
 			this.IsOpen = true;
 
 			// send enqueued commands while connection wasn't open
