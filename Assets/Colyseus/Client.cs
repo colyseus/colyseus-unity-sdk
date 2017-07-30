@@ -4,8 +4,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
-using MsgPack;
-using MsgPack.Serialization;
+using GameDevWare.Serialization;
+using GameDevWare.Serialization.MessagePack;
 
 using UnityEngine;
 
@@ -109,20 +109,18 @@ namespace Colyseus
 
         void ParseMessage (byte[] recv)
 		{
-			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (recv);
-
-			var message = raw.Value.AsList ();
-			var code = message [0].AsInt32 ();
+			var message = MsgPack.Deserialize<List<object>> (new MemoryStream(recv));
+			var code = (byte) message [0];
 
 			if (code == Protocol.USER_ID) {
-				this.id = message [1].AsString ();
+				this.id = (string) message [1];
 
 				if (this.OnOpen != null)
 					this.OnOpen.Invoke (this, EventArgs.Empty);
 
 			} else if (code == Protocol.JOIN_ROOM) {
 				var room = this.room;
-				room.id = message [1].AsString ();
+				room.id = (string) message [1];
 
 				this.endpoint.Path = "/" + room.id;
 				this.endpoint.Query = "colyseusid=" + this.id;
@@ -134,7 +132,7 @@ namespace Colyseus
 
 			} else if (code == Protocol.JOIN_ERROR) {
 				if (this.OnError != null)
-					this.OnError.Invoke (this, new ErrorEventArgs (message [2].AsString ()));
+					this.OnError.Invoke (this, new ErrorEventArgs ((string) message [2]));
 
 			} else {
 				if (this.OnMessage != null)

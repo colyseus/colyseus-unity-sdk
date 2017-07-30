@@ -1,6 +1,7 @@
 ﻿using System;
 
-using MsgPack;
+using GameDevWare.Serialization;
+using GameDevWare.Serialization.MessagePack;
 
 namespace Colyseus
 {
@@ -48,7 +49,7 @@ namespace Colyseus
 		/// <summary>
 		/// New state of the <see cref="Room" />
 		/// </summary>
-		public MessagePackObject state;
+		public IndexedDictionary<string, object> state;
 
 		/// <summary>
 		/// Boolean representing if the event is setting the state of the <see cref="Room" /> for the first time.
@@ -57,7 +58,7 @@ namespace Colyseus
 
 		/// <summary>
 		/// </summary>
-		public RoomUpdateEventArgs (MessagePackObject state, bool isFirstState = false)
+		public RoomUpdateEventArgs (IndexedDictionary<string, object> state, bool isFirstState = false)
 		{
 			this.state = state;
 			this.isFirstState = isFirstState;

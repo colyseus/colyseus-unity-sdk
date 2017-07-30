@@ -1,11 +1,12 @@
 ﻿using UnityEngine;
 
 using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 
-using MsgPack;
-using MsgPack.Serialization;
+using GameDevWare.Serialization;
+using GameDevWare.Serialization.MessagePack;
 
 #if !WINDOWS_UWP
 using WebSocketSharp;
@@ -19,19 +20,11 @@ namespace Colyseus
 		public Uri uri;
 		public bool IsOpen = false;
 
-		protected MessagePackSerializer<object[]> serializer;
 		protected Queue<byte[]> _enqueuedCalls = new Queue<byte[]>();
 
 		public Connection (Uri uri) : base(uri)
 		{
 			this.uri = uri;
-
-			// Prepare MessagePack Serializers
-			MessagePackSerializer.PrepareType<MessagePackObject>();
-			MessagePackSerializer.PrepareType<object[]>();
-			MessagePackSerializer.PrepareType<byte[]>();
-
-			this.serializer = MessagePackSerializer.Get<object[]>();
 
 			this.OnOpen += _OnOpen;
 			this.OnClose += _OnClose;
@@ -39,7 +32,10 @@ namespace Colyseus
 
 		public void Send(object[] data)
 		{
-			var packedData = this.serializer.PackSingleObject(data);
+			var serializationOutput = new MemoryStream ();
+			MsgPack.Serialize (data, serializationOutput);
+
+			var packedData = serializationOutput.ToArray ();
 
 			if (!this.IsOpen) {
 				this._enqueuedCalls.Enqueue(packedData);

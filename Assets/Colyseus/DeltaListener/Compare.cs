@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using MsgPack;
-using MsgPack.Serialization;
+
+using GameDevWare.Serialization;
+using GameDevWare.Serialization.MessagePack;
 
 namespace Colyseus
 {
@@ -9,13 +10,13 @@ namespace Colyseus
 	{
 		public string[] path;
 		public string operation; // : "add" | "remove" | "replace";
-		public MessagePackObject value;
+		public object value;
 	}
 
 	public class Compare
 	{
 
-		public static PatchObject[] GetPatchList(MessagePackObject tree1, MessagePackObject tree2)
+		public static PatchObject[] GetPatchList(IndexedDictionary<string, object> tree1, IndexedDictionary<string, object> tree2)
 		{
 			List<PatchObject> patches = new List<PatchObject>();
 			List<string> path = new List<string>();
@@ -26,36 +27,40 @@ namespace Colyseus
 		}
 
 		// Dirty check if obj is different from mirror, generate patches and update mirror
-		protected static void Generate(MessagePackObject mirrorPacked, MessagePackObject objPacked, List<PatchObject> patches, List<string> path)
+		protected static void Generate(IndexedDictionary<string, object> mirror, IndexedDictionary<string, object> obj, List<PatchObject> patches, List<string> path)
 		{
-			MessagePackObjectDictionary mirror = mirrorPacked.AsDictionary();
-			MessagePackObjectDictionary obj = objPacked.AsDictionary();
-			
 			var newKeys = obj.Keys;
 			var oldKeys = mirror.Keys;
-			//var changed = false;
 			var deleted = false;
 
 			foreach (var key in oldKeys)
 			{
-				if (obj.ContainsKey(key) && !(!obj.ContainsKey(key) && mirror.ContainsKey(key) && !objPacked.IsArray))
+				if (obj.ContainsKey(key) && !(!obj.ContainsKey(key) && mirror.ContainsKey(key) && !(obj is Array)))
 				{
 					var oldVal = mirror[key];
 					var newVal = obj[key];
 
-					if (oldVal.IsDictionary && !oldVal.IsNil && newVal.IsDictionary  && !newVal.IsNil)
+					if (
+						oldVal != null && 
+						newVal != null && 
+						oldVal is IndexedDictionary<string, object> &&
+						newVal is IndexedDictionary<string, object>
+					)
 					{
 						List<string> deeperPath = new List<string>(path);
-						deeperPath.Add(key.AsString());
+						deeperPath.Add((string) key);
 
-						Generate(oldVal, newVal, patches, deeperPath);
+						Generate(
+							(IndexedDictionary<string, object>) oldVal, 
+							(IndexedDictionary<string, object>) newVal, 
+							patches, 
+							deeperPath
+						);
 					} else {
 						if (oldVal != newVal)
 						{
-							//changed = true;
-
 							List<string> replacePath = new List<string>(path);
-							replacePath.Add(key.AsString());
+							replacePath.Add((string) key);
 
 							patches.Add(new PatchObject
 							{
@@ -68,7 +73,7 @@ namespace Colyseus
 				}
 				else {
 					List<string> removePath = new List<string>(path);
-					removePath.Add(key.AsString());
+					removePath.Add((string) key);
 
 					patches.Add(new PatchObject
 					{
@@ -90,7 +95,7 @@ namespace Colyseus
 				if (!mirror.ContainsKey(key) && obj.ContainsKey(key))
 				{
 					List<string> addPath = new List<string>(path);
-					addPath.Add(key.AsString());
+					addPath.Add((string) key);
 
 					patches.Add(new PatchObject
 					{

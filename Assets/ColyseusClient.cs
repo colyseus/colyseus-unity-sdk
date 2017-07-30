@@ -2,7 +2,6 @@ using UnityEngine;
 using System.Collections;
 using System;
 using Colyseus;
-using MsgPack;
 
 public class ColyseusClient : MonoBehaviour {
 
@@ -23,12 +22,13 @@ public class ColyseusClient : MonoBehaviour {
         chatRoom = colyseus.Join(roomName);
         chatRoom.OnReadyToConnect += (sender, e) => StartCoroutine ( chatRoom.Connect() );
         chatRoom.OnJoin += OnRoomJoined;
-        chatRoom.OnUpdate += OnUpdateHandler;
+//        chatRoom.OnUpdate += OnUpdateHandler;
 
-        chatRoom.Listen ("players", this.OnAddPlayer);
-        chatRoom.Listen ("players/:id/:axis", this.OnPlayerMove);
-        chatRoom.Listen ("players/:id", this.OnPlayerRemoved);
-        chatRoom.Listen (this.OnChangeFallback);
+//        chatRoom.Listen ("players", this.OnAddPlayer);
+//        chatRoom.Listen ("players/:id/:axis", this.OnPlayerMove);
+//        chatRoom.Listen ("players/:id", this.OnPlayerRemoved);
+//		chatRoom.Listen ("messages/:number", this.OnMessageAdded);
+//        chatRoom.Listen (this.OnChangeFallback);
 
         int i = 0;
 
@@ -54,6 +54,13 @@ public class ColyseusClient : MonoBehaviour {
 
         OnApplicationQuit();
     }
+
+	void OnDestroy () 
+	{
+		// Make sure client will disconnect from the server
+		chatRoom.Leave ();
+		colyseus.Close ();
+	}
 
     void OnOpenHandler (object sender, EventArgs e)
     {
@@ -85,6 +92,13 @@ public class ColyseusClient : MonoBehaviour {
 		Debug.Log (change.path);
 		Debug.Log (change.value);
     }
+
+	void OnMessageAdded (DataChange change)
+	{
+		Debug.Log ("OnMessageAdded");
+		Debug.Log (change.path["number"]);
+		Debug.Log (change.value);
+	}
 
 	void OnChangeFallback (PatchObject change)
     {

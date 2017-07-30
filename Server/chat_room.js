@@ -26,16 +26,16 @@ class ChatRoom extends Room {
   onJoin (client) {
     console.log("client joined!", client.id);
     this.state.players[client.id] = { x: 0, y: 0 };
-    this.state.messages.push("client " + client.id + " joined");
   }
 
   onLeave (client) {
-    this.state.messages.push("client " + client.id + " left");
+    console.log("client left!", client.id);
     delete this.state.players[client.id];
   }
 
   onMessage (client, data) {
     console.log(data, "received from", client.id);
+    this.state.messages.push(client.id + " sent " + data);
   }
 
   update () {
@@ -44,7 +44,7 @@ class ChatRoom extends Room {
     }
   }
 
-  dispose () {
+  onDispose () {
     console.log("Dispose ChatRoom");
   }
 

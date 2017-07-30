@@ -2,11 +2,19 @@
 # yarn lockfile v1
 
 
+"@types/debug@^0.0.29":
+  version "0.0.29"
+  resolved "https://registry.yarnpkg.com/@types/debug/-/debug-0.0.29.tgz#a1e514adfbd92f03a224ba54d693111dbf1f3754"
+
 "@types/fossil-delta@^0.2.1":
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/@types/fossil-delta/-/fossil-delta-0.2.2.tgz#c6f3e87b818cfc93067f506716a22819ae2edbb5"
   dependencies:
     "@types/node" "*"
+
+"@types/ip@^0.0.29":
+  version "0.0.29"
+  resolved "https://registry.yarnpkg.com/@types/ip/-/ip-0.0.29.tgz#f3ee60d9a8f595be09cc3b7858ec9517d8bcea04"
 
 "@types/mocha@^2.2.32":
   version "2.2.39"
@@ -22,13 +30,13 @@
   version "7.0.5"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.5.tgz#96a0f0a618b7b606f1ec547403c00650210bfbb7"
 
-"@types/node@^7.0.12":
-  version "7.0.12"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.12.tgz#ae5f67a19c15f752148004db07cbbb372e69efc9"
+"@types/node@^7.0.18":
+  version "7.0.39"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.39.tgz#8aced4196387038113f6f9aa4014ab4c51edab3c"
 
-"@types/shortid@0.0.28":
-  version "0.0.28"
-  resolved "https://registry.yarnpkg.com/@types/shortid/-/shortid-0.0.28.tgz#b359e25348351f6bf736eed20d2e666528c248c6"
+"@types/shortid@0.0.29":
+  version "0.0.29"
+  resolved "https://registry.yarnpkg.com/@types/shortid/-/shortid-0.0.29.tgz#8093ee0416a6e2bf2aa6338109114b3fbffa0e9b"
 
 "@types/uws@^0.13.0":
   version "0.13.0"
@@ -197,9 +205,9 @@ chokidar@^1.4.3:
   optionalDependencies:
     fsevents "^1.0.0"
 
-clock-timer.js@^1.1.0:
-  version "1.1.4"
-  resolved "https://registry.yarnpkg.com/clock-timer.js/-/clock-timer.js-1.1.4.tgz#6076243e8c3713af7211a438c7bd78ae67516e55"
+clock-timer.js@^1.1.7:
+  version "1.1.7"
+  resolved "https://registry.yarnpkg.com/clock-timer.js/-/clock-timer.js-1.1.7.tgz#32002590376ab20b435aa27d25e720b4ace18e39"
   dependencies:
     clock.js "^1.1.5"
 
@@ -211,22 +219,29 @@ code-point-at@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
 
-colyseus@^0.4.15:
-  version "0.4.15"
-  resolved "https://registry.yarnpkg.com/colyseus/-/colyseus-0.4.15.tgz#288474488d3ad27153076679c5b09fa51dcbc4de"
+colyseus@0.5.0-alpha.12:
+  version "0.5.0-alpha.12"
+  resolved "https://registry.yarnpkg.com/colyseus/-/colyseus-0.5.0-alpha.12.tgz#73626ce0d8232069acff0947210cd630ce36cf9a"
   dependencies:
+    "@types/debug" "^0.0.29"
     "@types/fossil-delta" "^0.2.1"
+    "@types/ip" "^0.0.29"
     "@types/mocha" "^2.2.32"
     "@types/msgpack-lite" "^0.1.1"
-    "@types/node" "^7.0.12"
-    "@types/shortid" "0.0.28"
+    "@types/node" "^7.0.18"
+    "@types/shortid" "0.0.29"
     "@types/uws" "^0.13.0"
-    clock-timer.js "^1.1.0"
+    clock-timer.js "^1.1.7"
+    debug "^2.6.8"
     fossil-delta "^0.2.5"
+    ip "^1.1.5"
+    memshared "^0.9.14"
     msgpack-lite "^0.1.26"
+    nonenumerable "^1.0.1"
     shortid "^2.2.6"
     timeframe "^0.3.5"
-    uws "^0.14.1"
+    url-parse "^1.1.9"
+    uws "8.14.0"
 
 combined-stream@^1.0.5, combined-stream@~1.0.5:
   version "1.0.5"
@@ -298,6 +313,12 @@ debug@^2.2.0, debug@~2.2.0:
   resolved "https://registry.yarnpkg.com/debug/-/debug-2.2.0.tgz#f87057e995b1a1f6ae6a4960664137bc56f039da"
   dependencies:
     ms "0.7.1"
+
+debug@^2.6.8:
+  version "2.6.8"
+  resolved "https://registry.yarnpkg.com/debug/-/debug-2.6.8.tgz#e731531ca2ede27d188222427da17821d68ff4fc"
+  dependencies:
+    ms "2.0.0"
 
 deep-extend@~0.4.0:
   version "0.4.1"
@@ -694,6 +715,10 @@ int64-buffer@^0.1.9:
   version "0.1.9"
   resolved "https://registry.yarnpkg.com/int64-buffer/-/int64-buffer-0.1.9.tgz#9e039da043b24f78b196b283e04653ef5e990f61"
 
+ip@^1.1.5:
+  version "1.1.5"
+  resolved "https://registry.yarnpkg.com/ip/-/ip-1.1.5.tgz#bdded70114290828c0a039e72ef25f5aaec4354a"
+
 ipaddr.js@1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/ipaddr.js/-/ipaddr.js-1.2.0.tgz#8aba49c9192799585bdd643e0ccb50e8ae777ba4"
@@ -921,6 +946,10 @@ media-typer@0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
 
+memshared@^0.9.14:
+  version "0.9.14"
+  resolved "https://registry.yarnpkg.com/memshared/-/memshared-0.9.14.tgz#e41024153d1e7761b2dae7c60bf1448df9ba0448"
+
 merge-descriptors@1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/merge-descriptors/-/merge-descriptors-1.0.1.tgz#b00aaa556dd8b44568150ec9d1b953f3f90cbb61"
@@ -989,6 +1018,10 @@ ms@0.7.2:
   version "0.7.2"
   resolved "https://registry.yarnpkg.com/ms/-/ms-0.7.2.tgz#ae25cf2512b3885a1d95d7f037868d8431124765"
 
+ms@2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/ms/-/ms-2.0.0.tgz#5608aeadfc00be6c2901df5f9861788de0d597c8"
+
 msgpack-lite@^0.1.26:
   version "0.1.26"
   resolved "https://registry.yarnpkg.com/msgpack-lite/-/msgpack-lite-0.1.26.tgz#dd3c50b26f059f25e7edee3644418358e2a9ad89"
@@ -1040,6 +1073,10 @@ nodemon@^1.7.1:
     touch "1.0.0"
     undefsafe "0.0.3"
     update-notifier "0.5.0"
+
+nonenumerable@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/nonenumerable/-/nonenumerable-1.0.1.tgz#f8322218884818722f7ebf11d583f12f2d1208d6"
 
 nopt@~1.0.10:
   version "1.0.10"
@@ -1197,6 +1234,10 @@ qs@~6.3.0:
   version "6.3.1"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.3.1.tgz#918c0b3bcd36679772baf135b1acb4c1651ed79d"
 
+querystringify@~1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/querystringify/-/querystringify-1.0.0.tgz#6286242112c5b712fa654e526652bf6a13ff05cb"
+
 randomatic@^1.1.3:
   version "1.1.6"
   resolved "https://registry.yarnpkg.com/randomatic/-/randomatic-1.1.6.tgz#110dcabff397e9dcff7c0789ccc0a49adf1ec5bb"
@@ -1308,6 +1349,10 @@ request@^2.79.0:
     tough-cookie "~2.3.0"
     tunnel-agent "~0.4.1"
     uuid "^3.0.0"
+
+requires-port@1.0.x:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/requires-port/-/requires-port-1.0.0.tgz#925d2601d39ac485e091cf0da5c6e694dc3dcaff"
 
 rimraf@2, rimraf@~2.5.1, rimraf@~2.5.4:
   version "2.5.4"
@@ -1540,6 +1585,13 @@ update-notifier@0.5.0:
     semver-diff "^2.0.0"
     string-length "^1.0.0"
 
+url-parse@^1.1.9:
+  version "1.1.9"
+  resolved "https://registry.yarnpkg.com/url-parse/-/url-parse-1.1.9.tgz#c67f1d775d51f0a18911dd7b3ffad27bb9e5bd19"
+  dependencies:
+    querystringify "~1.0.0"
+    requires-port "1.0.x"
+
 util-deprecate@~1.0.1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
@@ -1556,9 +1608,9 @@ uuid@^3.0.0:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.0.1.tgz#6544bba2dfda8c1cf17e629a3a305e2bb1fee6c1"
 
-uws@^0.14.1:
-  version "0.14.1"
-  resolved "https://registry.yarnpkg.com/uws/-/uws-0.14.1.tgz#89b8eb7bced272c65621472e878c57f4e0e00640"
+uws@8.14.0:
+  version "8.14.0"
+  resolved "https://registry.yarnpkg.com/uws/-/uws-8.14.0.tgz#acc1488d13ecb23fe2f942a7eafb06681fa91431"
 
 vary@~1.1.0:
   version "1.1.0"

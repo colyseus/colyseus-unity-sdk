@@ -1,9 +1,10 @@
 using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 
-using MsgPack;
-using MsgPack.Serialization;
+using GameDevWare.Serialization;
+using GameDevWare.Serialization.MessagePack;
 
 using UnityEngine;
 
@@ -59,7 +60,7 @@ namespace Colyseus
 		/// </param>
 		/// <param name="name">The name of the room</param>
 		public Room (String name) 
-			: base(new MessagePackObject(new MessagePackObjectDictionary()))
+			: base(new IndexedDictionary<string, object>())
 		{
 			this.name = name;
 		}
@@ -84,17 +85,24 @@ namespace Colyseus
 			this.OnReadyToConnect.Invoke (this, new EventArgs());
 		}
 
-		public void SetState( MessagePackObject state, int remoteCurrentTime, int remoteElapsedTime)
+		public void SetState( IndexedDictionary<string, object> state, uint remoteCurrentTime, uint remoteElapsedTime)
 		{
 			this.Set(state);
 
-			// Creates serializer.
-			var serializer = MessagePackSerializer.Get <MessagePackObject>();
+			// Deserialize
+			var serializationOutput = new MemoryStream();
+			MsgPack.Serialize (state, serializationOutput);
 
 			if (this.OnUpdate != null)
 				this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(state, true));
 
-			this._previousState = serializer.PackSingleObject (state);
+			var byteArr = serializationOutput.ToArray ();
+			var str = "";
+			foreach (var b in byteArr) {
+				str += b.ToString () + " ";
+			}
+			Debug.Log(str);
+			this._previousState = serializationOutput.ToArray();
 		}
 
 		/// <summary>
@@ -103,7 +111,7 @@ namespace Colyseus
 		public void Leave ()
 		{
 			if (this.id != null) {
-				this.Send (new object[]{ Protocol.LEAVE_ROOM, this.id });
+				this.connection.Close ();
 			}
 		}
 
@@ -118,39 +126,43 @@ namespace Colyseus
 
 		protected void ParseMessage (byte[] recv)
 		{
-			UnpackingResult<MessagePackObject> raw = Unpacking.UnpackObject (recv);
-
-			var message = raw.Value.AsList ();
-			var code = message [0].AsInt32 ();
+			var message = MsgPack.Deserialize<List<object>> (new MemoryStream(recv));
+			var code = (byte) message [0];
 
 			if (code == Protocol.JOIN_ROOM) {
-				this.sessionId = message [1].AsString ();
+				this.sessionId = (string) message [1];
 
 				if (this.OnJoin != null)
 					this.OnJoin.Invoke (this, new EventArgs());
 
 			} else if (code == Protocol.JOIN_ERROR) {
 				if (this.OnError != null)
-					this.OnError.Invoke (this, new ErrorEventArgs(message [2].AsString ()));
+					this.OnError.Invoke (this, new ErrorEventArgs((string) message [2]));
 
 			} else if (code == Protocol.LEAVE_ROOM) {
 				this.Leave ();
 
 			} else if (code == Protocol.ROOM_STATE) {
-				var state = message [2];
-				var remoteCurrentTime = message [3].AsInt32();
-				var remoteElapsedTime = message [4].AsInt32();
+				var state = (IndexedDictionary<string, object>) message [2];
 
-				this.SetState (state, remoteCurrentTime, remoteElapsedTime);
+				// TODO: 
+				// https://github.com/deniszykov/msgpack-unity3d/issues/8
+
+				// var remoteCurrentTime = (double) message [3];
+				// var remoteElapsedTime = (int) message [4];
+
+				// this.SetState (state, remoteCurrentTime, remoteElapsedTime);
+
+				this.SetState (state, 0, 0);
 
 			} else if (code == Protocol.ROOM_STATE_PATCH) {
-				IList<MessagePackObject> patchBytes = message [2].AsList();
+				var patchBytes = (List<object>) message [2];
 				byte[] patches = new byte[patchBytes.Count];
 
 				int idx = 0;
-				foreach (MessagePackObject obj in patchBytes)
+				foreach (byte obj in patchBytes)
 				{
-					patches[idx] = obj.AsByte();
+					patches[idx] = obj;
 					idx++;
 				}
 
@@ -166,8 +178,7 @@ namespace Colyseus
 		{
 			this._previousState = Fossil.Delta.Apply (this._previousState, delta);
 
-			var serializer = MessagePackSerializer.Get <MessagePackObject>();
-			var newState = serializer.UnpackSingleObject (this._previousState);
+			var newState = MsgPack.Deserialize<IndexedDictionary<string, object>> (new MemoryStream(this._previousState));
 
 			this.Set(newState);
 

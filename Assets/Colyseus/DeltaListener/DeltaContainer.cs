@@ -3,7 +3,8 @@ using System.Text.RegularExpressions;
 using System.Collections;
 using System.Collections.Generic;
 
-using MsgPack;
+using GameDevWare.Serialization;
+using GameDevWare.Serialization.MessagePack;
 
 namespace Colyseus
 {
@@ -14,7 +15,7 @@ namespace Colyseus
 	{
 		public Dictionary<string, string> path;
 		public string operation; // : "add" | "remove" | "replace";
-		public MessagePackObject value;
+		public object value;
 	}
 
 	public struct Listener<T>
@@ -26,7 +27,7 @@ namespace Colyseus
 
 	public class DeltaContainer
 	{
-		public MessagePackObject data;
+		public IndexedDictionary<string, object> data;
 		private List<PatchListener> listeners;
 		private FallbackPatchListener defaultListener;
 
@@ -39,13 +40,13 @@ namespace Colyseus
 			{ ":*", new Regex(@"(.*)") },
 		};
 
-		public DeltaContainer (MessagePackObject data)
+		public DeltaContainer (IndexedDictionary<string, object> data)
 		{
 			this.data = data;
 			this.Reset();
 		}
 
-		public PatchObject[] Set(MessagePackObject newData) {
+		public PatchObject[] Set(IndexedDictionary<string, object> newData) {
 			var patches = Compare.GetPatchList(this.data, newData);
 
 			this.CheckPatches(patches);
