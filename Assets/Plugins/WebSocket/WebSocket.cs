@@ -18,6 +18,9 @@ public class WebSocket
 {
 	private Uri mUrl;
 
+	public event EventHandler OnOpen;
+	public event EventHandler OnClose;
+
 	public WebSocket(Uri url)
 	{
 		mUrl = url;
@@ -85,11 +88,19 @@ public class WebSocket
 
 		while (SocketState(m_NativeRef) == 0)
 			yield return 0;
+
+		if (OnOpen != null) {
+			OnOpen.Invoke(this, new EventArgs());
+		}
 	}
 
 	public void Close()
 	{
 		SocketClose(m_NativeRef);
+
+		if (OnClose != null) {
+			OnClose.Invoke(this, new EventArgs());
+		}
 	}
 
 	public string error
@@ -130,6 +141,9 @@ public class WebSocket
 		{
 			await m_Socket.ConnectAsync(mUrl);
 			m_IsConnected = true;
+			if (OnOpen != null) {
+				OnOpen.Invoke(sender, e);
+			}
 			Debug.Log("Connected");
 		}
 		catch (Exception ex)
@@ -143,6 +157,9 @@ public class WebSocket
 
     private void M_Socket_Closed(IWebSocket sender, WebSocketClosedEventArgs args)
     {
+		if (OnClose != null) {
+			OnClose.Invoke(sender, e);
+		}
         m_Error = args.Reason;
     }
 
@@ -207,9 +224,6 @@ public class WebSocket
 	Queue<byte[]> m_Messages = new Queue<byte[]>();
 	bool m_IsConnected = false;
 	string m_Error = null;
-
-	public event EventHandler OnOpen;
-	public event EventHandler OnClose;
 
 	public IEnumerator Connect()
 	{
