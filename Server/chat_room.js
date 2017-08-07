@@ -39,6 +39,7 @@ class ChatRoom extends Room {
   }
 
   update () {
+    console.log("num clients:", Object.keys(this.clients).length);
     for (var id in this.state.players) {
       this.state.players[id].x++;
     }

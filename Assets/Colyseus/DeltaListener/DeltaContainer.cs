@@ -50,9 +50,9 @@ namespace Colyseus
 			var patches = Compare.GetPatchList(this.data, newData);
 
 			this.CheckPatches(patches);
-	        this.data = newData;
+			this.data = newData;
 
-	        return patches;
+			return patches;
 		}
 
 		public void RegisterPlaceholder(string placeholder, Regex matcher)
@@ -77,14 +77,14 @@ namespace Colyseus
 			var regexpRules = this.ParseRegexRules (rawRules);
 
 			PatchListener listener = new PatchListener {
-	            callback = callback,
-	            rules = regexpRules,
+				callback = callback,
+				rules = regexpRules,
 				rawRules = rawRules
 			};
 
 			this.listeners.Add(listener);
 
-	        return listener;
+			return listener;
 		}
 
 		public void RemoveListener(PatchListener listener)
@@ -164,10 +164,10 @@ namespace Colyseus
 		private Dictionary<string, string> GetPathVariables(PatchObject patch, PatchListener listener) {
 			var result = new Dictionary<string, string> ();
 
-	        // skip if rules count differ from patch
-	        if (patch.path.Length != listener.rules.Length) {
+			// skip if rules count differ from patch
+			if (patch.path.Length != listener.rules.Length) {
 				return result;
-	        }
+			}
 
 			for (var i = 0; i < listener.rules.Length; i++) {
 				var matches = listener.rules[i].Matches(patch.path[i]);
@@ -176,18 +176,18 @@ namespace Colyseus
 
 				} else if (listener.rawRules[i][0] == ':') {
 					result.Add ( listener.rawRules[i].Substring(1), matches[0].ToString() );
-	            }
-	        }
+				}
+			}
 
 			return result;
-	    }
+		}
 
-	    private void Reset()
+		private void Reset()
 		{
 			this.listeners = new List<PatchListener> ();
 
 			this.defaultListener = default(FallbackPatchListener);
-	    }
+		}
 
 	}
 }

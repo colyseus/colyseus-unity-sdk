@@ -199,8 +199,8 @@ namespace Fossil
 					break;
 
 				case ';':
-					byte[] output = zOut.ToArray();
-					if (cnt != Checksum(output))
+					byte[] output = zOut.ToArray ();
+					if (cnt != Checksum (output))
 						throw new Exception("bad checksum");
 					if (total != limit)
 						throw new Exception("generated size does not match predicted size");

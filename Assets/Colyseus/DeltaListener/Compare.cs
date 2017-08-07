@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 using GameDevWare.Serialization;
@@ -41,8 +41,8 @@ namespace Colyseus
 					var newVal = obj[key];
 
 					if (
-						oldVal != null && 
-						newVal != null && 
+						oldVal != null &&
+						newVal != null &&
 						oldVal is IndexedDictionary<string, object> &&
 						newVal is IndexedDictionary<string, object>
 					)
@@ -51,9 +51,9 @@ namespace Colyseus
 						deeperPath.Add((string) key);
 
 						Generate(
-							(IndexedDictionary<string, object>) oldVal, 
-							(IndexedDictionary<string, object>) newVal, 
-							patches, 
+							(IndexedDictionary<string, object>) oldVal,
+							(IndexedDictionary<string, object>) newVal,
+							patches,
 							deeperPath
 						);
 					} else {

@@ -59,13 +59,13 @@ namespace Colyseus
 		/// The <see cref="Client"/> client connection instance.
 		/// </param>
 		/// <param name="name">The name of the room</param>
-		public Room (String name) 
+		public Room (String name)
 			: base(new IndexedDictionary<string, object>())
 		{
 			this.name = name;
 		}
 
-		public void Recv () 
+		public void Recv ()
 		{
 			byte[] data = this.connection.Recv();
 			if (data != null)
@@ -79,7 +79,7 @@ namespace Colyseus
 			return this.connection.Connect ();
 		}
 
-		public void SetConnection (Connection connection) 
+		public void SetConnection (Connection connection)
 		{
 			this.connection = connection;
 			this.OnReadyToConnect.Invoke (this, new EventArgs());
@@ -96,12 +96,6 @@ namespace Colyseus
 			if (this.OnUpdate != null)
 				this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(state, true));
 
-			var byteArr = serializationOutput.ToArray ();
-			var str = "";
-			foreach (var b in byteArr) {
-				str += b.ToString () + " ";
-			}
-			Debug.Log(str);
 			this._previousState = serializationOutput.ToArray();
 		}
 
@@ -145,7 +139,7 @@ namespace Colyseus
 			} else if (code == Protocol.ROOM_STATE) {
 				var state = (IndexedDictionary<string, object>) message [2];
 
-				// TODO: 
+				// TODO:
 				// https://github.com/deniszykov/msgpack-unity3d/issues/8
 
 				// var remoteCurrentTime = (double) message [3];
@@ -156,14 +150,14 @@ namespace Colyseus
 				this.SetState (state, 0, 0);
 
 			} else if (code == Protocol.ROOM_STATE_PATCH) {
-				var patchBytes = (List<object>) message [2];
-				byte[] patches = new byte[patchBytes.Count];
 
-				int idx = 0;
-				foreach (byte obj in patchBytes)
-				{
-					patches[idx] = obj;
-					idx++;
+				var data = (List<object>) message [2];
+				byte[] patches = new byte[data.Count];
+
+				uint i = 0;
+				foreach (var b in data) {
+					patches [i] = Convert.ToByte(b);
+					i++;
 				}
 
 				this.Patch (patches);

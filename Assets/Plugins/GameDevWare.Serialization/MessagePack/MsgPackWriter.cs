@@ -63,26 +63,33 @@ namespace GameDevWare.Serialization.MessagePack
 				return;
 			}
 
-			var bytes = context.Encoding.GetBytes(value);
-			if (value.Length <= byte.MaxValue)
+			var bytes = this.context.Encoding.GetBytes(value);
+			if (value.Length < 32)
+			{
+				var formatByte = (byte)(value.Length | (byte)MsgPackType.FixStrStart);
+				this.buffer[0] = formatByte;
+				this.outputStream.Write(this.buffer, 0, 1);
+				this.bytesWritten += 1;
+			}
+			else if (value.Length <= byte.MaxValue)
 			{
 				this.Write(MsgPackType.Str8);
-				buffer[0] = (byte) bytes.Length;
-				this.outputStream.Write(buffer, 0, 1);
+				this.buffer[0] = (byte) bytes.Length;
+				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (value.Length <= ushort.MaxValue)
 			{
 				this.Write(MsgPackType.Str16);
-				this.bitConverter.CopyBytes((ushort) bytes.Length, buffer, 0);
-				this.outputStream.Write(buffer, 0, 2);
+				this.bitConverter.CopyBytes((ushort) bytes.Length, this.buffer, 0);
+				this.outputStream.Write(this.buffer, 0, 2);
 				this.bytesWritten += 2;
 			}
 			else
 			{
 				this.Write(MsgPackType.Str32);
-				this.bitConverter.CopyBytes((uint) bytes.Length, buffer, 0);
-				this.outputStream.Write(buffer, 0, 4);
+				this.bitConverter.CopyBytes((uint) bytes.Length, this.buffer, 0);
+				this.outputStream.Write(this.buffer, 0, 4);
 				this.bytesWritten += 4;
 			}
 
@@ -105,35 +112,35 @@ namespace GameDevWare.Serialization.MessagePack
 			{
 				var formatByte = (byte) ((byte) Math.Abs(number) | (byte) MsgPackType.NegativeFixIntStart);
 				this.buffer[0] = formatByte;
-				this.outputStream.Write(buffer, 0, 1);
+				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (number >= 0 && number < 128)
 			{
 				var formatByte = (byte) ((byte) number | (byte) MsgPackType.PositiveFixIntStart);
 				this.buffer[0] = formatByte;
-				this.outputStream.Write(buffer, 0, 1);
+				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (number <= sbyte.MaxValue && number >= sbyte.MinValue)
 			{
 				this.Write(MsgPackType.Int8);
-				buffer[0] = (byte) (sbyte) number;
-				this.outputStream.Write(buffer, 0, 1);
+				this.buffer[0] = (byte) (sbyte) number;
+				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (number <= short.MaxValue && number >= short.MinValue)
 			{
 				this.Write(MsgPackType.Int16);
 				this.bitConverter.CopyBytes((short) number, this.buffer, 0);
-				this.outputStream.Write(buffer, 0, 2);
+				this.outputStream.Write(this.buffer, 0, 2);
 				this.bytesWritten += 2;
 			}
 			else
 			{
 				this.Write(MsgPackType.Int32);
 				this.bitConverter.CopyBytes((int) number, this.buffer, 0);
-				this.outputStream.Write(buffer, 0, 4);
+				this.outputStream.Write(this.buffer, 0, 4);
 				this.bytesWritten += 4;
 			}
 		}
@@ -144,28 +151,28 @@ namespace GameDevWare.Serialization.MessagePack
 			{
 				var formatByte = (byte) ((byte) number | (byte) MsgPackType.PositiveFixIntStart);
 				this.buffer[0] = formatByte;
-				this.outputStream.Write(buffer, 0, 1);
+				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (number <= byte.MaxValue)
 			{
 				this.Write(MsgPackType.UInt8);
-				buffer[0] = (byte) number;
-				this.outputStream.Write(buffer, 0, 1);
+				this.buffer[0] = (byte) number;
+				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (number <= ushort.MaxValue)
 			{
 				this.Write(MsgPackType.UInt16);
 				this.bitConverter.CopyBytes((ushort) number, this.buffer, 0);
-				this.outputStream.Write(buffer, 0, 2);
+				this.outputStream.Write(this.buffer, 0, 2);
 				this.bytesWritten += 2;
 			}
 			else
 			{
 				this.Write(MsgPackType.UInt32);
 				this.bitConverter.CopyBytes((uint) number, this.buffer, 0);
-				this.outputStream.Write(buffer, 0, 4);
+				this.outputStream.Write(this.buffer, 0, 4);
 				this.bytesWritten += 4;
 			}
 		}
@@ -180,7 +187,7 @@ namespace GameDevWare.Serialization.MessagePack
 
 			this.Write(MsgPackType.Int64);
 			this.bitConverter.CopyBytes(number, this.buffer, 0);
-			this.outputStream.Write(buffer, 0, 8);
+			this.outputStream.Write(this.buffer, 0, 8);
 			this.bytesWritten += 8;
 		}
 
@@ -194,7 +201,7 @@ namespace GameDevWare.Serialization.MessagePack
 
 			this.Write(MsgPackType.UInt64);
 			this.bitConverter.CopyBytes(number, this.buffer, 0);
-			this.outputStream.Write(buffer, 0, 8);
+			this.outputStream.Write(this.buffer, 0, 8);
 			this.bytesWritten += 8;
 		}
 
@@ -202,7 +209,7 @@ namespace GameDevWare.Serialization.MessagePack
 		{
 			this.Write(MsgPackType.Float32);
 			this.bitConverter.CopyBytes(number, this.buffer, 0);
-			this.outputStream.Write(buffer, 0, 4);
+			this.outputStream.Write(this.buffer, 0, 4);
 			this.bytesWritten += 4;
 		}
 
@@ -210,7 +217,7 @@ namespace GameDevWare.Serialization.MessagePack
 		{
 			this.Write(MsgPackType.Float64);
 			this.bitConverter.CopyBytes(number, this.buffer, 0);
-			this.outputStream.Write(buffer, 0, 8);
+			this.outputStream.Write(this.buffer, 0, 8);
 			this.bytesWritten += 8;
 		}
 
@@ -218,9 +225,9 @@ namespace GameDevWare.Serialization.MessagePack
 		{
 			this.Write(MsgPackType.FixExt16);
 			this.buffer[0] = (byte) MsgPackExtType.Decimal;
-			this.outputStream.Write(buffer, 0, 1);
+			this.outputStream.Write(this.buffer, 0, 1);
 			this.bitConverter.CopyBytes(number, this.buffer, 0);
-			this.outputStream.Write(buffer, 0, 16);
+			this.outputStream.Write(this.buffer, 0, 16);
 			this.bytesWritten += 17;
 		}
 
@@ -236,21 +243,21 @@ namespace GameDevWare.Serialization.MessagePack
 		{
 			this.Write(MsgPackType.FixExt16);
 			this.buffer[0] = (byte)MsgPackExtType.DateTime;
-			this.outputStream.Write(buffer, 0, 1);
+			this.outputStream.Write(this.buffer, 0, 1);
 			Array.Clear(this.buffer, 0, 16);
 			this.buffer[0] = (byte)dateTime.Kind;
 			this.bitConverter.CopyBytes(dateTime.Ticks, this.buffer, 1);
-			this.outputStream.Write(buffer, 0, 16);
+			this.outputStream.Write(this.buffer, 0, 16);
 		}
 
 		public void Write(DateTimeOffset datetime)
 		{
 			this.Write(MsgPackType.FixExt16);
 			this.buffer[0] = (byte)MsgPackExtType.DateTimeOffset;
-			this.outputStream.Write(buffer, 0, 1);
+			this.outputStream.Write(this.buffer, 0, 1);
 			this.bitConverter.CopyBytes(datetime.UtcDateTime.Ticks, this.buffer, 0);
 			this.bitConverter.CopyBytes(datetime.Offset.Ticks, this.buffer, 8);
-			this.outputStream.Write(buffer, 0, 16);
+			this.outputStream.Write(this.buffer, 0, 16);
 		}
 
 		public void Write(byte[] value)
@@ -265,19 +272,19 @@ namespace GameDevWare.Serialization.MessagePack
 			{
 				this.buffer[0] = (byte)MsgPackType.Bin8;
 				this.buffer[1] = (byte)value.Length;
-				this.outputStream.Write(buffer, 0, 2);
+				this.outputStream.Write(this.buffer, 0, 2);
 			}
 			else if (value.Length < ushort.MaxValue)
 			{
 				this.buffer[0] = (byte)MsgPackType.Bin16;
 				this.bitConverter.CopyBytes(checked((ushort)value.LongLength), this.buffer, 1);
-				this.outputStream.Write(buffer, 0, 3);
+				this.outputStream.Write(this.buffer, 0, 3);
 			}
 			else
 			{
 				this.buffer[0] = (byte)MsgPackType.Bin32;
 				this.bitConverter.CopyBytes(checked((uint)value.LongLength), this.buffer, 1);
-				this.outputStream.Write(buffer, 0, 5);
+				this.outputStream.Write(this.buffer, 0, 5);
 			}
 			this.outputStream.Write(value, 0, value.Length);
 		}
@@ -290,21 +297,21 @@ namespace GameDevWare.Serialization.MessagePack
 			{
 				var formatByte = (byte) (numberOfMembers | (byte) MsgPackType.FixMapStart);
 				this.buffer[0] = formatByte;
-				this.outputStream.Write(buffer, 0, 1);
+				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (numberOfMembers <= ushort.MaxValue)
 			{
 				this.Write(MsgPackType.Map16);
-				this.bitConverter.CopyBytes((ushort) numberOfMembers, buffer, 0);
-				this.outputStream.Write(buffer, 0, 2);
+				this.bitConverter.CopyBytes((ushort) numberOfMembers, this.buffer, 0);
+				this.outputStream.Write(this.buffer, 0, 2);
 				this.bytesWritten += 2;
 			}
 			else
 			{
 				this.Write(MsgPackType.Map32);
-				this.bitConverter.CopyBytes((int) numberOfMembers, buffer, 0);
-				this.outputStream.Write(buffer, 0, 4);
+				this.bitConverter.CopyBytes((int) numberOfMembers, this.buffer, 0);
+				this.outputStream.Write(this.buffer, 0, 4);
 				this.bytesWritten += 4;
 			}
 		}
@@ -321,21 +328,21 @@ namespace GameDevWare.Serialization.MessagePack
 			{
 				var formatByte = (byte) (numberOfMembers | (byte) MsgPackType.FixArrayStart);
 				this.buffer[0] = formatByte;
-				this.outputStream.Write(buffer, 0, 1);
+				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten++;
 			}
 			else if (numberOfMembers <= ushort.MaxValue)
 			{
 				this.Write(MsgPackType.Array16);
-				this.bitConverter.CopyBytes((ushort) numberOfMembers, buffer, 0);
-				this.outputStream.Write(buffer, 0, 2);
+				this.bitConverter.CopyBytes((ushort) numberOfMembers, this.buffer, 0);
+				this.outputStream.Write(this.buffer, 0, 2);
 				this.bytesWritten += 2;
 			}
 			else
 			{
 				this.Write(MsgPackType.Array32);
-				this.bitConverter.CopyBytes((int) numberOfMembers, buffer, 0);
-				this.outputStream.Write(buffer, 0, 4);
+				this.bitConverter.CopyBytes((int) numberOfMembers, this.buffer, 0);
+				this.outputStream.Write(this.buffer, 0, 4);
 				this.bytesWritten += 4;
 			}
 		}
@@ -352,7 +359,7 @@ namespace GameDevWare.Serialization.MessagePack
 		private void Write(MsgPackType token)
 		{
 			this.buffer[0] = (byte) token;
-			this.outputStream.Write(buffer, 0, 1);
+			this.outputStream.Write(this.buffer, 0, 1);
 			this.bytesWritten++;
 		}
 

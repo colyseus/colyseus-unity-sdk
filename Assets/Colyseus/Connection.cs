@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 using System;
 using System.IO;
@@ -12,7 +12,7 @@ using GameDevWare.Serialization.MessagePack;
 using WebSocketSharp;
 #endif
 
-namespace Colyseus 
+namespace Colyseus
 {
 
 	public class Connection : WebSocket
@@ -41,7 +41,7 @@ namespace Colyseus
 				this._enqueuedCalls.Enqueue(packedData);
 
 			} else {
-				
+
 				base.Send(packedData);
 			}
 		}

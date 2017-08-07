@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
@@ -99,7 +99,7 @@ namespace Colyseus
 			if (options == null) {
 				options = new Dictionary<string, object> ();
 			}
-			
+
 			this.room = new Room (roomName);
 
 			this.connection.Send (new object[]{Protocol.JOIN_ROOM, roomName, options});
@@ -137,10 +137,10 @@ namespace Colyseus
 			} else {
 				if (this.OnMessage != null)
 					this.OnMessage.Invoke (this, new MessageEventArgs (message));
-            }
+			}
 		}
 
-		protected void OnLeaveRoom (object sender, EventArgs args) 
+		protected void OnLeaveRoom (object sender, EventArgs args)
 		{
 			Room room = (Room)sender;
 			this.rooms.Remove (room.id);
