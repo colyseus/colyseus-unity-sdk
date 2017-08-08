@@ -64,21 +64,21 @@ namespace GameDevWare.Serialization.MessagePack
 			}
 
 			var bytes = this.context.Encoding.GetBytes(value);
-			if (value.Length < 32)
+			if (bytes.Length < 32)
 			{
-				var formatByte = (byte)(value.Length | (byte)MsgPackType.FixStrStart);
+				var formatByte = (byte)(bytes.Length | (byte)MsgPackType.FixStrStart);
 				this.buffer[0] = formatByte;
 				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
-			else if (value.Length <= byte.MaxValue)
+			else if (bytes.Length <= byte.MaxValue)
 			{
 				this.Write(MsgPackType.Str8);
 				this.buffer[0] = (byte) bytes.Length;
 				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
-			else if (value.Length <= ushort.MaxValue)
+			else if (bytes.Length <= ushort.MaxValue)
 			{
 				this.Write(MsgPackType.Str16);
 				this.bitConverter.CopyBytes((ushort) bytes.Length, this.buffer, 0);
