@@ -53,49 +53,38 @@ room.OnUpdate += OnUpdate;
 void OnUpdate (object sender, RoomUpdateEventArgs e)
 {
 	Debug.Log(e.state);
+	Debug.Log(e.isFirstState); // is this the very first room update from the server?
 }
 ```
 
-**Listening to additions on state**
+**Listening to add/remove on state**
 
 ```csharp
-room.state.Listen ("players", "add", OnAddPlayer);
+room.Listen ("players/:id", OnPlayerChange);
 ```
 
 ```csharp
-void OnAddPlayer (string[] path, MessagePackObject value)
+void OnPlayerChange (DataChange change)
 {
 	Debug.Log ("OnAddPlayer");
-	Debug.Log (value);
+	Debug.Log (change.path["id"]);
+	Debug.Log (change.operation);
+	Debug.Log (change.value);
 }
 ```
 
 **Listening to updates on state**
 
 ```csharp
-room.state.Listen ("players/:id/:axis", "replace", OnPlayerMove);
+room.Listen ("players/:id/:axis", OnPlayerMove);
 ```
 
 ```csharp
-void OnPlayerMove (string[] path, MessagePackObject value)
+void OnPlayerMove (DataChange change)
 {
 	Debug.Log ("OnPlayerMove");
-	Debug.Log ("playerId: " + path[0] + ", axis: " + path[1]);
-	Debug.Log (value);
-}
-```
-
-**Listening to deletions on state**
-
-```csharp
-room.state.Listen ("players/:id", "remove", OnPlayerRemoved);
-```
-
-```csharp
-void OnPlayerRemoved (string[] path, MessagePackObject value)
-{
-	Debug.Log ("OnPlayerRemoved");
-	Debug.Log ("playerId: " + path[0]);
+	Debug.Log ("playerId: " + change.path["id"] + ", axis: " + change.path["axis"]);
+	Debug.Log (change.value);
 }
 ```
 
