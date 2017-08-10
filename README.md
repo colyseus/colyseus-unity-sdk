@@ -66,7 +66,6 @@ room.Listen ("players/:id", OnPlayerChange);
 ```csharp
 void OnPlayerChange (DataChange change)
 {
-	Debug.Log ("OnAddPlayer");
 	Debug.Log (change.path["id"]);
 	Debug.Log (change.operation);
 	Debug.Log (change.value);
