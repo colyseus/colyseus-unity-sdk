@@ -25,13 +25,13 @@ public class ColyseusClient : MonoBehaviour {
 
 		chatRoom = colyseus.Join(roomName);
 		chatRoom.OnReadyToConnect += (sender, e) => StartCoroutine ( chatRoom.Connect() );
-//		chatRoom.OnJoin += OnRoomJoined;
-//		chatRoom.OnUpdate += OnUpdateHandler;
+		chatRoom.OnJoin += OnRoomJoined;
+		chatRoom.OnUpdate += OnUpdateHandler;
 
 		chatRoom.Listen ("players/:id/:axis", this.OnPlayerMove);
 		chatRoom.Listen ("players/:id", this.OnPlayerChange);
 		chatRoom.Listen ("messages/:number", this.OnMessageAdded);
-//		chatRoom.Listen (this.OnChangeFallback);
+		chatRoom.Listen (this.OnChangeFallback);
 
 		int i = 0;
 
@@ -106,16 +106,15 @@ public class ColyseusClient : MonoBehaviour {
 
 	void OnChangeFallback (PatchObject change)
 	{
-		Debug.Log ("OnChangeFallback");
-		Debug.Log (change.operation);
-		Debug.Log (change.path);
-		Debug.Log (change.value);
+		// Debug.Log ("OnChangeFallback");
+		// Debug.Log (change.operation);
+		// Debug.Log (change.path);
+		// Debug.Log (change.value);
 	}
 
 	void OnUpdateHandler (object sender, RoomUpdateEventArgs e)
 	{
-		Debug.Log("Update!");
-		Debug.Log(e.state);
+		// Debug.Log(e.state);
 	}
 
 	void OnApplicationQuit()
