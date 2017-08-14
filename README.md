@@ -23,7 +23,7 @@
 
 ## Installation
 
-Copy `Assets/Colyseus` into your Unity project.
+Copy `Assets/Plugins` into your Unity project.
 
 ## Running the demo server
 

@@ -57,7 +57,7 @@ namespace Colyseus
 							deeperPath
 						);
 					} else {
-						if (oldVal != newVal)
+						if (!oldVal.Equals(newVal))
 						{
 							List<string> replacePath = new List<string>(path);
 							replacePath.Add((string) key);
