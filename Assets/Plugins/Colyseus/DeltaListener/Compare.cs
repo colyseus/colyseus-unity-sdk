@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
 
 using GameDevWare.Serialization;
@@ -27,7 +28,6 @@ namespace Colyseus
 			return patches.ToArray();
 		}
 
-		// Dirty check if obj is different from mirror, generate patches and update mirror
 		protected static void Generate(List<object> mirror, List<object> obj, List<PatchObject> patches, List<string> path)
 		{
 			var mirrorDict = new IndexedDictionary<string, object> ();
@@ -50,15 +50,17 @@ namespace Colyseus
 			var oldKeys = mirror.Keys;
 			var deleted = false;
 
-			foreach (var key in oldKeys)
+			for (int i = 0; i < oldKeys.Count; i++) 
 			{
+				var key = oldKeys [i];
 				if (obj.ContainsKey(key) && !(!obj.ContainsKey(key) && mirror.ContainsKey(key) && !(obj is List<object>)))
 				{
 					var oldVal = mirror[key];
 					var newVal = obj[key];
 
 					if (
-						oldVal != null && newVal != null &&
+						(oldVal as IEnumerable) != null && 
+						(oldVal as IEnumerable) != null && 
 						Object.ReferenceEquals(oldVal.GetType(), newVal.GetType())
 					)
 					{

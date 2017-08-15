@@ -94,6 +94,23 @@ public class DeltaContainerTest {
 		Assert.AreEqual (1, listenCalls);
 	}
 
+	[Test]
+	public void ListenRemoveArray() {
+		var newData = GetRawData ();
+		var messages = (List<object>) newData ["messages"];
+		messages.RemoveAt (0);
+
+		var listenCalls = 0;
+		container.Listen ("messages/:number", (DataChange change) => {
+			listenCalls++;
+			Assert.AreEqual("remove", change.operation);
+			Assert.AreEqual("2", change.path["number"]);
+		});
+
+		container.Set (newData);
+		Assert.AreEqual (1, listenCalls);
+	}
+
 	protected IndexedDictionary<string, object> GetRawData () {
 		var data = new IndexedDictionary<string, object> ();
 		var players = new IndexedDictionary<string, object> ();
