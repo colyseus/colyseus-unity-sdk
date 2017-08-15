@@ -2,6 +2,12 @@
 # yarn lockfile v1
 
 
+"@gamestdio/timer@^1.1.7":
+  version "1.1.8"
+  resolved "https://registry.npmjs.org/@gamestdio/timer/-/timer-1.1.8.tgz#6e5424f6e137aa88935571628f790433429a2f14"
+  dependencies:
+    clock.js "^1.1.5"
+
 "@types/debug@^0.0.29":
   version "0.0.29"
   resolved "https://registry.yarnpkg.com/@types/debug/-/debug-0.0.29.tgz#a1e514adfbd92f03a224ba54d693111dbf1f3754"
@@ -205,12 +211,6 @@ chokidar@^1.4.3:
   optionalDependencies:
     fsevents "^1.0.0"
 
-clock-timer.js@^1.1.7:
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/clock-timer.js/-/clock-timer.js-1.1.7.tgz#32002590376ab20b435aa27d25e720b4ace18e39"
-  dependencies:
-    clock.js "^1.1.5"
-
 clock.js@*, clock.js@^1.1.5:
   version "1.1.5"
   resolved "https://registry.yarnpkg.com/clock.js/-/clock.js-1.1.5.tgz#c1186cd7e328cc838006d1d2a74eac72070b8f45"
@@ -219,10 +219,11 @@ code-point-at@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
 
-colyseus@0.5.0-alpha.12:
-  version "0.5.0-alpha.12"
-  resolved "https://registry.yarnpkg.com/colyseus/-/colyseus-0.5.0-alpha.12.tgz#73626ce0d8232069acff0947210cd630ce36cf9a"
+colyseus@^0.5.0:
+  version "0.5.0"
+  resolved "https://registry.npmjs.org/colyseus/-/colyseus-0.5.0.tgz#143552bddf6662d80ab3192e496ed952e88cd6b0"
   dependencies:
+    "@gamestdio/timer" "^1.1.7"
     "@types/debug" "^0.0.29"
     "@types/fossil-delta" "^0.2.1"
     "@types/ip" "^0.0.29"
@@ -231,7 +232,6 @@ colyseus@0.5.0-alpha.12:
     "@types/node" "^7.0.18"
     "@types/shortid" "0.0.29"
     "@types/uws" "^0.13.0"
-    clock-timer.js "^1.1.7"
     debug "^2.6.8"
     fossil-delta "^0.2.5"
     ip "^1.1.5"
@@ -241,7 +241,7 @@ colyseus@0.5.0-alpha.12:
     shortid "^2.2.6"
     timeframe "^0.3.5"
     url-parse "^1.1.9"
-    uws "8.14.0"
+    uws "8.14.1"
 
 combined-stream@^1.0.5, combined-stream@~1.0.5:
   version "1.0.5"
@@ -1608,9 +1608,9 @@ uuid@^3.0.0:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.0.1.tgz#6544bba2dfda8c1cf17e629a3a305e2bb1fee6c1"
 
-uws@8.14.0:
-  version "8.14.0"
-  resolved "https://registry.yarnpkg.com/uws/-/uws-8.14.0.tgz#acc1488d13ecb23fe2f942a7eafb06681fa91431"
+uws@8.14.1:
+  version "8.14.1"
+  resolved "https://registry.npmjs.org/uws/-/uws-8.14.1.tgz#de09619f305f6174d5516a9c6942cb120904b20b"
 
 vary@~1.1.0:
   version "1.1.0"
