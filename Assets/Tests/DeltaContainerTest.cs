@@ -73,8 +73,26 @@ public class DeltaContainerTest {
 			}
 		});
 
-		container.Set (new IndexedDictionary<string, object>(newData));
+		container.Set (newData);
 		Assert.AreEqual (2, listenCalls);
+	}
+
+	[Test]
+	public void ListenWithoutPlaceholder() {
+		var newData = GetRawData ();
+
+		var game = (IndexedDictionary<string, object>) newData ["game"];
+		game ["turn"] = 1;
+
+		var listenCalls = 0;
+		container.Listen ("game/turn", (DataChange change) => {
+			listenCalls++;
+			Assert.AreEqual(change.operation, "replace");
+			Assert.AreEqual(change.value, 1);
+		});
+
+		container.Set (newData);
+		Assert.AreEqual (1, listenCalls);
 	}
 
 	[Test]
@@ -130,6 +148,9 @@ public class DeltaContainerTest {
 			})}
 		}));
 
+		data.Add ("game", new IndexedDictionary<string, object>(new Dictionary<string, object> { 
+			{"turn", 0}
+		}));
 		data.Add ("players", players);
 		data.Add ("messages", new List<object> { "one", "two", "three" });
 		return data;
