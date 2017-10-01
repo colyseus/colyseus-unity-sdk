@@ -139,7 +139,7 @@ namespace Colyseus
 				{
 					var listener = this.listeners[j];
 					var pathVariables = this.GetPathVariables(patches[i], listener);
-					if (pathVariables.Count > 0)
+					if (pathVariables != null)
 					{
 						var dataChange = new DataChange ();
 						dataChange.path = pathVariables;
@@ -166,13 +166,13 @@ namespace Colyseus
 
 			// skip if rules count differ from patch
 			if (patch.path.Length != listener.rules.Length) {
-				return result;
+				return null;
 			}
 
 			for (var i = 0; i < listener.rules.Length; i++) {
 				var matches = listener.rules[i].Matches(patch.path[i]);
 				if (matches.Count == 0 || matches.Count > 2) {
-					return result;
+					return null;
 
 				} else if (listener.rawRules[i][0] == ':') {
 					result.Add ( listener.rawRules[i].Substring(1), matches[0].ToString() );
