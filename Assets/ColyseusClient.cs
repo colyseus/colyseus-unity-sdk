@@ -33,6 +33,8 @@ public class ColyseusClient : MonoBehaviour {
 		room.Listen ("messages/:number", this.OnMessageAdded);
 		room.Listen (this.OnChangeFallback);
 
+		room.OnData += (object sender, MessageEventArgs e) => Debug.Log(e.data);
+
 		int i = 0;
 
 		while (true)
@@ -42,7 +44,7 @@ public class ColyseusClient : MonoBehaviour {
 			// string reply = client.RecvString();
 			if (client.error != null)
 			{
-				Debug.LogError ("Error: "+client.error);
+				Debug.LogError ("Error: " + client.error);
 				break;
 			}
 

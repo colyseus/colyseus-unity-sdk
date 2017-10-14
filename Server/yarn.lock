@@ -2,6 +2,12 @@
 # yarn lockfile v1
 
 
+"@gamestdio/timeline@^0.3.5":
+  version "0.3.5"
+  resolved "https://registry.yarnpkg.com/@gamestdio/timeline/-/timeline-0.3.5.tgz#35ffbe1621535b41dfb5d5009c4c52301bbb1fc6"
+  dependencies:
+    harmony-proxy "^1.0.1"
+
 "@gamestdio/timer@^1.1.7":
   version "1.1.8"
   resolved "https://registry.npmjs.org/@gamestdio/timer/-/timer-1.1.8.tgz#6e5424f6e137aa88935571628f790433429a2f14"
@@ -32,11 +38,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/node@*":
-  version "7.0.5"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.5.tgz#96a0f0a618b7b606f1ec547403c00650210bfbb7"
-
-"@types/node@^7.0.18":
+"@types/node@*", "@types/node@^7.0.18":
   version "7.0.39"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.39.tgz#8aced4196387038113f6f9aa4014ab4c51edab3c"
 
@@ -211,7 +213,7 @@ chokidar@^1.4.3:
   optionalDependencies:
     fsevents "^1.0.0"
 
-clock.js@*, clock.js@^1.1.5:
+clock.js@^1.1.5:
   version "1.1.5"
   resolved "https://registry.yarnpkg.com/clock.js/-/clock.js-1.1.5.tgz#c1186cd7e328cc838006d1d2a74eac72070b8f45"
 
@@ -219,10 +221,11 @@ code-point-at@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
 
-colyseus@^0.5.0:
-  version "0.5.0"
-  resolved "https://registry.npmjs.org/colyseus/-/colyseus-0.5.0.tgz#143552bddf6662d80ab3192e496ed952e88cd6b0"
+colyseus@^0.5.7:
+  version "0.5.7"
+  resolved "https://registry.yarnpkg.com/colyseus/-/colyseus-0.5.7.tgz#5766b28faf14302c139eac3c3f440d9bc0ef4fd9"
   dependencies:
+    "@gamestdio/timeline" "^0.3.5"
     "@gamestdio/timer" "^1.1.7"
     "@types/debug" "^0.0.29"
     "@types/fossil-delta" "^0.2.1"
@@ -235,11 +238,10 @@ colyseus@^0.5.0:
     debug "^2.6.8"
     fossil-delta "^0.2.5"
     ip "^1.1.5"
-    memshared "^0.9.14"
+    memshared "^0.9.15"
     msgpack-lite "^0.1.26"
     nonenumerable "^1.0.1"
     shortid "^2.2.6"
-    timeframe "^0.3.5"
     url-parse "^1.1.9"
     uws "8.14.1"
 
@@ -946,9 +948,9 @@ media-typer@0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
 
-memshared@^0.9.14:
-  version "0.9.14"
-  resolved "https://registry.yarnpkg.com/memshared/-/memshared-0.9.14.tgz#e41024153d1e7761b2dae7c60bf1448df9ba0448"
+memshared@^0.9.15:
+  version "0.9.15"
+  resolved "https://registry.yarnpkg.com/memshared/-/memshared-0.9.15.tgz#1d93d07a15958fafe867523a9804f31917cbca34"
 
 merge-descriptors@1.0.1:
   version "1.0.1"
@@ -1526,13 +1528,6 @@ through@2, through@~2.3, through@~2.3.1:
 timed-out@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/timed-out/-/timed-out-2.0.0.tgz#f38b0ae81d3747d628001f41dafc652ace671c0a"
-
-timeframe@^0.3.5:
-  version "0.3.5"
-  resolved "https://registry.yarnpkg.com/timeframe/-/timeframe-0.3.5.tgz#c8cc612d22faacdd9b31e33e6072c85f21ab208c"
-  dependencies:
-    clock.js "*"
-    harmony-proxy "^1.0.1"
 
 touch@1.0.0:
   version "1.0.0"

@@ -25,8 +25,9 @@ namespace Colyseus
 		public string id;
 		protected UriBuilder endpoint;
 
-		protected Room room;
 		protected Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
+		protected Dictionary<int, Room> connectingRooms = new Dictionary<int, Room> ();
+		protected int joinRequestId;
 
 		protected Connection connection;
 
@@ -100,11 +101,15 @@ namespace Colyseus
 				options = new Dictionary<string, object> ();
 			}
 
-			this.room = new Room (roomName);
+			int requestId = ++this.joinRequestId;
+			options.Add ("requestId", requestId);
+
+			var room = new Room (roomName);
+			this.connectingRooms.Add (requestId, room);
 
 			this.connection.Send (new object[]{Protocol.JOIN_ROOM, roomName, options});
 
-			return this.room;
+			return room;
 		}
 
         void ParseMessage (byte[] recv)
@@ -119,16 +124,24 @@ namespace Colyseus
 					this.OnOpen.Invoke (this, EventArgs.Empty);
 
 			} else if (code == Protocol.JOIN_ROOM) {
-				var room = this.room;
-				room.id = (string) message [1];
+				var requestId = (byte) message [2];
 
-				this.endpoint.Path = "/" + room.id;
-				this.endpoint.Query = "colyseusid=" + this.id;
+				Room room;
+				if (this.connectingRooms.TryGetValue (requestId, out room)) {
+					room.id = (string) message [1];
 
-				room.SetConnection (new Connection (this.endpoint.Uri));
-				room.OnLeave += OnLeaveRoom;
+					this.endpoint.Path = "/" + room.id;
+					this.endpoint.Query = "colyseusid=" + this.id;
 
-				this.rooms.Add (room.id, room);
+					room.SetConnection (new Connection (this.endpoint.Uri));
+					room.OnLeave += OnLeaveRoom;
+
+					this.rooms.Add (room.id, room);
+					this.connectingRooms.Remove (requestId);
+
+				} else {
+					throw new Exception ("can't join room using requestId " + requestId.ToString());
+				}
 
 			} else if (code == Protocol.JOIN_ERROR) {
 				if (this.OnError != null)
