@@ -20,6 +20,7 @@ public class ColyseusClient : MonoBehaviour {
 		String uri = "ws://" + serverName + ":" + port;
 		client = new Client(uri);
 		client.OnOpen += OnOpenHandler;
+		client.OnClose += (object sender, EventArgs e) => Debug.Log ("CONNECTION CLOSED");
 
 		yield return StartCoroutine(client.Connect());
 

@@ -82,6 +82,7 @@ namespace Colyseus
 		public void SetConnection (Connection connection)
 		{
 			this.connection = connection;
+			this.connection.OnClose += (object sender, EventArgs e) => this.OnLeave.Invoke(sender, e);
 			this.OnReadyToConnect.Invoke (this, new EventArgs());
 		}
 

@@ -69,6 +69,7 @@ namespace Colyseus
 			}
 
 			this.connection = new Connection (this.endpoint.Uri);
+			this.connection.OnClose += (object sender, EventArgs e) => this.OnClose.Invoke(sender, e);
 		}
 
 		public IEnumerator Connect()
