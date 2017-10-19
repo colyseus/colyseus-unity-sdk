@@ -1,21 +1,29 @@
-"use strict";
+const cluster = require("cluster");
+const express = require("express");
 
-var colyseus = require('colyseus')
-  , http = require('http')
+const ClusterServer = require("colyseus").ClusterServer;
+const ChatRoom = require('./chat_room');
 
-  , express = require('express')
-  // , cors = require('cors')
+const PORT = process.env.PORT || 3553;
+const gameServer = new ClusterServer();
 
-  , port = process.env.PORT || 3553
-  , app = express()
-  , server = http.createServer(app)
-  , gameServer = new colyseus.Server({ server: server })
+// Register ChatRoom as "chat"
+gameServer.register("chat", ChatRoom);
 
-  , ChatRoom = require('./chat_room');
+if (cluster.isMaster) {
+    gameServer.listen(PORT);
+    gameServer.fork();
 
-gameServer.register('chat', ChatRoom)
+} else {
+    let app = new express();
 
-app.use(express.static( __dirname ))
-gameServer.listen(port, '127.0.0.1');
+    app.get("/something", function (req, res) {
+        console.log("something!", process.pid);
+        res.send("Hey!");
+    });
 
-console.log(`Listening on http://localhost:${ port }`)
+    // Create HTTP Server
+    gameServer.attach({ server: app });
+}
+
+console.log("Listening on " + PORT);

@@ -200,8 +200,12 @@ namespace Fossil
 
 				case ';':
 					byte[] output = zOut.ToArray ();
-					if (cnt != Checksum (output))
-						throw new Exception("bad checksum");
+					//
+					// Checksum is optional (2017-10-05)
+					// http://fossil-scm.org/xfer/info/d3a46b2a45b92bbc
+					//
+					//if (cnt != Checksum (output))
+					//	throw new Exception("bad checksum");
 					if (total != limit)
 						throw new Exception("generated size does not match predicted size");
 					return output;

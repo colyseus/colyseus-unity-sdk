@@ -34,9 +34,12 @@ namespace GameDevWare.Serialization.Metadata
 
 		static GettersAndSetters()
 		{
+#if ((UNITY_WEBGL || UNITY_IOS || ENABLE_IL2CPP) && !UNITY_EDITOR)
+			AotRuntime = true;
+#else
 			try { Expression.Lambda<Func<bool>>(Expression.Constant(true)).Compile(); }
 			catch (Exception) { AotRuntime = true; }
-
+#endif
 			ReadFunctions = new Dictionary<MemberInfo, Func<object, object>>();
 			WriteFunctions = new Dictionary<MemberInfo, Action<object, object>>();
 			ConstructorFunctions = new Dictionary<MemberInfo, Func<object>>();
@@ -107,7 +110,6 @@ namespace GameDevWare.Serialization.Metadata
 
 			if (AotRuntime || fieldInfo.IsStatic)
 				return false;
-
 
 			lock (ReadFunctions)
 			{

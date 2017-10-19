@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using System;
 using Colyseus;
 
@@ -13,6 +14,9 @@ public class ColyseusClient : MonoBehaviour {
 	public string serverName = "localhost";
 	public string port = "3553";
 	public string roomName = "chat";
+
+	// map of players
+	Dictionary<string, GameObject> players = new Dictionary<string, GameObject>();
 
 	// Use this for initialization
 	IEnumerator Start () {
@@ -29,8 +33,8 @@ public class ColyseusClient : MonoBehaviour {
 		room.OnJoin += OnRoomJoined;
 		room.OnUpdate += OnUpdateHandler;
 
-		room.Listen ("players/:id/:axis", this.OnPlayerMove);
 		room.Listen ("players/:id", this.OnPlayerChange);
+		room.Listen ("players/:id/:axis", this.OnPlayerMove);
 		room.Listen ("messages/:number", this.OnMessageAdded);
 		room.Listen (this.OnChangeFallback);
 
@@ -78,12 +82,51 @@ public class ColyseusClient : MonoBehaviour {
 		Debug.Log("Joined room successfully.");
 	}
 
+	void OnUpdateHandler (object sender, RoomUpdateEventArgs e)
+	{
+		// Setup room first state
+		if (e.isFirstState) {
+			IndexedDictionary<string, object> players = (IndexedDictionary<string, object>) e.state ["players"];
+
+			// trigger to add existing players 
+			foreach(KeyValuePair<string, object> player in players)
+			{
+				this.OnPlayerChange (new DataChange {
+					path = new Dictionary<string, string> {
+						{"id", player.Key}
+					},
+					operation = "add",
+					value = player.Value
+				});
+			}
+		}
+	}
+
 	void OnPlayerChange (DataChange change)
 	{
 		Debug.Log ("OnPlayerChange");
 		Debug.Log (change.operation);
 		Debug.Log (change.path["id"]);
 		Debug.Log (change.value);
+
+		if (change.operation == "add") {
+			IndexedDictionary<string, object> value = (IndexedDictionary<string, object>) change.value;
+
+			GameObject cube = GameObject.CreatePrimitive (PrimitiveType.Cube);
+
+			cube.transform.position = new Vector3 (Convert.ToSingle(value ["x"]), Convert.ToSingle(value ["y"]), 0);
+
+			// add "player" to map of players by id.
+			players.Add (change.path ["id"], cube);
+
+		} else if (change.operation == "remove") {
+			// remove player from scene
+			GameObject cube;
+			players.TryGetValue (change.path ["id"], out cube);
+			Destroy (cube);
+
+			players.Remove (change.path ["id"]);
+		}
 	}
 
 	void OnPlayerMove (DataChange change)
@@ -91,6 +134,11 @@ public class ColyseusClient : MonoBehaviour {
 		Debug.Log ("OnPlayerMove");
 		Debug.Log ("playerId: " + change.path["id"] + ", Axis: " + change.path["axis"]);
 		Debug.Log (change.value);
+
+		GameObject cube;
+		players.TryGetValue (change.path ["id"], out cube);
+
+		cube.transform.Translate (new Vector3 (Convert.ToSingle(change.value), 0, 0));
 	}
 
 	void OnPlayerRemoved (DataChange change)
@@ -113,11 +161,6 @@ public class ColyseusClient : MonoBehaviour {
 		// Debug.Log (change.operation);
 		// Debug.Log (change.path);
 		// Debug.Log (change.value);
-	}
-
-	void OnUpdateHandler (object sender, RoomUpdateEventArgs e)
-	{
-		// Debug.Log(e.state);
 	}
 
 	void OnApplicationQuit()

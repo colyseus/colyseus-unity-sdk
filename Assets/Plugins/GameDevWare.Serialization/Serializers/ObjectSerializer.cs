@@ -1,4 +1,4 @@
-﻿/* 
+/* 
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -27,6 +27,7 @@ namespace GameDevWare.Serialization.Serializers
 		public const string TYPE_MEMBER_NAME = "_type";
 
 		private static readonly Regex VersionRegEx = new Regex(@", Version=[^\]]+", RegexOptions.None);
+		private static readonly string BclTypePart = typeof(byte).AssemblyQualifiedName.Substring(typeof(byte).FullName.Length);
 
 		private readonly Type objectType;
 		private readonly string objectTypeNameWithoutVersion;
@@ -57,7 +58,7 @@ namespace GameDevWare.Serialization.Serializers
 				this.baseTypeSerializer = (ObjectSerializer)baseSerializer;
 			}
 
-		    this.objectTypeDescription = TypeDescription.Get(type);
+			this.objectTypeDescription = TypeDescription.Get(type);
 		}
 
 		public override object Deserialize(IJsonReader reader)
@@ -145,7 +146,17 @@ namespace GameDevWare.Serialization.Serializers
 				{
 					reader.NextToken();
 					var typeName = reader.ReadString(false);
-					var type = reader.Context.GetType(typeName, true, true);
+					var type = default(Type);
+					try
+					{
+						type = reader.Context.GetType(typeName, true, true);
+					}
+					catch (Exception getTypeError)
+					{
+						throw new SerializationException(string.Format("Failed to resolve type '{0}' of value for '{1}' of '{2}' type.\r\n" +
+							"More detailed information in inner exception.", typeName, memberName, this.objectType.Name), getTypeError);
+					}
+
 					if (type == typeof(object))
 					{
 						this.DeserializeMembers(reader, container, ref serializerOverride);
@@ -283,12 +294,15 @@ namespace GameDevWare.Serialization.Serializers
 		{
 			if (type == null) throw new ArgumentNullException("type");
 
-			return VersionRegEx.Replace(type.AssemblyQualifiedName ?? type.FullName, string.Empty);
+			var fullName = (type.AssemblyQualifiedName ?? type.FullName ?? type.Name);
+			fullName = VersionRegEx.Replace(fullName, string.Empty);
+			fullName = fullName.Replace(BclTypePart, ""); // remove BCL path of type information for better interop compatibility
+			return fullName;
 		}
 
 		public override string ToString()
 		{
-			return string.Format("object, {0}", objectType);
+			return string.Format("object, {0}", this.objectType);
 		}
 	}
 }
