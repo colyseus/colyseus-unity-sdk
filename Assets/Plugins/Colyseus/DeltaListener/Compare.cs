@@ -60,7 +60,7 @@ namespace Colyseus
 
 					if (
 						(oldVal as IEnumerable) != null && 
-						(oldVal as IEnumerable) != null && 
+						(newVal as IEnumerable) != null && 
 						Object.ReferenceEquals(oldVal.GetType(), newVal.GetType())
 					)
 					{

@@ -28,7 +28,9 @@ public class RoomTest {
 			Assert.NotNull (component.room.sessionId);
 		};
 
-		Assert.NotNull (component.room.data ["players"]);
-		Assert.NotNull (component.room.data ["messages"]);
+		component.room.OnUpdate += (object sender, RoomUpdateEventArgs e) => {
+			Assert.NotNull (component.room.data ["players"]);
+			Assert.NotNull (component.room.data ["messages"]);
+		};
 	}
 }
