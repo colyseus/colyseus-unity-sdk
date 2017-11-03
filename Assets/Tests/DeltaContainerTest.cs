@@ -137,12 +137,25 @@ public class DeltaContainerTest {
 		var listenCalls = 0;
 		container.Listen ("messages/:number", (DataChange change) => {
 			listenCalls++;
-			Assert.AreEqual("remove", change.operation);
-			Assert.AreEqual("2", change.path["number"]);
+			if (listenCalls == 1) {
+				Assert.AreEqual("remove", change.operation);
+				Assert.AreEqual("2", change.path["number"]);
+				Assert.AreEqual(null, change.value);
+
+			} else if (listenCalls == 2) {
+				Assert.AreEqual("replace", change.operation);
+				Assert.AreEqual("1", change.path["number"]);
+				Assert.AreEqual("three", change.value);
+
+			} else if (listenCalls == 3) {
+				Assert.AreEqual("replace", change.operation);
+				Assert.AreEqual("0", change.path["number"]);
+				Assert.AreEqual("two", change.value);
+			}
 		});
 
 		container.Set (newData);
-		Assert.AreEqual (1, listenCalls);
+		Assert.AreEqual (3, listenCalls);
 	}
 
 	protected IndexedDictionary<string, object> GetRawData () {

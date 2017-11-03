@@ -58,9 +58,12 @@ namespace Colyseus
 					var oldVal = mirror[key];
 					var newVal = obj[key];
 
+					var oldValType = oldVal.GetType ();
+					var newValType = newVal.GetType ();
+
 					if (
-						(oldVal as IEnumerable) != null && 
-						(newVal as IEnumerable) != null && 
+						!oldValType.IsPrimitive && oldValType != typeof(string) &&
+						!newValType.IsPrimitive && oldValType != typeof(string) && 
 						Object.ReferenceEquals(oldVal.GetType(), newVal.GetType())
 					)
 					{
