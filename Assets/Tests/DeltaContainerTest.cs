@@ -78,6 +78,22 @@ public class DeltaContainerTest {
 	}
 
 	[Test]
+	public void ListenReplaceString() {
+		var newData = GetRawData ();
+		newData ["turn"] = "mutated";
+
+		var listenCalls = 0;
+		container.Listen ("turn", (DataChange change) => {
+			listenCalls++;
+			Assert.AreEqual(change.value, "mutated");
+		});
+
+		container.Set (newData);
+		Assert.AreEqual (1, listenCalls);
+	}
+
+
+	[Test]
 	public void ListenWithoutPlaceholder() {
 		var newData = GetRawData ();
 
@@ -152,6 +168,7 @@ public class DeltaContainerTest {
 			{"turn", 0}
 		}));
 		data.Add ("players", players);
+		data.Add ("turn", "none");
 		data.Add ("messages", new List<object> { "one", "two", "three" });
 		return data;
 	}
