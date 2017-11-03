@@ -64,7 +64,7 @@ namespace Colyseus
 					if (
 						!oldValType.IsPrimitive && oldValType != typeof(string) &&
 						!newValType.IsPrimitive && oldValType != typeof(string) && 
-						Object.ReferenceEquals(oldVal.GetType(), newVal.GetType())
+						Object.ReferenceEquals(oldValType, newValType)
 					)
 					{
 						List<string> deeperPath = new List<string>(path);
