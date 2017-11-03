@@ -21,6 +21,22 @@ public class DeltaContainerTest {
 	}
 
 	[Test]
+	public void ListenAddString() {
+		var newData = GetRawData ();
+		newData ["some_string"] = "hello!";
+
+		var listenCalls = 0;
+		container.Listen ("some_string", (DataChange change) => {
+			listenCalls++;
+			Assert.AreEqual("add", change.operation);
+			Assert.AreEqual("hello!", change.value);
+		});
+
+		container.Set (newData);
+		Assert.AreEqual (1, listenCalls);
+	}
+
+	[Test]
 	public void ListenAddRemove() {
 		var newData = GetRawData ();
 
