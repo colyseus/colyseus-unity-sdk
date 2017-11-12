@@ -53,7 +53,12 @@ namespace Colyseus
 			for (int i = 0; i < oldKeys.Count; i++) 
 			{
 				var key = oldKeys [i];
-				if (obj.ContainsKey(key) && !(!obj.ContainsKey(key) && mirror.ContainsKey(key) && !(obj is List<object>)))
+				if (
+					obj.ContainsKey(key) && 
+					obj[key] != null &&
+					!(!obj.ContainsKey(key) && mirror.ContainsKey(key) && 
+					!(obj is List<object>))
+				)
 				{
 					var oldVal = mirror[key];
 					var newVal = obj[key];

@@ -37,6 +37,22 @@ public class DeltaContainerTest {
 	}
 
 	[Test]
+	public void ListenAddNull() {
+		var newData = GetRawData ();
+		newData ["null_new"] = null;
+
+		var listenCalls = 0;
+		container.Listen ("null_new", (DataChange change) => {
+			listenCalls++;
+			Assert.AreEqual("add", change.operation);
+			Assert.AreEqual(null, change.value);
+		});
+
+		container.Set (newData);
+		Assert.AreEqual (1, listenCalls);
+	}
+
+	[Test]
 	public void ListenAddRemove() {
 		var newData = GetRawData ();
 
@@ -198,6 +214,7 @@ public class DeltaContainerTest {
 		}));
 		data.Add ("players", players);
 		data.Add ("turn", "none");
+		data.Add ("null", null);
 		data.Add ("messages", new List<object> { "one", "two", "three" });
 		return data;
 	}
