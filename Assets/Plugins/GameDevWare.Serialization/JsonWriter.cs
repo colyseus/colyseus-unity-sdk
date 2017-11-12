@@ -1,4 +1,4 @@
-﻿/*
+/*
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -197,7 +197,7 @@ namespace GameDevWare.Serialization
 		{
 			this.WriteFormatting(JsonToken.DateTime);
 
-			var dateTimeFormat = this.Context.DateTimeFormats.First();
+			var dateTimeFormat = this.Context.DateTimeFormats.FirstOrDefault() ?? "o";
 			var dateString = dateTimeOffset.ToString(dateTimeFormat, this.Context.Format);
 			this.Write(dateString);
 		}

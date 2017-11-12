@@ -86,18 +86,17 @@ namespace Colyseus
 			this.OnReadyToConnect.Invoke (this, new EventArgs());
 		}
 
-		public void SetState( IndexedDictionary<string, object> state, uint remoteCurrentTime, uint remoteElapsedTime)
+		public void SetState( byte[] encodedState, uint remoteCurrentTime, uint remoteElapsedTime)
 		{
-			this.Set(state);
-
 			// Deserialize
-			var serializationOutput = new MemoryStream();
-			MsgPack.Serialize (state, serializationOutput);
+			var state = MsgPack.Deserialize<IndexedDictionary<string, object>> (new MemoryStream(encodedState));
+
+			this.Set(state);
 
 			if (this.OnUpdate != null)
 				this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(state, true));
 
-			this._previousState = serializationOutput.ToArray();
+			this._previousState = encodedState;
 		}
 
 		/// <summary>
@@ -138,7 +137,7 @@ namespace Colyseus
 				this.Leave ();
 
 			} else if (code == Protocol.ROOM_STATE) {
-				var state = (IndexedDictionary<string, object>) message [2];
+				byte[] encodedState = (byte[]) message [2];
 
 				// TODO:
 				// https://github.com/deniszykov/msgpack-unity3d/issues/8
@@ -148,7 +147,7 @@ namespace Colyseus
 
 				// this.SetState (state, remoteCurrentTime, remoteElapsedTime);
 
-				this.SetState (state, 0, 0);
+				this.SetState (encodedState, 0, 0);
 
 			} else if (code == Protocol.ROOM_STATE_PATCH) {
 

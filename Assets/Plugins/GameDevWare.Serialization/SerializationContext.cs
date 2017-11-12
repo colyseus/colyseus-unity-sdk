@@ -20,6 +20,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
+using GameDevWare.Serialization.MessagePack;
 using GameDevWare.Serialization.Serializers;
 
 // ReSharper disable once CheckNamespace
@@ -28,6 +29,7 @@ namespace GameDevWare.Serialization
 	public sealed class SerializationContext
 	{
 		private readonly Dictionary<Type, TypeSerializer> serializers;
+		private MessagePackExtensionTypeHandler extensionTypeHandler;
 
 		public Stack Hierarchy { get; private set; }
 
@@ -41,9 +43,15 @@ namespace GameDevWare.Serialization
 			set
 			{
 				if (value == null) throw new ArgumentNullException("value");
+
 				foreach (var kv in value)
 					this.serializers[kv.Key] = kv.Value;
 			}
+		}
+		public MessagePackExtensionTypeHandler ExtensionTypeHandler
+		{
+			get { return this.extensionTypeHandler; }
+			set { if (value == null) throw new ArgumentNullException("value"); this.extensionTypeHandler = value; }
 		}
 
 		public SerializationOptions Options { get; set; }
@@ -61,6 +69,8 @@ namespace GameDevWare.Serialization
 			this.Format = Json.DefaultFormat;
 			this.DateTimeFormats = Json.DefaultDateTimeFormats;
 			this.Encoding = Json.DefaultEncoding;
+			this.ExtensionTypeHandler = MsgPack.ExtensionTypeHandler;
+
 			this.serializers = Json.DefaultSerializers.ToDictionary(s => s.SerializedType);
 		}
 
