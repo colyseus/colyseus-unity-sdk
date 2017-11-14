@@ -1,4 +1,4 @@
-﻿/* 
+/* 
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -24,7 +24,7 @@ namespace GameDevWare.Serialization
 {
 	public abstract class JsonReader : IJsonReader
 	{
-		private static readonly long UNIX_EPOCH_TICKS = new DateTime(0x7b2, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
+
 		protected const int DEFAULT_BUFFER_SIZE = 1024;
 
 		private sealed class Buffer : IList<char>
@@ -543,7 +543,7 @@ namespace GameDevWare.Serialization
 				var ticks = JsonUtils.StringToInt64(buffer.GetChars(), buffer.Offset + start + 6, len - 8);
 
 				token = JsonToken.DateTime;
-				var dateTime = new DateTime(ticks * 0x2710L + UNIX_EPOCH_TICKS, DateTimeKind.Utc);
+				var dateTime = new DateTime(ticks * 0x2710L + JsonUtils.UnixEpochTicks, DateTimeKind.Utc);
 				lazyValue.Raw = dateTime;
 			}
 			else if (!quoted && IsNumber(buffer, start, len))

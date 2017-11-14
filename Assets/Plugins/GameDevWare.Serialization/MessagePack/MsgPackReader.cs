@@ -1,4 +1,4 @@
-﻿/*
+/*
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -399,11 +399,11 @@ namespace GameDevWare.Serialization.MessagePack
 							dataCount = this.bitConverter.ToUInt32(this.buffer, this.bufferOffset);
 						}
 
-						this.ReadToBuffer(1, throwOnEos: true);
-						var extType = this.buffer[this.bufferOffset];
+						this.ReadToBuffer(1, true);
+						var extensionType = unchecked((sbyte)this.buffer[this.bufferOffset]);
 
 						var data = this.ReadBytes(dataCount);
-						this.ReadExtType(extType, data, pos);
+						this.Value.SetValue(this.ReadExtensionType(extensionType, data), JsonToken.StringLiteral, pos);
 						break;
 					case MsgPackType.False:
 						this.Value.SetValue(FalseObject, JsonToken.Boolean, pos);
@@ -567,27 +567,19 @@ namespace GameDevWare.Serialization.MessagePack
 				return new ArraySegment<byte>(bytes, 0, bytes.Length);
 			}
 		}
-		private void ReadExtType(byte extType, ArraySegment<byte> data, int pos)
+		private object ReadExtensionType(sbyte type, ArraySegment<byte> data)
 		{
-			switch ((MsgPackExtType)extType)
+			var value = default(object);
+			if (this.Context.ExtensionTypeHandler.TryRead(type, data, out value))
 			{
-				case MsgPackExtType.DateTimeOld:
-					this.Value.SetValue(new DateTime(this.bitConverter.ToInt64(data.Array, data.Offset), DateTimeKind.Utc), JsonToken.DateTime, pos);
-					break;
-				case MsgPackExtType.DateTime:
-					this.Value.SetValue(new DateTime(this.bitConverter.ToInt64(data.Array, data.Offset + 1), (DateTimeKind)data.Array[data.Offset]), JsonToken.DateTime, pos);
-					break;
-				case MsgPackExtType.DateTimeOffset:
-					var time = new DateTime(this.bitConverter.ToInt64(data.Array, data.Offset), DateTimeKind.Utc);
-					var offset = new TimeSpan(this.bitConverter.ToInt64(data.Array, data.Offset + 8));
-					this.Value.SetValue(new DateTimeOffset(time, offset), JsonToken.DateTime, pos);
-					break;
-				case MsgPackExtType.DecimalOld:
-				case MsgPackExtType.Decimal:
-					this.Value.SetValue(this.bitConverter.ToDecimal(data.Array, data.Offset), JsonToken.Number, pos);
-					break;
-				default:
-					throw new UnknownMsgPackExtentionTypeException(extType);
+				return value;
+			}
+			else
+			{
+				if (ReferenceEquals(data.Array, this.buffer))
+					data = new ArraySegment<byte>((byte[])data.Array.Clone(), data.Offset, data.Count);
+
+				return new MessagePackExtensionType(type, data);
 			}
 		}
 

@@ -1,4 +1,4 @@
-﻿/*
+/*
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -29,7 +29,7 @@ namespace GameDevWare.Serialization.Serializers
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
 
-			if (reader.Token == JsonToken.DateTime)
+			if (reader.Token == JsonToken.DateTime || reader.RawValue is DateTime)
 				return reader.Value.AsDateTime;
 
 			var dateTimeStr = reader.ReadString(false);

@@ -1,4 +1,4 @@
-﻿/* 
+/* 
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -30,7 +30,7 @@ namespace GameDevWare.Serialization.MessagePack
 		{
 		}
 
-		public UnknownMsgPackExtentionTypeException(byte invalidExtType)
+		public UnknownMsgPackExtentionTypeException(sbyte invalidExtType)
 			: base(string.Format("Unknown MessagePack extention type '{0}' was readed from stream.", invalidExtType))
 		{
 		}

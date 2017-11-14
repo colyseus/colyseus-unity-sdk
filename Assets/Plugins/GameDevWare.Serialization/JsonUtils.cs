@@ -1,4 +1,4 @@
-﻿/* 
+/* 
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -21,6 +21,8 @@ namespace GameDevWare.Serialization
 {
 	internal static class JsonUtils
 	{
+		internal static readonly long UnixEpochTicks = new DateTime(0x7b2, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
+
 		private static readonly char[] ZerBuff = new char[] {'0', '0', '0', '0', '0', '0', '0', '0',};
 		private static readonly char[] HexChar = "0123456789ABCDEF".ToCharArray();
 

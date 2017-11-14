@@ -1,4 +1,4 @@
-﻿/* 
+/* 
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -14,7 +14,9 @@
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using GameDevWare.Serialization.MessagePack;
 using GameDevWare.Serialization.Serializers;
 
@@ -23,6 +25,17 @@ namespace GameDevWare.Serialization
 {
 	public static class MsgPack
 	{
+		public static string[] DefaultDateTimeFormats { get { return Json.DefaultDateTimeFormats; } set { Json.DefaultDateTimeFormats = value; } }
+		public static IFormatProvider DefaultFormat { get { return Json.DefaultFormat; } set { Json.DefaultFormat = value; } }
+		public static Encoding DefaultEncoding { get { return Json.DefaultEncoding; } set { Json.DefaultEncoding = value; } }
+		public static List<TypeSerializer> DefaultSerializers { get { return Json.DefaultSerializers; } }
+		public static MessagePackExtensionTypeHandler ExtensionTypeHandler { get; private set; }
+
+		static MsgPack()
+		{
+			ExtensionTypeHandler = new DefaultMessagePackExtensionTypeHandler(EndianBitConverter.Big);
+		}
+
 		public static void Serialize<T>(T objectToSerialize, Stream msgPackOutput)
 		{
 			Serialize(objectToSerialize, msgPackOutput, CreateDefaultContext(SerializationOptions.None));

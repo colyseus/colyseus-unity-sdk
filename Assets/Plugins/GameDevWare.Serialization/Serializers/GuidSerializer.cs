@@ -1,4 +1,4 @@
-﻿/* 
+/* 
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -14,6 +14,7 @@
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
+using GameDevWare.Serialization.MessagePack;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
@@ -35,6 +36,20 @@ namespace GameDevWare.Serialization.Serializers
 		{
 			if (writer == null) throw new ArgumentNullException("writer");
 			if (value == null) throw new ArgumentNullException("value");
+
+			var messagePackWriter = writer as MsgPackWriter;
+			if (messagePackWriter != null)
+			{
+				// try to write it as Message Pack extension type
+				var extensionType = default(sbyte);
+				var buffer = messagePackWriter.GetWriteBuffer();
+				if (messagePackWriter.Context.ExtensionTypeHandler.TryWrite(value, out extensionType, ref buffer))
+				{
+					messagePackWriter.Write(extensionType, buffer);
+					return;
+				}
+				// if not, continue default serialization
+			}
 
 			var guid = (Guid)value;
 			var guidStr = guid.ToString();

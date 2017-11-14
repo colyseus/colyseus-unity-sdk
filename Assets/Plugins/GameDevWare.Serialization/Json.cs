@@ -1,4 +1,4 @@
-﻿/*
+/*
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using GameDevWare.Serialization.MessagePack;
 using GameDevWare.Serialization.Serializers;
 
 // ReSharper disable once CheckNamespace
@@ -25,6 +26,7 @@ namespace GameDevWare.Serialization
 {
 	public static class Json
 	{
+		
 		private static IFormatProvider _DefaultFormat = CultureInfo.InvariantCulture;
 		private static Encoding _DefaultEncoding = new UTF8Encoding(false, true);
 		private static string[] _DefaultDateTimeFormats;
@@ -92,6 +94,7 @@ namespace GameDevWare.Serialization
 				new VersionSerializer(),
 				new TimeSpanSerializer(),
 				new DictionaryEntrySerializer(),
+
 #if UNITY_5 || UNITY_4 || UNITY_3_3 || UNITY_3_4 || UNITY_3_5
 				new BoundsSerializer(),
 				new Matrix4x4Serializer(),
