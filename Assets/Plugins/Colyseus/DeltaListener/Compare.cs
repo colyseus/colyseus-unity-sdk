@@ -133,11 +133,29 @@ namespace Colyseus
 					List<string> addPath = new List<string>(path);
 					addPath.Add((string) key);
 
+					var newVal = obj [key];
+					if (newVal != null) {
+						var newValType = newVal.GetType ();
+
+						// compare deeper additions
+						if (
+							!newValType.IsPrimitive && 
+							newValType != typeof(string)
+						) {
+							if (newVal is IDictionary) {
+								Generate(new IndexedDictionary<string, object>(), newVal as IndexedDictionary<string, object>, patches, addPath);
+
+							} else if (newVal is IList) {
+								Generate(new List<object>(), newVal as List<object>, patches, addPath);
+							}
+						}
+					}
+
 					patches.Add(new PatchObject
 					{
 						operation = "add",
 						path = addPath.ToArray(),
-						value = obj[key]
+						value = newVal
 					});
 				}
 			}

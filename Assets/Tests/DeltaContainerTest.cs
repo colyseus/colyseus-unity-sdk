@@ -190,6 +190,32 @@ public class DeltaContainerTest {
 		Assert.AreEqual (3, listenCalls);
 	}
 
+	[Test]
+	public void ListenInitialState() {
+		var container = new DeltaContainer (new IndexedDictionary<string, object>());
+		var listenCalls = 0;
+
+		container.Listen ("players/:id/position/:attribute", (DataChange change) => {
+			listenCalls++;
+		});
+
+		container.Listen ("turn", (DataChange change) => {
+			listenCalls++;
+		});
+
+		container.Listen ("game/turn", (DataChange change) => {
+			listenCalls++;
+		});
+
+		container.Listen ("messages/:number", (DataChange change) => {
+			listenCalls++;
+		});
+
+		container.Set (GetRawData ());
+
+		Assert.AreEqual (9, listenCalls);
+	}
+
 	protected IndexedDictionary<string, object> GetRawData () {
 		var data = new IndexedDictionary<string, object> ();
 		var players = new IndexedDictionary<string, object> ();
