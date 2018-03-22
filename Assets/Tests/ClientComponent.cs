@@ -19,12 +19,6 @@ public class ClientComponent : MonoBehaviour
 		while (true)
 		{
 			client.Recv();
-
-			if (client.error != null)
-			{
-				Debug.LogError ("Error: " + client.error);
-				break;
-			}
 			yield return 0;
 		}
 

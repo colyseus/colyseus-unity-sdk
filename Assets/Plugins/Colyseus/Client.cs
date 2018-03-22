@@ -62,13 +62,7 @@ namespace Colyseus
 		{
 			this.id = id;
 			this.endpoint = new UriBuilder(new Uri (endpoint));
-
-			// append client id to query string
-			if (this.id != null) {
-				this.endpoint.Query = "colyseusid=" + this.id;
-			}
-
-			this.connection = new Connection (this.endpoint.Uri);
+			this.connection = createConnection();
 			this.connection.OnClose += (object sender, EventArgs e) => this.OnClose.Invoke(sender, e);
 		}
 
@@ -105,7 +99,7 @@ namespace Colyseus
 			int requestId = ++this.joinRequestId;
 			options.Add ("requestId", requestId);
 
-			var room = new Room (roomName);
+			var room = new Room (roomName, options);
 			this.connectingRooms.Add (requestId, room);
 
 			this.connection.Send (new object[]{Protocol.JOIN_ROOM, roomName, options});
@@ -113,7 +107,38 @@ namespace Colyseus
 			return room;
 		}
 
-        void ParseMessage (byte[] recv)
+		/// <summary>
+		/// Close <see cref="Client"/> connection and leave all joined rooms.
+		/// </summary>
+		public void Close()
+		{
+			this.connection.Close();
+		}
+
+		protected Connection createConnection (string path = "", Dictionary<string, object> options = null)
+		{
+			if (options == null) {
+				options = new Dictionary<string, object> ();
+			}
+
+			if (this.id != null) {
+				options.Add ("colyseusid", this.id);
+			}
+
+			var list = new List<string>();
+			foreach(var item in options)
+			{
+				list.Add(item.Key + "=" + item.Value);
+			}
+
+			UriBuilder uriBuilder = new UriBuilder(this.endpoint.Uri);
+			uriBuilder.Path = path;
+			uriBuilder.Query = string.Join("&", list.ToArray());
+
+			return new Connection (uriBuilder.Uri);
+		}
+
+        private void ParseMessage (byte[] recv)
 		{
 			var message = MsgPack.Deserialize<List<object>> (new MemoryStream(recv));
 			var code = (byte) message [0];
@@ -134,7 +159,7 @@ namespace Colyseus
 					this.endpoint.Path = "/" + room.id;
 					this.endpoint.Query = "colyseusid=" + this.id;
 
-					room.SetConnection (new Connection (this.endpoint.Uri));
+					room.SetConnection (createConnection(room.id, room.options));
 					room.OnLeave += OnLeaveRoom;
 
 					this.rooms.Add (room.id, room);
@@ -160,18 +185,6 @@ namespace Colyseus
 			this.rooms.Remove (room.id);
 		}
 
-		/// <summary>
-		/// Close <see cref="Client"/> connection and leave all joined rooms.
-		/// </summary>
-		public void Close()
-		{
-			this.connection.Close();
-		}
-
-		public string error
-		{
-			get { return this.connection.error; }
-		}
 	}
 
 }

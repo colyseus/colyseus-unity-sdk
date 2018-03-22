@@ -20,6 +20,7 @@ public class WebSocket
 
 	public event EventHandler OnOpen;
 	public event EventHandler OnClose;
+	public event EventHandler<Colyseus.ErrorEventArgs> OnError;
 
 	public WebSocket(Uri url)
 	{
@@ -128,6 +129,7 @@ public class WebSocket
 		m_Socket.Control.MessageType = SocketMessageType.Binary;
 		m_Socket.MessageReceived += M_Socket_MessageReceived;
 		m_Socket.Closed += M_Socket_Closed;
+
 		TryConnect();
 
 		while (!m_IsConnected && m_Error == null)
@@ -151,7 +153,8 @@ public class WebSocket
 			Debug.Log("Error while connecting!");
 			Debug.Log(ex.Source);
 			Debug.Log(ex.Message);
-			//Add code here to handle any exceptions
+
+			OnError.Invoke(this, new Colyseus.ErrorEventArgs (ex.Message));
 		}
 	}
 
@@ -223,15 +226,16 @@ public class WebSocket
     WebSocketSharp.WebSocket m_Socket;
 	Queue<byte[]> m_Messages = new Queue<byte[]>();
 	bool m_IsConnected = false;
-	string m_Error = null;
 
 	public IEnumerator Connect()
 	{
+		Debug.Log(mUrl.ToString());
 		m_Socket = new WebSocketSharp.WebSocket(mUrl.ToString());
 
 		m_Socket.OnMessage += (sender, e) => m_Messages.Enqueue (e.RawData);
 
 		m_Socket.OnOpen += (sender, e) => {
+			Debug.Log("WebSocketSharp Open!");
 			if (OnOpen != null) {
 				OnOpen.Invoke(sender, e);
 			}
@@ -239,16 +243,20 @@ public class WebSocket
 		};
 
 		m_Socket.OnClose += (sender, e) => {
+			Debug.Log("WebSocketSharp Close!");
 			if (OnClose != null) {
 				OnClose.Invoke(sender, e);
 			}
 		};
 
-		m_Socket.OnError += (sender, e) => m_Error = e.Message;
+		m_Socket.OnError += (sender, e) => {
+			Debug.Log("WebSocketSharp Error!");
+			this.OnError.Invoke (this, new Colyseus.ErrorEventArgs (e.Message));
+		};
 
 		m_Socket.ConnectAsync();
 
-		while (!m_IsConnected && m_Error == null)
+		while (!m_IsConnected) //  && m_Error == null
 			yield return 0;
 	}
 
@@ -267,13 +275,6 @@ public class WebSocket
 	public void Close()
 	{
 		m_Socket.Close();
-	}
-
-	public string error
-	{
-		get {
-			return m_Error;
-		}
 	}
 #endif
 }

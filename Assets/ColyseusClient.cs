@@ -20,38 +20,35 @@ public class ColyseusClient : MonoBehaviour {
 
 	// Use this for initialization
 	IEnumerator Start () {
-
 		String uri = "ws://" + serverName + ":" + port;
 		client = new Client(uri);
 		client.OnOpen += OnOpenHandler;
 		client.OnClose += (object sender, EventArgs e) => Debug.Log ("CONNECTION CLOSED");
 
+		Debug.Log ("Let's connect the client!");
 		yield return StartCoroutine(client.Connect());
 
+		Debug.Log ("Let's join the room!");
 		room = client.Join(roomName);
-		room.OnReadyToConnect += (sender, e) => StartCoroutine ( room.Connect() );
+		room.OnReadyToConnect += (sender, e) => {
+			Debug.Log("Ready to connect to room!");
+			StartCoroutine (room.Connect ());
+		};
 		room.OnJoin += OnRoomJoined;
-		room.OnUpdate += OnUpdateHandler;
+		room.OnStateChange += OnStateChangeHandler;
 
 		room.Listen ("players/:id", this.OnPlayerChange);
 		room.Listen ("players/:id/:axis", this.OnPlayerMove);
 		room.Listen ("messages/:number", this.OnMessageAdded);
 		room.Listen (this.OnChangeFallback);
 
-		room.OnData += (object sender, MessageEventArgs e) => Debug.Log(e.data);
+		room.OnData += OnData;
 
 		int i = 0;
 
 		while (true)
 		{
 			client.Recv();
-
-			// string reply = client.RecvString();
-			if (client.error != null)
-			{
-				Debug.LogError ("Error: " + client.error);
-				break;
-			}
 
 			i++;
 
@@ -82,13 +79,19 @@ public class ColyseusClient : MonoBehaviour {
 		Debug.Log("Joined room successfully.");
 	}
 
-	void OnUpdateHandler (object sender, RoomUpdateEventArgs e)
+	void OnData (object sender, MessageEventArgs e) 
+	{
+		var data = (IndexedDictionary<string, object>) e.data;
+		Debug.Log(data);
+	}
+
+	void OnStateChangeHandler (object sender, RoomUpdateEventArgs e)
 	{
 		// Setup room first state
 		if (e.isFirstState) {
 			IndexedDictionary<string, object> players = (IndexedDictionary<string, object>) e.state ["players"];
 
-			// trigger to add existing players 
+			// trigger to add existing players
 			foreach(KeyValuePair<string, object> player in players)
 			{
 				this.OnPlayerChange (new DataChange {

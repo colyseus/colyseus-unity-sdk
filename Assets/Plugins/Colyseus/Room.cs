@@ -18,6 +18,8 @@ namespace Colyseus
 		public string name;
 		public string sessionId;
 
+		public Dictionary<string, object> options;
+
 		protected Connection connection;
 		protected byte[] _previousState = null;
 
@@ -34,7 +36,7 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs when some error has been triggered in the room.
 		/// </summary>
-		public event EventHandler OnError;
+		public event EventHandler<ErrorEventArgs> OnError;
 
 		/// <summary>
 		/// Occurs when <see cref="Client"/> leaves this room.
@@ -49,7 +51,7 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs after applying the patched state on this <see cref="Room"/>.
 		/// </summary>
-		public event EventHandler<RoomUpdateEventArgs> OnUpdate;
+		public event EventHandler<RoomUpdateEventArgs> OnStateChange;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Room"/> class.
@@ -59,10 +61,11 @@ namespace Colyseus
 		/// The <see cref="Client"/> client connection instance.
 		/// </param>
 		/// <param name="name">The name of the room</param>
-		public Room (String name)
+		public Room (String name, Dictionary<string, object> options = null)
 			: base(new IndexedDictionary<string, object>())
 		{
 			this.name = name;
+			this.options = options;
 		}
 
 		public void Recv ()
@@ -83,6 +86,7 @@ namespace Colyseus
 		{
 			this.connection = connection;
 			this.connection.OnClose += (object sender, EventArgs e) => this.OnLeave.Invoke(sender, e);
+			this.connection.OnError += (object sender, ErrorEventArgs e) => this.OnError.Invoke(sender, e);
 			this.OnReadyToConnect.Invoke (this, new EventArgs());
 		}
 
@@ -93,8 +97,9 @@ namespace Colyseus
 
 			this.Set(state);
 
-			if (this.OnUpdate != null)
-				this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(state, true));
+			if (this.OnStateChange != null) {
+				this.OnStateChange.Invoke (this, new RoomUpdateEventArgs (state, true));
+			}
 
 			this._previousState = encodedState;
 		}
@@ -106,6 +111,9 @@ namespace Colyseus
 		{
 			if (this.id != null) {
 				this.connection.Close ();
+
+			} else {
+				this.OnLeave.Invoke (this, new EventArgs ());
 			}
 		}
 
@@ -126,24 +134,24 @@ namespace Colyseus
 			if (code == Protocol.JOIN_ROOM) {
 				this.sessionId = (string) message [1];
 
-				if (this.OnJoin != null)
-					this.OnJoin.Invoke (this, new EventArgs());
-
+				if (this.OnJoin != null) {
+					this.OnJoin.Invoke (this, new EventArgs ());
+				}
+					
 			} else if (code == Protocol.JOIN_ERROR) {
-				if (this.OnError != null)
-					this.OnError.Invoke (this, new ErrorEventArgs((string) message [2]));
+				this.OnError.Invoke (this, new ErrorEventArgs ((string) message [1]));
 
 			} else if (code == Protocol.LEAVE_ROOM) {
 				this.Leave ();
 
 			} else if (code == Protocol.ROOM_STATE) {
-				byte[] encodedState = (byte[]) message [2];
+				byte[] encodedState = (byte[]) message [1];
 
 				// TODO:
 				// https://github.com/deniszykov/msgpack-unity3d/issues/8
 
-				// var remoteCurrentTime = (double) message [3];
-				// var remoteElapsedTime = (int) message [4];
+				// var remoteCurrentTime = (double) message [2];
+				// var remoteElapsedTime = (int) message [3];
 
 				// this.SetState (state, remoteCurrentTime, remoteElapsedTime);
 
@@ -151,7 +159,7 @@ namespace Colyseus
 
 			} else if (code == Protocol.ROOM_STATE_PATCH) {
 
-				var data = (List<object>) message [2];
+				var data = (List<object>) message [1];
 				byte[] patches = new byte[data.Count];
 
 				uint i = 0;
@@ -163,8 +171,9 @@ namespace Colyseus
 				this.Patch (patches);
 
 			} else if (code == Protocol.ROOM_DATA) {
-				if (this.OnData != null)
-					this.OnData.Invoke(this, new MessageEventArgs(message[2]));
+				if (this.OnData != null) {
+					this.OnData.Invoke (this, new MessageEventArgs (message [1]));
+				}
 			}
 		}
 
@@ -176,8 +185,8 @@ namespace Colyseus
 
 			this.Set(newState);
 
-			if (this.OnUpdate != null)
-				this.OnUpdate.Invoke(this, new RoomUpdateEventArgs(this.data));
+			if (this.OnStateChange != null)
+				this.OnStateChange.Invoke(this, new RoomUpdateEventArgs(this.data));
 		}
 	}
 }
