@@ -25,11 +25,16 @@ namespace Colyseus
 		public string id;
 		protected UriBuilder endpoint;
 
+		protected Connection connection;
+
 		protected Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
 		protected Dictionary<int, Room> connectingRooms = new Dictionary<int, Room> ();
-		protected int joinRequestId;
 
-		protected Connection connection;
+		protected int requestId;
+		protected Dictionary<int, Action<RoomAvailable[]>> roomsAvailableRequests = new Dictionary<int, Action<RoomAvailable[]>>();
+		protected RoomAvailable[] roomsAvailableResponse = { 
+			new RoomAvailable()
+		};
 
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> connection has been established, and Client <see cref="id"/> is available.
@@ -62,7 +67,7 @@ namespace Colyseus
 		{
 			this.id = id;
 			this.endpoint = new UriBuilder(new Uri (endpoint));
-			this.connection = createConnection();
+			this.connection = CreateConnection();
 			this.connection.OnClose += (object sender, EventArgs e) => this.OnClose.Invoke(sender, e);
 		}
 
@@ -96,7 +101,7 @@ namespace Colyseus
 				options = new Dictionary<string, object> ();
 			}
 
-			int requestId = ++this.joinRequestId;
+			int requestId = ++this.requestId;
 			options.Add ("requestId", requestId);
 
 			var room = new Room (roomName, options);
@@ -107,6 +112,29 @@ namespace Colyseus
 			return room;
 		}
 
+//		/// <summary>
+//		/// Request <see cref="Client"/> to join in a <see cref="Room"/>.
+//		/// </summary>
+//		/// <param name="roomName">The name of the Room to join.</param>
+//		/// <param name="callback">Callback to receive list of available rooms</param>
+//		public void GetAvailableRooms (string roomName, Action<RoomAvailable[]> callback)
+//		{
+//			int requestId = ++this.requestId;
+//			this.connection.Send (new object[]{Protocol.ROOM_LIST, requestId, roomName});
+//
+//			this.roomsAvailableRequests.Add (requestId, callback);
+//
+//			// // USAGE
+//			// this.client.GetAvailableRooms ("chat", (RoomAvailable[] obj) => {
+//			// 	for (int i = 0; i < obj.Length; i++) {
+//			// 		Debug.Log (obj [i].roomId);
+//			// 		Debug.Log (obj [i].clients);
+//			// 		Debug.Log (obj [i].maxClients);
+//			// 		Debug.Log (obj [i].metadata);
+//			// 	}
+//			});
+//		}
+
 		/// <summary>
 		/// Close <see cref="Client"/> connection and leave all joined rooms.
 		/// </summary>
@@ -115,7 +143,7 @@ namespace Colyseus
 			this.connection.Close();
 		}
 
-		protected Connection createConnection (string path = "", Dictionary<string, object> options = null)
+		protected Connection CreateConnection (string path = "", Dictionary<string, object> options = null)
 		{
 			if (options == null) {
 				options = new Dictionary<string, object> ();
@@ -159,7 +187,7 @@ namespace Colyseus
 					this.endpoint.Path = "/" + room.id;
 					this.endpoint.Query = "colyseusid=" + this.id;
 
-					room.SetConnection (createConnection(room.id, room.options));
+					room.SetConnection (CreateConnection(room.id, room.options));
 					room.OnLeave += OnLeaveRoom;
 
 					this.rooms.Add (room.id, room);
@@ -172,6 +200,12 @@ namespace Colyseus
 			} else if (code == Protocol.JOIN_ERROR) {
 				if (this.OnError != null)
 					this.OnError.Invoke (this, new ErrorEventArgs ((string) message [2]));
+
+//			} else if (code == Protocol.ROOM_LIST) {
+//				var requestId = Convert.ToInt32(message[1]);
+//				var rooms = (RoomAvailable[]) Convert.ChangeType(message[2], roomsAvailableResponse.GetType());
+//				this.roomsAvailableRequests [requestId].Invoke (rooms);
+//				this.roomsAvailableRequests.Remove (requestId);
 
 			} else {
 				if (this.OnMessage != null)

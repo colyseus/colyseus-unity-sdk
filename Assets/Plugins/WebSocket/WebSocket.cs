@@ -229,7 +229,6 @@ public class WebSocket
 
 	public IEnumerator Connect()
 	{
-		Debug.Log(mUrl.ToString());
 		m_Socket = new WebSocketSharp.WebSocket(mUrl.ToString());
 
 		m_Socket.OnMessage += (sender, e) => m_Messages.Enqueue (e.RawData);
@@ -251,7 +250,9 @@ public class WebSocket
 
 		m_Socket.OnError += (sender, e) => {
 			Debug.Log("WebSocketSharp Error!");
-			this.OnError.Invoke (this, new Colyseus.ErrorEventArgs (e.Message));
+			if (this.OnError != null) {
+				this.OnError.Invoke (this, new Colyseus.ErrorEventArgs (e.Message));
+			}
 		};
 
 		m_Socket.ConnectAsync();

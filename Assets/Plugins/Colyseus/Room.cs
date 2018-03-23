@@ -10,6 +10,13 @@ using UnityEngine;
 
 namespace Colyseus
 {
+	public class RoomAvailable {
+		public string roomId;
+		public uint clients;
+		public uint maxClients;
+		public object metadata;
+	}
+	
 	/// <summary>
 	/// </summary>
 	public class Room : DeltaContainer
@@ -85,8 +92,19 @@ namespace Colyseus
 		public void SetConnection (Connection connection)
 		{
 			this.connection = connection;
-			this.connection.OnClose += (object sender, EventArgs e) => this.OnLeave.Invoke(sender, e);
-			this.connection.OnError += (object sender, ErrorEventArgs e) => this.OnError.Invoke(sender, e);
+
+			this.connection.OnClose += (object sender, EventArgs e) => {
+				if (this.OnLeave != null) {
+					this.OnLeave.Invoke (sender, e);
+				}
+			};
+
+			this.connection.OnError += (object sender, ErrorEventArgs e) => {
+				if (this.OnError != null) {
+					this.OnError.Invoke(sender, e);
+				}
+			};
+
 			this.OnReadyToConnect.Invoke (this, new EventArgs());
 		}
 

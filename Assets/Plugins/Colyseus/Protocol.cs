@@ -33,6 +33,11 @@ namespace Colyseus
 		public static int ROOM_STATE_PATCH = 15;
 
 		// 
+		// Matchmaking messages (20~30)
+		// 
+		public static int ROOM_LIST = 20;
+
+		// 
 		// Generic messages (50~60)
 		// 
 

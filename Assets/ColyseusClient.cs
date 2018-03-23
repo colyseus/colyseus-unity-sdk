@@ -11,8 +11,9 @@ public class ColyseusClient : MonoBehaviour {
 
 	Client client;
 	Room room;
+
 	public string serverName = "localhost";
-	public string port = "3553";
+	public string port = "8080";
 	public string roomName = "chat";
 
 	// map of players
@@ -21,6 +22,7 @@ public class ColyseusClient : MonoBehaviour {
 	// Use this for initialization
 	IEnumerator Start () {
 		String uri = "ws://" + serverName + ":" + port;
+		Debug.Log (uri);
 		client = new Client(uri);
 		client.OnOpen += OnOpenHandler;
 		client.OnClose += (object sender, EventArgs e) => Debug.Log ("CONNECTION CLOSED");
@@ -29,7 +31,10 @@ public class ColyseusClient : MonoBehaviour {
 		yield return StartCoroutine(client.Connect());
 
 		Debug.Log ("Let's join the room!");
-		room = client.Join(roomName);
+		room = client.Join(roomName, new Dictionary<string, object>()
+		{
+			{ "create", true }
+		});
 		room.OnReadyToConnect += (sender, e) => {
 			Debug.Log("Ready to connect to room!");
 			StartCoroutine (room.Connect ());
@@ -62,13 +67,6 @@ public class ColyseusClient : MonoBehaviour {
 		OnApplicationQuit();
 	}
 
-	void OnDestroy ()
-	{
-		// Make sure client will disconnect from the server
-		room.Leave ();
-		client.Close ();
-	}
-
 	void OnOpenHandler (object sender, EventArgs e)
 	{
 		Debug.Log("Connected to server. Client id: " + client.id);
@@ -82,7 +80,7 @@ public class ColyseusClient : MonoBehaviour {
 	void OnData (object sender, MessageEventArgs e) 
 	{
 		var data = (IndexedDictionary<string, object>) e.data;
-		Debug.Log(data);
+//		Debug.Log(data);
 	}
 
 	void OnStateChangeHandler (object sender, RoomUpdateEventArgs e)
@@ -107,10 +105,10 @@ public class ColyseusClient : MonoBehaviour {
 
 	void OnPlayerChange (DataChange change)
 	{
-		Debug.Log ("OnPlayerChange");
-		Debug.Log (change.operation);
-		Debug.Log (change.path["id"]);
-		Debug.Log (change.value);
+//		Debug.Log ("OnPlayerChange");
+//		Debug.Log (change.operation);
+//		Debug.Log (change.path["id"]);
+//		Debug.Log (change.value);
 
 		if (change.operation == "add") {
 			IndexedDictionary<string, object> value = (IndexedDictionary<string, object>) change.value;
@@ -134,9 +132,9 @@ public class ColyseusClient : MonoBehaviour {
 
 	void OnPlayerMove (DataChange change)
 	{
-		Debug.Log ("OnPlayerMove");
-		Debug.Log ("playerId: " + change.path["id"] + ", Axis: " + change.path["axis"]);
-		Debug.Log (change.value);
+//		Debug.Log ("OnPlayerMove");
+//		Debug.Log ("playerId: " + change.path["id"] + ", Axis: " + change.path["axis"]);
+//		Debug.Log (change.value);
 
 		GameObject cube;
 		players.TryGetValue (change.path ["id"], out cube);
@@ -146,29 +144,30 @@ public class ColyseusClient : MonoBehaviour {
 
 	void OnPlayerRemoved (DataChange change)
 	{
-		Debug.Log ("OnPlayerRemoved");
-		Debug.Log (change.path);
-		Debug.Log (change.value);
+//		Debug.Log ("OnPlayerRemoved");
+//		Debug.Log (change.path);
+//		Debug.Log (change.value);
 	}
 
 	void OnMessageAdded (DataChange change)
 	{
-		Debug.Log ("OnMessageAdded");
-		Debug.Log (change.path["number"]);
-		Debug.Log (change.value);
+//		Debug.Log ("OnMessageAdded");
+//		Debug.Log (change.path["number"]);
+//		Debug.Log (change.value);
 	}
 
 	void OnChangeFallback (PatchObject change)
 	{
-		// Debug.Log ("OnChangeFallback");
-		// Debug.Log (change.operation);
-		// Debug.Log (change.path);
-		// Debug.Log (change.value);
+//		Debug.Log ("OnChangeFallback");
+//		Debug.Log (change.operation);
+//		Debug.Log (change.path);
+//		Debug.Log (change.value);
 	}
 
 	void OnApplicationQuit()
 	{
-		// Ensure the connection with server is closed immediatelly
-		client.Close();
+		// Make sure client will disconnect from the server
+		room.Leave ();
+		client.Close ();
 	}
 }
