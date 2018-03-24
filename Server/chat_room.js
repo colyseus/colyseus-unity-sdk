@@ -36,6 +36,8 @@ class ChatRoom extends Room {
   onMessage (client, data) {
     console.log(data, "received from", client.sessionId);
     this.state.messages.push(client.sessionId + " sent " + data);
+
+    this.broadcast({hello: "hello world"});
   }
 
   update () {

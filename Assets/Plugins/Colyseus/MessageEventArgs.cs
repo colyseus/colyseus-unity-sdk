@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using GameDevWare.Serialization;
 using GameDevWare.Serialization.MessagePack;
@@ -29,15 +29,15 @@ namespace Colyseus
 	public class MessageEventArgs : EventArgs
 	{
 		/// <summary>
-		/// Data coming from the server.
+		/// Message coming from the server.
 		/// </summary>
-		public object data = null;
+		public object message = null;
 
 		/// <summary>
 		/// </summary>
-		public MessageEventArgs (object data)
+		public MessageEventArgs (object message)
 		{
-			this.data = data;
+			this.message = message;
 		}
 	}
 

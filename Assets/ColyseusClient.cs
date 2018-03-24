@@ -47,7 +47,7 @@ public class ColyseusClient : MonoBehaviour {
 		room.Listen ("messages/:number", this.OnMessageAdded);
 		room.Listen (this.OnChangeFallback);
 
-		room.OnData += OnData;
+		room.OnMessage += OnMessage;
 
 		int i = 0;
 
@@ -77,9 +77,9 @@ public class ColyseusClient : MonoBehaviour {
 		Debug.Log("Joined room successfully.");
 	}
 
-	void OnData (object sender, MessageEventArgs e) 
+	void OnMessage (object sender, MessageEventArgs e)
 	{
-		var data = (IndexedDictionary<string, object>) e.data;
+		var message = (IndexedDictionary<string, object>) e.message;
 //		Debug.Log(data);
 	}
 

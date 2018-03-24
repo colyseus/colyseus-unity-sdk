@@ -16,7 +16,7 @@ namespace Colyseus
 		public uint maxClients;
 		public object metadata;
 	}
-	
+
 	/// <summary>
 	/// </summary>
 	public class Room : DeltaContainer
@@ -53,7 +53,7 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs when server sends a message to this <see cref="Room"/>
 		/// </summary>
-		public event EventHandler<MessageEventArgs> OnData;
+		public event EventHandler<MessageEventArgs> OnMessage;
 
 		/// <summary>
 		/// Occurs after applying the patched state on this <see cref="Room"/>.
@@ -155,7 +155,7 @@ namespace Colyseus
 				if (this.OnJoin != null) {
 					this.OnJoin.Invoke (this, new EventArgs ());
 				}
-					
+
 			} else if (code == Protocol.JOIN_ERROR) {
 				this.OnError.Invoke (this, new ErrorEventArgs ((string) message [1]));
 
@@ -189,8 +189,8 @@ namespace Colyseus
 				this.Patch (patches);
 
 			} else if (code == Protocol.ROOM_DATA) {
-				if (this.OnData != null) {
-					this.OnData.Invoke (this, new MessageEventArgs (message [1]));
+				if (this.OnMessage != null) {
+					this.OnMessage.Invoke (this, new MessageEventArgs (message [1]));
 				}
 			}
 		}

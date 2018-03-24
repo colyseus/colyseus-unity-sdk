@@ -32,7 +32,7 @@ namespace Colyseus
 
 		protected int requestId;
 		protected Dictionary<int, Action<RoomAvailable[]>> roomsAvailableRequests = new Dictionary<int, Action<RoomAvailable[]>>();
-		protected RoomAvailable[] roomsAvailableResponse = { 
+		protected RoomAvailable[] roomsAvailableResponse = {
 			new RoomAvailable()
 		};
 
