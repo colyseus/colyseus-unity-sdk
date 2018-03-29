@@ -92,11 +92,13 @@ namespace GameDevWare.Serialization.MessagePack
 						return false;
 
 					var buffer = data.Array;
-					var guidValue = new Guid
-					(
-							this.bitConverter.ToUInt32(buffer, data.Offset),
-							this.bitConverter.ToUInt16(buffer, data.Offset + 4),
-							this.bitConverter.ToUInt16(buffer, data.Offset + 6),
+					unchecked
+					{
+						var guidValue = new Guid
+						(
+							(uint)(buffer[data.Offset + 3] << 24 | buffer[data.Offset + 2] << 16 | buffer[data.Offset + 1] << 8 | buffer[data.Offset + 0]),
+							(ushort)(buffer[data.Offset + 5] << 8 | buffer[data.Offset + 4]),
+							(ushort)(buffer[data.Offset + 7] << 8 | buffer[data.Offset + 6]),
 							buffer[data.Offset + 8],
 							buffer[data.Offset + 9],
 							buffer[data.Offset + 10],
@@ -105,9 +107,11 @@ namespace GameDevWare.Serialization.MessagePack
 							buffer[data.Offset + 13],
 							buffer[data.Offset + 14],
 							buffer[data.Offset + 15]
-					);
-					value = guidValue;
-					return true;
+						);
+
+						value = guidValue;
+						return true;
+					}
 				default:
 					return false;
 			}

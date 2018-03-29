@@ -109,16 +109,16 @@ namespace GameDevWare.Serialization.MessagePack
 
 		public void Write(int number)
 		{
-			if (number > -32 && number < 0)
+			if (number >= -32 && number < 0)
 			{
-				var formatByte = (byte)((byte)Math.Abs(number) | (byte)MsgPackType.NegativeFixIntStart);
+				var formatByte = unchecked((byte)number);
 				this.buffer[0] = formatByte;
 				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (number >= 0 && number < 128)
 			{
-				var formatByte = (byte)((byte)number | (byte)MsgPackType.PositiveFixIntStart);
+				var formatByte = unchecked((byte)number);
 				this.buffer[0] = formatByte;
 				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
@@ -126,14 +126,14 @@ namespace GameDevWare.Serialization.MessagePack
 			else if (number <= sbyte.MaxValue && number >= sbyte.MinValue)
 			{
 				this.WriteType(MsgPackType.Int8);
-				this.buffer[0] = (byte)(sbyte)number;
+				this.buffer[0] = unchecked((byte)(sbyte)number);
 				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (number <= short.MaxValue && number >= short.MinValue)
 			{
 				this.WriteType(MsgPackType.Int16);
-				this.bitConverter.CopyBytes((short)number, this.buffer, 0);
+				this.bitConverter.CopyBytes(checked((short)number), this.buffer, 0);
 				this.outputStream.Write(this.buffer, 0, 2);
 				this.bytesWritten += 2;
 			}
@@ -150,7 +150,7 @@ namespace GameDevWare.Serialization.MessagePack
 		{
 			if (number < 128)
 			{
-				var formatByte = (byte)((byte)number | (byte)MsgPackType.PositiveFixIntStart);
+				var formatByte = checked((byte)number);
 				this.buffer[0] = formatByte;
 				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
@@ -158,14 +158,14 @@ namespace GameDevWare.Serialization.MessagePack
 			else if (number <= byte.MaxValue)
 			{
 				this.WriteType(MsgPackType.UInt8);
-				this.buffer[0] = (byte)number;
+				this.buffer[0] = checked((byte)number);
 				this.outputStream.Write(this.buffer, 0, 1);
 				this.bytesWritten += 1;
 			}
 			else if (number <= ushort.MaxValue)
 			{
 				this.WriteType(MsgPackType.UInt16);
-				this.bitConverter.CopyBytes((ushort)number, this.buffer, 0);
+				this.bitConverter.CopyBytes(checked((ushort)number), this.buffer, 0);
 				this.outputStream.Write(this.buffer, 0, 2);
 				this.bytesWritten += 2;
 			}
@@ -182,7 +182,7 @@ namespace GameDevWare.Serialization.MessagePack
 		{
 			if (number <= int.MaxValue && number >= int.MinValue)
 			{
-				this.Write((int)number);
+				this.Write(checked((int)number));
 				return;
 			}
 
@@ -196,7 +196,7 @@ namespace GameDevWare.Serialization.MessagePack
 		{
 			if (number <= uint.MaxValue)
 			{
-				this.Write((uint)number);
+				this.Write(checked((uint)number));
 				return;
 			}
 

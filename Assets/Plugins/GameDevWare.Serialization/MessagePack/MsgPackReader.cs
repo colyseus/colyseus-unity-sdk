@@ -260,15 +260,15 @@ namespace GameDevWare.Serialization.MessagePack
 				this.closingTokens.Push(new ClosingToken { Token = JsonToken.EndOfObject, Counter = mapCount * 2 + 1 });
 				this.Value.SetValue(null, JsonToken.BeginObject, pos);
 			}
-			else if (formatValue >= (byte)MsgPackType.NegativeFixIntStart && formatValue <= (byte)MsgPackType.NegativeFixIntEnd)
+			else if (formatValue >= (byte)MsgPackType.NegativeFixIntStart)
 			{
-				var value = -(formatValue - (byte)MsgPackType.NegativeFixIntStart);
-				this.Value.SetValue((sbyte)value, JsonToken.Number, pos);
+				var value = unchecked((sbyte)formatValue);
+				this.Value.SetValue(value, JsonToken.Number, pos);
 			}
-			else if (formatValue >= (byte)MsgPackType.PositiveFixIntStart && formatValue <= (byte)MsgPackType.PositiveFixIntEnd)
+			else if (formatValue <= (byte)MsgPackType.PositiveFixIntEnd)
 			{
-				var value = formatValue - (byte)MsgPackType.PositiveFixIntStart;
-				this.Value.SetValue((byte)value, JsonToken.Number, pos);
+				var value = unchecked((byte)formatValue);
+				this.Value.SetValue(value, JsonToken.Number, pos);
 			}
 			else
 			{
@@ -421,7 +421,7 @@ namespace GameDevWare.Serialization.MessagePack
 						break;
 					case MsgPackType.Int8:
 						this.ReadToBuffer(1, throwOnEos: true);
-						this.Value.SetValue((sbyte)this.buffer[this.bufferOffset], JsonToken.Number, pos);
+						this.Value.SetValue(unchecked((sbyte)this.buffer[this.bufferOffset]), JsonToken.Number, pos);
 						break;
 					case MsgPackType.Int16:
 						this.ReadToBuffer(2, throwOnEos: true);
