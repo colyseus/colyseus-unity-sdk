@@ -25,9 +25,9 @@ namespace Colyseus
 		public string[] rawRules;
 	}
 
-	public class DeltaContainer
+	public class StateContainer
 	{
-		public IndexedDictionary<string, object> data;
+		public IndexedDictionary<string, object> state;
 		private List<PatchListener> listeners;
 		private FallbackPatchListener defaultListener;
 
@@ -40,17 +40,17 @@ namespace Colyseus
 			{ ":*", new Regex(@"(.*)") },
 		};
 
-		public DeltaContainer (IndexedDictionary<string, object> data)
+		public StateContainer (IndexedDictionary<string, object> state)
 		{
-			this.data = data;
+			this.state = state;
 			this.Reset();
 		}
 
 		public PatchObject[] Set(IndexedDictionary<string, object> newData) {
-			var patches = Compare.GetPatchList(this.data, newData);
+			var patches = Compare.GetPatchList(this.state, newData);
 
 			this.CheckPatches(patches);
-			this.data = newData;
+			this.state = newData;
 
 			return patches;
 		}

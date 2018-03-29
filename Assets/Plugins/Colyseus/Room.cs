@@ -19,7 +19,7 @@ namespace Colyseus
 
 	/// <summary>
 	/// </summary>
-	public class Room : DeltaContainer
+	public class Room : StateContainer
 	{
 		public string id;
 		public string name;
@@ -204,7 +204,7 @@ namespace Colyseus
 			this.Set(newState);
 
 			if (this.OnStateChange != null)
-				this.OnStateChange.Invoke(this, new RoomUpdateEventArgs(this.data));
+				this.OnStateChange.Invoke(this, new RoomUpdateEventArgs(this.state));
 		}
 	}
 }

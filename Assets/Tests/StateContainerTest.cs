@@ -7,12 +7,12 @@ using System.Collections.Generic;
 using Colyseus;
 using GameDevWare.Serialization;
 
-public class DeltaContainerTest {
-	DeltaContainer container;
+public class StateContainerTest {
+	StateContainer container;
 
 	[SetUp]
 	public void Init () {
-		container = new DeltaContainer (GetRawData());
+		container = new StateContainer (GetRawData());
 	}
 
 	[TearDown]
@@ -192,7 +192,7 @@ public class DeltaContainerTest {
 
 	[Test]
 	public void ListenInitialState() {
-		var container = new DeltaContainer (new IndexedDictionary<string, object>());
+		var container = new StateContainer (new IndexedDictionary<string, object>());
 		var listenCalls = 0;
 
 		container.Listen ("players/:id/position/:attribute", (DataChange change) => {

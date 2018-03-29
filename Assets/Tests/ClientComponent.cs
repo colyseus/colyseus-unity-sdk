@@ -9,7 +9,7 @@ public class ClientComponent : MonoBehaviour
 
 	// Use this for initialization
 	public IEnumerator Start () {
-		client = new Client("ws://localhost:3553");
+		client = new Client("ws://localhost:8080");
 
 		yield return StartCoroutine(client.Connect());
 
