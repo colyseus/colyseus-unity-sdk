@@ -1,4 +1,4 @@
-﻿/* 
+/* 
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
@@ -37,7 +37,7 @@ namespace GameDevWare.Serialization.Serializers
 			if (value == null) throw new ArgumentNullException("value");
 
 			var uri = (Uri)value;
-			writer.WriteString(uri.ToString());
+			writer.WriteString(uri.OriginalString);
 		}
 	}
 }
