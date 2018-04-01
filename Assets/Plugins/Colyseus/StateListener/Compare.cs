@@ -63,13 +63,11 @@ namespace Colyseus
 					var oldVal = mirror[key];
 					var newVal = obj[key];
 
-					var oldValType = oldVal.GetType ();
-					var newValType = newVal.GetType ();
-
 					if (
-						!oldValType.IsPrimitive && oldValType != typeof(string) &&
-						!newValType.IsPrimitive && oldValType != typeof(string) && 
-						Object.ReferenceEquals(oldValType, newValType)
+						oldVal != null && newVal != null &&
+						!oldVal.GetType ().IsPrimitive && oldVal.GetType () != typeof(string) &&
+						!newVal.GetType ().IsPrimitive && newVal.GetType () != typeof(string) && 
+						Object.ReferenceEquals(oldVal.GetType (), newVal.GetType ())
 					)
 					{
 						List<string> deeperPath = new List<string>(path);
@@ -93,7 +91,10 @@ namespace Colyseus
 						}
 							
 					} else {
-						if (!oldVal.Equals(newVal))
+						if (
+							(oldVal == null && newVal != null) ||
+							!oldVal.Equals(newVal)
+						)
 						{
 							List<string> replacePath = new List<string>(path);
 							replacePath.Add((string) key);

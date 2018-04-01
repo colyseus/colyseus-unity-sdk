@@ -37,6 +37,22 @@ public class StateContainerTest {
 	}
 
 	[Test]
+	public void ListenReplaceNull() {
+		var newData = GetRawData ();
+
+		var listenCalls = 0;
+		container.Listen ("null", (DataChange change) => {
+			listenCalls++;
+			Assert.AreEqual("replace", change.operation);
+			Assert.AreEqual(10, change.value);
+		});
+		newData ["null"] = 10;
+
+		container.Set (newData);
+		Assert.AreEqual (1, listenCalls);
+	}
+
+	[Test]
 	public void ListenAddNull() {
 		var newData = GetRawData ();
 		newData ["null_new"] = null;
