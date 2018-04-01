@@ -50,8 +50,6 @@ public class ColyseusClient : MonoBehaviour {
 		room.OnMessage += OnMessage;
 
 		int i = 0;
-
-		OnApplicationQuit();
 		
 		while (true)
 		{
@@ -150,12 +148,5 @@ public class ColyseusClient : MonoBehaviour {
 //		Debug.Log (change.operation);
 //		Debug.Log (change.path);
 //		Debug.Log (change.value);
-	}
-
-	void OnApplicationQuit()
-	{
-		// Make sure client will disconnect from the server
-		room.Leave ();
-		client.Close ();
 	}
 }
