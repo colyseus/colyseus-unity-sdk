@@ -51,6 +51,8 @@ public class ColyseusClient : MonoBehaviour {
 
 		int i = 0;
 
+		OnApplicationQuit();
+		
 		while (true)
 		{
 			client.Recv();
@@ -63,8 +65,6 @@ public class ColyseusClient : MonoBehaviour {
 
 			yield return 0;
 		}
-
-		OnApplicationQuit();
 	}
 
 	void OnOpenHandler (object sender, EventArgs e)
