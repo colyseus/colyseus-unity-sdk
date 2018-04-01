@@ -88,26 +88,14 @@ public class ColyseusClient : MonoBehaviour {
 		// Setup room first state
 		if (e.isFirstState) {
 			IndexedDictionary<string, object> players = (IndexedDictionary<string, object>) e.state ["players"];
-
-			// trigger to add existing players
-			foreach(KeyValuePair<string, object> player in players)
-			{
-				this.OnPlayerChange (new DataChange {
-					path = new Dictionary<string, string> {
-						{"id", player.Key}
-					},
-					operation = "add",
-					value = player.Value
-				});
-			}
 		}
 	}
 
 	void OnPlayerChange (DataChange change)
 	{
-//		Debug.Log ("OnPlayerChange");
-//		Debug.Log (change.operation);
-//		Debug.Log (change.path["id"]);
+		Debug.Log ("OnPlayerChange");
+		Debug.Log (change.operation);
+		Debug.Log (change.path["id"]);
 //		Debug.Log (change.value);
 
 		if (change.operation == "add") {
