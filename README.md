@@ -45,13 +45,13 @@ See [usage example](Assets/ColyseusClient.cs) for more details.
 Client colyseus = new Colyseus.Client ("ws://localhost:2657");
 
 Room room = colyseus.Join ("room_name");
-room.OnUpdate += OnUpdate;
+room.OnStateChange += OnStateChange;
 ```
 
 **Getting the full room state**
 
 ```csharp
-void OnUpdate (object sender, RoomUpdateEventArgs e)
+void OnStateChange (object sender, RoomUpdateEventArgs e)
 {
 	if (e.isFirstState) {
 		// First setup of your client state
