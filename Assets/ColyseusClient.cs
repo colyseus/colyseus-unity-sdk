@@ -149,6 +149,7 @@ public class ColyseusClient : MonoBehaviour {
 //		Debug.Log (change.path);
 //		Debug.Log (change.value);
 	}
+
 	void OnApplicationQuit()
 	{
 		// Make sure client will disconnect from the server
