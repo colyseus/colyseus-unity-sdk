@@ -50,6 +50,7 @@ public class ColyseusClient : MonoBehaviour {
 		room.OnMessage += OnMessage;
 
 		int i = 0;
+		
 		while (true)
 		{
 			client.Recv();
