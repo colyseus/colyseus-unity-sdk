@@ -95,13 +95,13 @@ namespace Colyseus
 
 			this.connection.OnClose += (object sender, EventArgs e) => {
 				if (this.OnLeave != null) {
-					this.OnLeave.Invoke (sender, e);
+					this.OnLeave.Invoke (this, e);
 				}
 			};
 
 			this.connection.OnError += (object sender, ErrorEventArgs e) => {
 				if (this.OnError != null) {
-					this.OnError.Invoke(sender, e);
+					this.OnError.Invoke(this, e);
 				}
 			};
 
