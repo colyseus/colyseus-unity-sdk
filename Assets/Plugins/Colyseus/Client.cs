@@ -125,28 +125,28 @@ namespace Colyseus
 			return this.Join(roomName, options);
 		}
 
-//		/// <summary>
-//		/// Request <see cref="Client"/> to join in a <see cref="Room"/>.
-//		/// </summary>
-//		/// <param name="roomName">The name of the Room to join.</param>
-//		/// <param name="callback">Callback to receive list of available rooms</param>
-//		public void GetAvailableRooms (string roomName, Action<RoomAvailable[]> callback)
-//		{
-//			int requestId = ++this.requestId;
-//			this.connection.Send (new object[]{Protocol.ROOM_LIST, requestId, roomName});
-//
-//			this.roomsAvailableRequests.Add (requestId, callback);
-//
-//			// // USAGE
-//			// this.client.GetAvailableRooms ("chat", (RoomAvailable[] obj) => {
-//			// 	for (int i = 0; i < obj.Length; i++) {
-//			// 		Debug.Log (obj [i].roomId);
-//			// 		Debug.Log (obj [i].clients);
-//			// 		Debug.Log (obj [i].maxClients);
-//			// 		Debug.Log (obj [i].metadata);
-//			// 	}
-//			});
-//		}
+		/// <summary>
+		/// Request <see cref="Client"/> to join in a <see cref="Room"/>.
+		/// </summary>
+		/// <param name="roomName">The name of the Room to join.</param>
+		/// <param name="callback">Callback to receive list of available rooms</param>
+		public void GetAvailableRooms (string roomName, Action<RoomAvailable[]> callback)
+		{
+			int requestId = ++this.requestId;
+			this.connection.Send (new object[]{Protocol.ROOM_LIST, requestId, roomName});
+
+			this.roomsAvailableRequests.Add (requestId, callback);
+
+			// // USAGE
+			// this.client.GetAvailableRooms ("chat", (RoomAvailable[] obj) => {
+			// 	for (int i = 0; i < obj.Length; i++) {
+			// 		Debug.Log (obj [i].roomId);
+			// 		Debug.Log (obj [i].clients);
+			// 		Debug.Log (obj [i].maxClients);
+			// 		Debug.Log (obj [i].metadata);
+			// 	}
+			//});
+		}
 
 		/// <summary>
 		/// Close <see cref="Client"/> connection and leave all joined rooms.
@@ -214,11 +214,20 @@ namespace Colyseus
 				if (this.OnError != null)
 					this.OnError.Invoke (this, new ErrorEventArgs ((string) message [2]));
 
-//			} else if (code == Protocol.ROOM_LIST) {
-//				var requestId = Convert.ToInt32(message[1]);
-//				var rooms = (RoomAvailable[]) Convert.ChangeType(message[2], roomsAvailableResponse.GetType());
-//				this.roomsAvailableRequests [requestId].Invoke (rooms);
-//				this.roomsAvailableRequests.Remove (requestId);
+            } else if (code == Protocol.ROOM_LIST) {
+
+                var requestId = Convert.ToInt32(message[1]);
+                List<object> _rooms = (List<object>)message[2];
+                RoomAvailable[] rooms = new RoomAvailable[_rooms.Count];
+
+                for (int i = 0; i < _rooms.Count; i++) {
+                    IDictionary<string, object> room = (IDictionary<string, object>)_rooms[i];
+                    RoomAvailable _room = ObjectExtensions.ToObject<RoomAvailable>(_rooms[i]);
+                    rooms[i] = _room;
+                }
+
+                this.roomsAvailableRequests[requestId].Invoke(rooms);
+                this.roomsAvailableRequests.Remove(requestId);
 
 			} else {
 				if (this.OnMessage != null)
