@@ -112,6 +112,19 @@ namespace Colyseus
 			return room;
 		}
 
+		/// <summary>
+		/// Request <see cref="Client"/> to rejoin a <see cref="Room"/>.
+		/// </summary>
+		/// <param name="roomName">The name of the Room to rejoin.</param>
+		/// <param name="sessionId">sessionId of client's previous connection</param>
+		public Room ReJoin (string roomName, string sessionId)
+		{
+			Dictionary<string, object> options = new Dictionary<string, object> ();
+			options.Add ("sessionId", sessionId);
+
+			return this.Join(roomName, options);
+		}
+
 //		/// <summary>
 //		/// Request <see cref="Client"/> to join in a <see cref="Room"/>.
 //		/// </summary>
