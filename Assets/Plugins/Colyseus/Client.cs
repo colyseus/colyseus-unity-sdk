@@ -49,7 +49,7 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> gets an error.
 		/// </summary>
-		public event EventHandler OnError;
+		public event EventHandler<ErrorEventArgs> OnError;
 
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> receives a message from server.
