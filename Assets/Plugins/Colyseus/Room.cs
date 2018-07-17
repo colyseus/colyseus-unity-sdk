@@ -11,10 +11,10 @@ using UnityEngine;
 namespace Colyseus
 {
 	public class RoomAvailable {
-		public string roomId;
-		public uint clients;
-		public uint maxClients;
-		public object metadata;
+        public string roomId { get; set; }
+        public uint clients { get; set; }
+        public uint maxClients { get; set; }
+        public object metadata { get; set; }
 	}
 
 	/// <summary>
