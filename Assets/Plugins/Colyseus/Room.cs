@@ -128,7 +128,7 @@ namespace Colyseus
 		public void Leave ()
 		{
 			if (this.id != null) {
-				this.connection.Close ();
+				this.connection.Send(new object[]{Protocol.LEAVE_ROOM});
 
 			} else {
 				this.OnLeave.Invoke (this, new EventArgs ());
