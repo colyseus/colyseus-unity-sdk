@@ -83,10 +83,10 @@ namespace Colyseus
 			{
 				this.ParseMessage(data);
 			}
-
-			// TODO: this may not be a good idea?
-			foreach (var room in this.rooms) {
-				room.Value.Recv ();
+			
+			Dictionary<string, Room> temp_dic = new Dictionary<string, Room>(this.rooms);
+			foreach (var room in temp_dic) {
+				this.rooms[room.Key].Recv();
 			}
 		}
 
