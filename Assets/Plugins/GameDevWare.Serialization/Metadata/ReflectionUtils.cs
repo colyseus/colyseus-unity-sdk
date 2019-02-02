@@ -1,16 +1,16 @@
-﻿/* 
+/*
 	Copyright (c) 2016 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
-	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND 
-	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE 
-	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY, 
-	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE 
+	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND
+	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE
+	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY,
+	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE
 	AND THOSE ARISING BY STATUTE OR FROM CUSTOM OR USAGE OF TRADE OR COURSE OF DEALING.
-	
-	This source code is distributed via Unity Asset Store, 
-	to use it in your project you should accept Terms of Service and EULA 
+
+	This source code is distributed via Unity Asset Store,
+	to use it in your project you should accept Terms of Service and EULA
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
@@ -26,12 +26,15 @@ namespace GameDevWare.Serialization.Metadata
 {
 	internal static class GettersAndSetters
 	{
+#if !NET_STANDARD_2_0
 		private static readonly bool AotRuntime;
 
 		private static readonly Dictionary<MemberInfo, Func<object, object>> ReadFunctions;
 		private static readonly Dictionary<MemberInfo, Action<object, object>> WriteFunctions;
 		private static readonly Dictionary<MemberInfo, Func<object>> ConstructorFunctions;
+#endif
 
+#if !NET_STANDARD_2_0
 		static GettersAndSetters()
 		{
 #if ((UNITY_WEBGL || UNITY_IOS || ENABLE_IL2CPP) && !UNITY_EDITOR)
@@ -44,12 +47,16 @@ namespace GameDevWare.Serialization.Metadata
 			WriteFunctions = new Dictionary<MemberInfo, Action<object, object>>();
 			ConstructorFunctions = new Dictionary<MemberInfo, Func<object>>();
 		}
+#endif
 
 		public static bool TryGetAssessors(MethodInfo getMethod, MethodInfo setMethod, out Func<object, object> getFn, out Action<object, object> setFn)
 		{
 			getFn = null;
 			setFn = null;
 
+#if NET_STANDARD_2_0
+			return false;
+#else
 			if (AotRuntime)
 				return false;
 
@@ -102,11 +109,16 @@ namespace GameDevWare.Serialization.Metadata
 			}
 
 			return true;
+#endif
 		}
 		public static bool TryGetAssessors(FieldInfo fieldInfo, out Func<object, object> getFn, out Action<object, object> setFn)
 		{
 			getFn = null;
 			setFn = null;
+
+#if NET_STANDARD_2_0
+			return false;
+#else
 
 			if (AotRuntime || fieldInfo.IsStatic)
 				return false;
@@ -159,6 +171,7 @@ namespace GameDevWare.Serialization.Metadata
 			}
 
 			return true;
+#endif
 		}
 		public static bool TryGetConstructor(Type type, out Func<object> ctrFn)
 		{
@@ -166,6 +179,9 @@ namespace GameDevWare.Serialization.Metadata
 
 			ctrFn = null;
 
+#if NET_STANDARD_2_0
+			return false;
+#else
 			if (AotRuntime || type.IsAbstract || type.IsInterface)
 				return false;
 
@@ -189,6 +205,7 @@ namespace GameDevWare.Serialization.Metadata
 			}
 
 			return true;
+#endif
 		}
 	}
 }
