@@ -169,7 +169,7 @@ namespace Colyseus
 			var list = new List<string>();
 			foreach(var item in options)
 			{
-				list.Add(item.Key + "=" + item.Value);
+				list.Add(item.Key + "=" + ((item.Value != null) ? Convert.ToString(item.Value) : "null") );
 			}
 
 			UriBuilder uriBuilder = new UriBuilder(this.endpoint.Uri);
