@@ -1,7 +1,4 @@
-﻿using UnityEngine;
-using UnityEngine.TestTools;
-using NUnit.Framework;
-using System.Collections;
+﻿using NUnit.Framework;
 using System.Collections.Generic;
 
 using Colyseus;
@@ -230,6 +227,31 @@ public class StateContainerTest {
 		container.Set (GetRawData ());
 
 		Assert.AreEqual (9, listenCalls);
+	}
+
+	[Test]
+	public void ListenWithImmediate()
+	{
+		var container = new StateContainer(GetRawData());
+		var listenCalls = 0;
+
+		container.Listen("players/:id/position/:attribute", (DataChange change) => {
+			listenCalls++;
+		}, true);
+
+		container.Listen("turn", (DataChange change) => {
+			listenCalls++;
+		}, true);
+
+		container.Listen("game/turn", (DataChange change) => {
+			listenCalls++;
+		}, true);
+
+		container.Listen("messages/:number", (DataChange change) => {
+			listenCalls++;
+		}, true);
+
+		Assert.AreEqual(9, listenCalls);
 	}
 
 	protected IndexedDictionary<string, object> GetRawData () {
