@@ -27,7 +27,7 @@ namespace Colyseus
 
 		public Dictionary<string, object> options;
 
-		protected Connection connection;
+		public Connection connection;
 		protected byte[] _previousState = null;
 
 		/// <summary>
@@ -125,10 +125,17 @@ namespace Colyseus
 		/// <summary>
 		/// Leave the room.
 		/// </summary>
-		public void Leave ()
+		public void Leave (bool consented = true)
 		{
 			if (this.id != null) {
-				this.connection.Send(new object[]{Protocol.LEAVE_ROOM});
+				if (consented)
+				{
+					this.connection.Send(new object[] { Protocol.LEAVE_ROOM }); 
+				}
+				else
+				{
+					this.connection.Close();
+				}
 
 			} else {
 				this.OnLeave.Invoke (this, new EventArgs ());

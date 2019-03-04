@@ -2,17 +2,17 @@ const http = require("http");
 const express = require("express");
 
 const colyseus = require("colyseus");
-const ChatRoom = require('./chat_room');
+const DemoRoom = require('./demo_room');
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 2567;
 
 const app = new express();
 const gameServer = new colyseus.Server({
   server: http.createServer(app)
 });
 
-// Register ChatRoom as "chat"
-gameServer.register("chat", ChatRoom);
+// Register DemoRoom as "chat"
+gameServer.register("demo", DemoRoom);
 
 app.get("/something", function (req, res) {
   console.log("something!", process.pid);

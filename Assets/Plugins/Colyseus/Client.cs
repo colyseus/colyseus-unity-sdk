@@ -30,7 +30,7 @@ namespace Colyseus
 		protected Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
 		protected Dictionary<int, Room> connectingRooms = new Dictionary<int, Room> ();
 
-		protected int requestId;
+		protected int _requestId;
 		protected Dictionary<int, Action<RoomAvailable[]>> roomsAvailableRequests = new Dictionary<int, Action<RoomAvailable[]>>();
 		protected RoomAvailable[] roomsAvailableResponse = {
 			new RoomAvailable()
@@ -101,7 +101,7 @@ namespace Colyseus
 				options = new Dictionary<string, object> ();
 			}
 
-			int requestId = ++this.requestId;
+			int requestId = ++this._requestId;
 			options.Add ("requestId", requestId);
 
 			var room = new Room (roomName, options);
@@ -132,7 +132,7 @@ namespace Colyseus
 		/// <param name="callback">Callback to receive list of available rooms</param>
 		public void GetAvailableRooms (string roomName, Action<RoomAvailable[]> callback)
 		{
-			int requestId = ++this.requestId;
+			int requestId = ++this._requestId;
 			this.connection.Send (new object[]{Protocol.ROOM_LIST, requestId, roomName});
 
 			this.roomsAvailableRequests.Add (requestId, callback);
@@ -172,9 +172,11 @@ namespace Colyseus
 				list.Add(item.Key + "=" + ((item.Value != null) ? Convert.ToString(item.Value) : "null") );
 			}
 
-			UriBuilder uriBuilder = new UriBuilder(this.endpoint.Uri);
-			uriBuilder.Path = path;
-			uriBuilder.Query = string.Join("&", list.ToArray());
+			UriBuilder uriBuilder = new UriBuilder(this.endpoint.Uri)
+			{
+				Path = path,
+				Query = string.Join("&", list.ToArray())
+			};
 
 			return new Connection (uriBuilder.Uri);
 		}
@@ -203,6 +205,10 @@ namespace Colyseus
 					room.SetConnection (CreateConnection(room.id, room.options));
 					room.OnLeave += OnLeaveRoom;
 
+					if (this.rooms.ContainsKey(room.id))
+					{
+						this.rooms.Remove(room.id);
+					}
 					this.rooms.Add (room.id, room);
 					this.connectingRooms.Remove (requestId);
 
@@ -218,15 +224,15 @@ namespace Colyseus
 
                 var requestId = Convert.ToInt32(message[1]);
                 List<object> _rooms = (List<object>)message[2];
-                RoomAvailable[] rooms = new RoomAvailable[_rooms.Count];
+                RoomAvailable[] availableRooms = new RoomAvailable[_rooms.Count];
 
                 for (int i = 0; i < _rooms.Count; i++) {
                     IDictionary<string, object> room = (IDictionary<string, object>)_rooms[i];
                     RoomAvailable _room = ObjectExtensions.ToObject<RoomAvailable>(_rooms[i]);
-                    rooms[i] = _room;
+                    availableRooms[i] = _room;
                 }
 
-                this.roomsAvailableRequests[requestId].Invoke(rooms);
+                this.roomsAvailableRequests[requestId].Invoke(availableRooms);
                 this.roomsAvailableRequests.Remove(requestId);
 
 			} else {
