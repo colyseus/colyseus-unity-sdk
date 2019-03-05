@@ -2,10 +2,13 @@ using System;
 
 namespace Colyseus
 {
-	public class Serializer
+	public interface Serializer<T>
 	{
-		public Serializer()
-		{
-		}
+		void SetState(byte[] data);
+		T GetState();
+		void Patch(byte[] data);
+
+	    void Teardown ();
+    	void Handshake (byte[] bytes);
 	}
 }

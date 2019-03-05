@@ -4,7 +4,23 @@ namespace Colyseus
 {
 	public class SchemaSerializer<T>
 	{
-		public SchemaSerializer()
+		void SetState(byte[] data)
+		{
+		}
+
+		T GetState()
+		{
+		}
+
+		void Patch(byte[] data)
+		{
+		}
+
+	    void Teardown ()
+		{
+		}
+
+    	void Handshake (byte[] bytes)
 		{
 		}
 	}

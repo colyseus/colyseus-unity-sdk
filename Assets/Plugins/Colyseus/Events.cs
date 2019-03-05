@@ -13,55 +13,49 @@ namespace Colyseus
 		/// <summary>
 		/// The error message
 		/// </summary>
-		public string message = null;
+		public string Message = null;
 
 		/// <summary>
 		/// </summary>
 		public ErrorEventArgs (string message)
 		{
-			this.message = message;
+			this.Message = message;
 		}
 	}
 
 	/// <summary>
 	/// Representation of a message received from the server.
 	/// </summary>
-	public class MessageEventArgs : EventArgs
+	public class DataEventArgs : EventArgs
 	{
 		/// <summary>
 		/// Message coming from the server.
 		/// </summary>
-		public object message = null;
+		public object Data;
 
 		/// <summary>
 		/// </summary>
-		public MessageEventArgs (object message)
+		public DataEventArgs (object _data)
 		{
-			this.message = message;
+			Data = _data;
 		}
 	}
 
 	/// <summary>
 	/// Room Update Message
 	/// </summary>
-	public class RoomUpdateEventArgs : EventArgs
+	public class StateChangeEventArgs<T> : EventArgs
 	{
 		/// <summary>
 		/// New state of the <see cref="Room" />
 		/// </summary>
-		public IndexedDictionary<string, object> state;
-
-		/// <summary>
-		/// Boolean representing if the event is setting the state of the <see cref="Room" /> for the first time.
-		/// </summary>
-		public bool isFirstState;
+		public T State { get; private set; }
 
 		/// <summary>
 		/// </summary>
-		public RoomUpdateEventArgs (IndexedDictionary<string, object> state, bool isFirstState = false)
+		public StateChangeEventArgs (T state)
 		{
-			this.state = state;
-			this.isFirstState = isFirstState;
+			this.State = state;
 		}
 	}
 }

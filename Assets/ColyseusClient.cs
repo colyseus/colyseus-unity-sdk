@@ -62,7 +62,7 @@ public class ColyseusClient : MonoBehaviour {
 			m_IdText.text = "id: " + client.id;
 		};
 		client.OnError += (sender, e) => Debug.LogError(e.message);
-		client.OnClose += (object sender, EventArgs e) => Debug.Log("CONNECTION CLOSED");
+		client.OnClose += (sender, e) => Debug.Log("CONNECTION CLOSED");
 		StartCoroutine(client.Connect());
 	}
 
@@ -77,7 +77,10 @@ public class ColyseusClient : MonoBehaviour {
 			Debug.Log("Ready to connect to room!");
 			StartCoroutine(room.Connect());
 		};
-		room.OnError += (sender, e) => Debug.LogError(e.message);
+		room.OnError += (sender, e) =>
+		{
+			Debug.LogError(e.message);
+		};
 		room.OnJoin += (sender, e) => {
 			Debug.Log("Joined room successfully.");
 			m_SessionIdText.text = "sessionId: " + room.sessionId;
@@ -150,13 +153,13 @@ public class ColyseusClient : MonoBehaviour {
 		}
 	}
 
-	void OnMessage (object sender, MessageEventArgs e)
+	void OnMessage (object sender, DataEventArgs e)
 	{
 		var message = (IndexedDictionary<string, object>) e.message;
 //		Debug.Log(data);
 	}
 
-	void OnStateChangeHandler (object sender, RoomUpdateEventArgs e)
+	void OnStateChangeHandler (object sender, StateChangeEventArgs e)
 	{
 		// Setup room first state
 		if (e.isFirstState) {

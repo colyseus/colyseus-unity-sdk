@@ -27,8 +27,8 @@ namespace Colyseus
 
 		protected Connection connection;
 
-		protected Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
-		protected Dictionary<int, Room> connectingRooms = new Dictionary<int, Room> ();
+		protected Dictionary<string, Room<object>> rooms = new Dictionary<string, Room<object>> ();
+		protected Dictionary<int, Room<object>> connectingRooms = new Dictionary<int, Room<object>> ();
 
 		protected int _requestId;
 		protected Dictionary<int, Action<RoomAvailable[]>> roomsAvailableRequests = new Dictionary<int, Action<RoomAvailable[]>>();
@@ -55,7 +55,7 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> receives a message from server.
 		/// </summary>
-		public event EventHandler<MessageEventArgs> OnMessage;
+		public event EventHandler<DataEventArgs> OnMessage;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Client"/> class with
@@ -64,29 +64,29 @@ namespace Colyseus
 		/// <param name="endpoint">
 		/// A <see cref="string"/> that represents the WebSocket URL to connect.
 		/// </param>
-		public Client (string endpoint, string id = null)
+		public Client (string _endpoint, string _id = null)
 		{
-			this.id = id;
-			this.endpoint = new UriBuilder(new Uri (endpoint));
-			this.connection = CreateConnection();
-			this.connection.OnClose += (object sender, EventArgs e) => this.OnClose.Invoke(sender, e);
+			id = _id;
+			endpoint = new UriBuilder(new Uri (_endpoint));
+			connection = CreateConnection();
+			connection.OnClose += OnClose.Invoke;
 		}
 
 		public IEnumerator Connect()
 		{
-			return this.connection.Connect ();
+			return connection.Connect ();
 		}
 
 		public void Recv()
 		{
-			byte[] data = this.connection.Recv();
+			byte[] data = connection.Recv();
 			if (data != null)
 			{
 				this.ParseMessage(data);
 			}
 
 			// TODO: this may not be a good idea?
-			foreach (var room in this.rooms) {
+			foreach (var room in rooms) {
 				room.Value.Recv ();
 			}
 		}
@@ -96,19 +96,19 @@ namespace Colyseus
 		/// </summary>
 		/// <param name="roomName">The name of the Room to join.</param>
 		/// <param name="options">Custom join request options</param>
-		public Room Join (string roomName, Dictionary<string, object> options = null)
+		public Room<T> Join <T> (string roomName, Dictionary<string, object> options = null)
 		{
 			if (options == null) {
 				options = new Dictionary<string, object> ();
 			}
 
-			int requestId = ++this._requestId;
+			int requestId = ++_requestId;
 			options.Add ("requestId", requestId);
 
-			var room = new Room (roomName, options);
-			this.connectingRooms.Add (requestId, room);
+			var room = new Room<T> (roomName, options);
+			connectingRooms.Add (requestId, room);
 
-			this.connection.Send (new object[]{Protocol.JOIN_REQUEST, roomName, options});
+			connection.Send (new object[]{Protocol.JOIN_REQUEST, roomName, options});
 
 			return room;
 		}
@@ -118,12 +118,12 @@ namespace Colyseus
 		/// </summary>
 		/// <param name="roomName">The name of the Room to rejoin.</param>
 		/// <param name="sessionId">sessionId of client's previous connection</param>
-		public Room ReJoin (string roomName, string sessionId)
+		public Room<T> ReJoin <T>(string roomName, string sessionId)
 		{
 			Dictionary<string, object> options = new Dictionary<string, object> ();
 			options.Add ("sessionId", sessionId);
 
-			return this.Join(roomName, options);
+			return Join<T>(roomName, options);
 		}
 
 		/// <summary>
@@ -133,9 +133,9 @@ namespace Colyseus
 		/// <param name="callback">Callback to receive list of available rooms</param>
 		public void GetAvailableRooms (string roomName, Action<RoomAvailable[]> callback)
 		{
-			int requestId = ++this._requestId;
-			this.connection.Send (new object[]{Protocol.ROOM_LIST, requestId, roomName});
-			this.roomsAvailableRequests.Add (requestId, callback);
+			int requestId = ++_requestId;
+			connection.Send (new object[]{Protocol.ROOM_LIST, requestId, roomName});
+			roomsAvailableRequests.Add (requestId, callback);
 		}
 
 		/// <summary>
@@ -143,7 +143,7 @@ namespace Colyseus
 		/// </summary>
 		public void Close()
 		{
-			this.connection.Close();
+			connection.Close();
 		}
 
 		protected Connection CreateConnection (string path = "", Dictionary<string, object> options = null)
@@ -152,8 +152,8 @@ namespace Colyseus
 				options = new Dictionary<string, object> ();
 			}
 
-			if (this.id != null) {
-				options.Add ("colyseusid", this.id);
+			if (id != null) {
+				options.Add ("colyseusid", id);
 			}
 
 			var list = new List<string>();
@@ -162,7 +162,7 @@ namespace Colyseus
 				list.Add(item.Key + "=" + ((item.Value != null) ? Convert.ToString(item.Value) : "null") );
 			}
 
-			UriBuilder uriBuilder = new UriBuilder(this.endpoint.Uri)
+			UriBuilder uriBuilder = new UriBuilder(endpoint.Uri)
 			{
 				Path = path,
 				Query = string.Join("&", list.ToArray())
@@ -174,39 +174,39 @@ namespace Colyseus
         private void ParseMessage (byte[] bytes)
 		{
 
-			if (this.previousCode == 0)
+			if (previousCode == 0)
 			{
 				var code = bytes[0];
 
 				if (code == Protocol.USER_ID)
 				{
-					this.id = System.Text.Encoding.UTF8.GetString(bytes, 1, bytes.Length);
+					id = System.Text.Encoding.UTF8.GetString(bytes, 1, bytes.Length);
 
-					if (this.OnOpen != null)
-						this.OnOpen.Invoke(this, EventArgs.Empty);
+					if (OnOpen != null)
+						OnOpen.Invoke(this, EventArgs.Empty);
 
 				}
 				else if (code == Protocol.JOIN_REQUEST)
 				{
 					var requestId = (byte)bytes[1];
 
-					Room room;
-					if (this.connectingRooms.TryGetValue(requestId, out room))
+					Room<object> room;
+					if (connectingRooms.TryGetValue(requestId, out room))
 					{
 						room.id = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes.Length);
 
-						this.endpoint.Path = "/" + room.id;
-						this.endpoint.Query = "colyseusid=" + this.id;
+						endpoint.Path = "/" + room.id;
+						endpoint.Query = "colyseusid=" + this.id;
 
 						room.SetConnection(CreateConnection(room.id, room.options));
 						room.OnLeave += OnLeaveRoom;
 
-						if (this.rooms.ContainsKey(room.id))
+						if (rooms.ContainsKey(room.id))
 						{
-							this.rooms.Remove(room.id);
+							rooms.Remove(room.id);
 						}
-						this.rooms.Add(room.id, room);
-						this.connectingRooms.Remove(requestId);
+						rooms.Add(room.id, room);
+						connectingRooms.Remove(requestId);
 
 					}
 					else
@@ -218,18 +218,18 @@ namespace Colyseus
 				else if (code == Protocol.JOIN_ERROR)
 				{
 					string message = System.Text.Encoding.UTF8.GetString(bytes, 1, bytes.Length);
-					if (this.OnError != null)
-						this.OnError.Invoke(this, new ErrorEventArgs(message));
+					if (OnError != null)
+						OnError.Invoke(this, new ErrorEventArgs(message));
 
 				}
 				else if (code == Protocol.ROOM_LIST)
 				{
-					this.previousCode = code;
+					previousCode = code;
 				}
 			}
 			else
 			{
-				if (this.previousCode == Protocol.ROOM_LIST)
+				if (previousCode == Protocol.ROOM_LIST)
 				{
 					var message = MsgPack.Deserialize<List<object>>(new MemoryStream(bytes));
 					var requestId = Convert.ToInt32(message[0]);
@@ -243,19 +243,19 @@ namespace Colyseus
 						availableRooms[i] = _room;
 					}
 
-					this.roomsAvailableRequests[requestId].Invoke(availableRooms);
-					this.roomsAvailableRequests.Remove(requestId);
+					roomsAvailableRequests[requestId].Invoke(availableRooms);
+					roomsAvailableRequests.Remove(requestId);
 				}
 
-				this.previousCode = 0;
+				previousCode = 0;
 			}
 
 		}
 
 		protected void OnLeaveRoom (object sender, EventArgs args)
 		{
-			Room room = (Room)sender;
-			this.rooms.Remove (room.id);
+			Room<> room = (Room<>)sender;
+			rooms.Remove (room.id);
 		}
 
 	}
