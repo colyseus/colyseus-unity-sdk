@@ -1,39 +1,41 @@
-using System;
+using UnityEngine;
 using System.IO;
 using GameDevWare.Serialization;
 
 namespace Colyseus
 {
-	public class FossilDeltaSerializer<T> : Serializer<T>
+	/* public class FossilDeltaSerializer<T> : Serializer<T> */
+	public class FossilDeltaSerializer : Serializer
 	{
-		protected StateContainer state = new StateContainer(new IndexedDictionary<string, object>());
+		public StateContainer State = new StateContainer(new IndexedDictionary<string, object>());
 		protected byte[] previousState = null;
 
-		void SetState(byte[] encodedState)
-		{
-			Set(MsgPack.Deserialize<IndexedDictionary<string, object>> (new MemoryStream(encodedState)));
+		public void SetState(byte[] encodedState)
+        {
+			State.Set(MsgPack.Deserialize<IndexedDictionary<string, object>> (new MemoryStream(encodedState)));
 			previousState = encodedState;
 		}
 
-		T GetState()
+		public IndexedDictionary<string, object> GetState()
 		{
-			return state.state;
+			return State.state;
 		}
 
-		void Patch(byte[] data)
+		public void Patch(byte[] bytes)
 		{
-			previousState = Fossil.Delta.Apply (previousState, delta);
+			previousState = Fossil.Delta.Apply (previousState, bytes);
 			var newState = MsgPack.Deserialize<IndexedDictionary<string, object>> (new MemoryStream(previousState));
-			Set(newState);
+			State.Set(newState);
 		}
 
-	    void Teardown ()
+	    public void Teardown ()
 		{
-			state.RemoveAllListeners();
+			State.RemoveAllListeners();
 		}
 
-    	void Handshake (byte[] bytes)
+    	public void Handshake (byte[] bytes, int offset)
 		{
+			Debug.Log("Handshake FossilDeltaSerializer!");
 		}
 	}
 }

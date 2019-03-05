@@ -2,12 +2,8 @@ using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
 
 using GameDevWare.Serialization;
-using GameDevWare.Serialization.MessagePack;
-
-using UnityEngine;
 
 namespace Colyseus
 {
@@ -27,14 +23,12 @@ namespace Colyseus
 
 		protected Connection connection;
 
-		protected Dictionary<string, Room<object>> rooms = new Dictionary<string, Room<object>> ();
-		protected Dictionary<int, Room<object>> connectingRooms = new Dictionary<int, Room<object>> ();
+		protected Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
+		protected Dictionary<int, IRoom> connectingRooms = new Dictionary<int, IRoom> ();
 
 		protected int _requestId;
 		protected Dictionary<int, Action<RoomAvailable[]>> roomsAvailableRequests = new Dictionary<int, Action<RoomAvailable[]>>();
-		protected RoomAvailable[] roomsAvailableResponse = {
-			new RoomAvailable()
-		};
+
 		protected byte previousCode = 0;
 
 		/// <summary>
@@ -69,7 +63,11 @@ namespace Colyseus
 			id = _id;
 			endpoint = new UriBuilder(new Uri (_endpoint));
 			connection = CreateConnection();
-			connection.OnClose += OnClose.Invoke;
+			connection.OnClose += (sender, e) =>
+			{
+				if (this.OnClose != null)
+					this.OnClose.Invoke(sender, e);
+			};
 		}
 
 		public IEnumerator Connect()
@@ -96,7 +94,7 @@ namespace Colyseus
 		/// </summary>
 		/// <param name="roomName">The name of the Room to join.</param>
 		/// <param name="options">Custom join request options</param>
-		public Room<T> Join <T> (string roomName, Dictionary<string, object> options = null)
+		public Room Join (string roomName, Dictionary<string, object> options = null)
 		{
 			if (options == null) {
 				options = new Dictionary<string, object> ();
@@ -105,7 +103,7 @@ namespace Colyseus
 			int requestId = ++_requestId;
 			options.Add ("requestId", requestId);
 
-			var room = new Room<T> (roomName, options);
+			var room = new Room (roomName, options);
 			connectingRooms.Add (requestId, room);
 
 			connection.Send (new object[]{Protocol.JOIN_REQUEST, roomName, options});
@@ -118,12 +116,12 @@ namespace Colyseus
 		/// </summary>
 		/// <param name="roomName">The name of the Room to rejoin.</param>
 		/// <param name="sessionId">sessionId of client's previous connection</param>
-		public Room<T> ReJoin <T>(string roomName, string sessionId)
+		public Room ReJoin (string roomName, string sessionId)
 		{
 			Dictionary<string, object> options = new Dictionary<string, object> ();
 			options.Add ("sessionId", sessionId);
 
-			return Join<T>(roomName, options);
+			return Join(roomName, options);
 		}
 
 		/// <summary>
@@ -180,7 +178,7 @@ namespace Colyseus
 
 				if (code == Protocol.USER_ID)
 				{
-					id = System.Text.Encoding.UTF8.GetString(bytes, 1, bytes.Length);
+					id = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes[1]);
 
 					if (OnOpen != null)
 						OnOpen.Invoke(this, EventArgs.Empty);
@@ -188,12 +186,13 @@ namespace Colyseus
 				}
 				else if (code == Protocol.JOIN_REQUEST)
 				{
-					var requestId = (byte)bytes[1];
+					var requestId = bytes[1];
 
-					Room<object> room;
-					if (connectingRooms.TryGetValue(requestId, out room))
+					IRoom _room;
+					if (connectingRooms.TryGetValue(requestId, out _room))
 					{
-						room.id = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes.Length);
+						Room room = (Room)_room;
+						room.id = System.Text.Encoding.UTF8.GetString(bytes, 3, bytes[2]);
 
 						endpoint.Path = "/" + room.id;
 						endpoint.Query = "colyseusid=" + this.id;
@@ -217,7 +216,7 @@ namespace Colyseus
 				}
 				else if (code == Protocol.JOIN_ERROR)
 				{
-					string message = System.Text.Encoding.UTF8.GetString(bytes, 1, bytes.Length);
+					string message = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes[1]);
 					if (OnError != null)
 						OnError.Invoke(this, new ErrorEventArgs(message));
 
@@ -254,7 +253,7 @@ namespace Colyseus
 
 		protected void OnLeaveRoom (object sender, EventArgs args)
 		{
-			Room<> room = (Room<>)sender;
+			Room room = (Room) sender;
 			rooms.Remove (room.id);
 		}
 

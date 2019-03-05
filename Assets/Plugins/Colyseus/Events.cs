@@ -44,16 +44,20 @@ namespace Colyseus
 	/// <summary>
 	/// Room Update Message
 	/// </summary>
-	public class StateChangeEventArgs<T> : EventArgs
+	//public class StateChangeEventArgs<T> : EventArgs
+	public class StateChangeEventArgs : EventArgs
 	{
 		/// <summary>
 		/// New state of the <see cref="Room" />
 		/// </summary>
-		public T State { get; private set; }
+		//public T State { get; private set; }
+
+		public IndexedDictionary<string, object> State { get; private set; }
+
 
 		/// <summary>
 		/// </summary>
-		public StateChangeEventArgs (T state)
+		public StateChangeEventArgs (IndexedDictionary<string, object> state)
 		{
 			this.State = state;
 		}

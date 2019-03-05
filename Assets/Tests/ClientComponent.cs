@@ -9,11 +9,11 @@ public class ClientComponent : MonoBehaviour
 
 	// Use this for initialization
 	public IEnumerator Start () {
-		client = new Client("ws://localhost:8080");
+		client = new Client("ws://localhost:2567");
 
 		yield return StartCoroutine(client.Connect());
 
-		room  = client.Join("chat");
+		room = client.Join("chat");
 		room.OnReadyToConnect += (sender, e) => StartCoroutine ( room.Connect() );
 
 		while (true)

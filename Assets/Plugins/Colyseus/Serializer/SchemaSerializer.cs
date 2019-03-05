@@ -2,26 +2,29 @@ using System;
 
 namespace Colyseus
 {
+	/*
 	public class SchemaSerializer<T>
 	{
-		void SetState(byte[] data)
+		public void SetState(byte[] data)
 		{
 		}
 
-		T GetState()
+		public T GetState()
+		{
+			return new T;
+		}
+
+		public void Patch(byte[] data)
 		{
 		}
 
-		void Patch(byte[] data)
+	    public void Teardown ()
 		{
 		}
 
-	    void Teardown ()
-		{
-		}
-
-    	void Handshake (byte[] bytes)
+    	public void Handshake (byte[] bytes, int offset)
 		{
 		}
 	}
+	*/
 }

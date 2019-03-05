@@ -1,14 +1,16 @@
 using System;
+using GameDevWare.Serialization;
 
 namespace Colyseus
 {
-	public interface Serializer<T>
+	public interface Serializer /* <T> */
 	{
 		void SetState(byte[] data);
-		T GetState();
+		// T GetState();
+		IndexedDictionary<string, object> GetState();
 		void Patch(byte[] data);
 
 	    void Teardown ();
-    	void Handshake (byte[] bytes);
+    	void Handshake (byte[] bytes, int offset);
 	}
 }

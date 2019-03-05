@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 
+using UnityEngine;
 using GameDevWare.Serialization;
 
 namespace Colyseus
@@ -15,9 +16,16 @@ namespace Colyseus
 		public object metadata { get; set; }
 	}
 
+	public interface IRoom 
+	{
+		// ...
+	}
+
 	/// <summary>
 	/// </summary>
-	public class Room<T>
+
+	// public class Room<T> : IRoom
+	public class Room : IRoom
 	{
 		public string id;
 		public string name;
@@ -28,7 +36,8 @@ namespace Colyseus
 		public Connection connection;
 
 		public string serializerId;
-		protected Serializer<T> serializer;
+		// protected Serializer<T> serializer;
+		protected Serializer serializer;
 
 		protected byte previousCode = 0;
 
@@ -60,7 +69,8 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs after applying the patched state on this <see cref="Room"/>.
 		/// </summary>
-		public event EventHandler<StateChangeEventArgs<T>> OnStateChange;
+		//public event EventHandler<StateChangeEventArgs<T>> OnStateChange;
+		public event EventHandler<StateChangeEventArgs> OnStateChange;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Room"/> class.
@@ -74,6 +84,9 @@ namespace Colyseus
 		{
 			this.name = name;
 			this.options = options;
+
+			// TODO: remove default serializer. it should arrive only after JOIN_ROOM.
+			this.serializer = (Colyseus.Serializer) new FossilDeltaSerializer();
 		}
 
 		public void Recv ()
@@ -114,7 +127,7 @@ namespace Colyseus
 			serializer.SetState(encodedState);
 
 			if (OnStateChange != null) {
-				OnStateChange.Invoke (this, new StateChangeEventArgs<T>(serializer.GetState()));
+				OnStateChange.Invoke (this, new StateChangeEventArgs(serializer.GetState()));
 			}
 		}
 
@@ -133,7 +146,7 @@ namespace Colyseus
 					connection.Close();
 				}
 
-			} else {
+			} else if (OnLeave != null) {
 				OnLeave.Invoke (this, new EventArgs ());
 			}
 		}
@@ -147,6 +160,24 @@ namespace Colyseus
 			connection.Send(new object[]{Protocol.ROOM_DATA, id, data});
 		}
 
+		public Listener<Action<PatchObject>> Listen(Action<PatchObject> callback)
+		{
+			if (string.IsNullOrEmpty(serializerId))
+			{
+				Debug.LogWarning("room.Listen() should be called after room.OnJoin has been called (DEPRECATION WARNING)");
+			}
+			return ((FossilDeltaSerializer)serializer).State.Listen(callback);
+		}
+
+		public Listener<Action<DataChange>> Listen(string segments, Action<DataChange> callback, bool immediate = false)
+		{
+			if (string.IsNullOrEmpty(serializerId))
+			{
+				Debug.LogWarning("room.Listen() should be called after room.OnJoin has been called (DEPRECATION WARNING)");
+			}
+			return ((FossilDeltaSerializer)serializer).State.Listen(segments, callback, immediate);
+		}
+
 		protected void ParseMessage (byte[] bytes)
 		{
 			if (previousCode == 0)
@@ -157,13 +188,19 @@ namespace Colyseus
 				{
 					var offset = 1;
 
-					sessionId = System.Text.Encoding.UTF8.GetString(bytes, offset, bytes.Length);
-					offset += sessionId.Length;
+					sessionId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
+					offset += sessionId.Length + 1;
 
-					serializerId = System.Text.Encoding.UTF8.GetString(bytes, offset, bytes.Length);
-					offset += serializerId.Length;
+					serializerId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
+					offset += serializerId.Length + 1;
 
-					serializer = (Colyseus.Serializer<T>) new FossilDeltaSerializer<T>();
+					// TODO: use serializer defined by the back-end.
+					// serializer = (Colyseus.Serializer) new FossilDeltaSerializer();
+
+					if (bytes.Length > offset)
+					{
+						serializer.Handshake(bytes, offset);
+					}
 
 					if (OnJoin != null)
 					{
@@ -173,7 +210,7 @@ namespace Colyseus
 				}
 				else if (code == Protocol.JOIN_ERROR)
 				{
-					var message = System.Text.Encoding.UTF8.GetString(bytes, 1, bytes.Length);
+					var message = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes[1]);
 					OnError.Invoke(this, new ErrorEventArgs(message));
 
 				}
@@ -199,7 +236,7 @@ namespace Colyseus
 				}
 				else if (previousCode == Protocol.ROOM_DATA)
 				{
-					var message = MsgPack.Deserialize<List<object>>(new MemoryStream(bytes));
+					var message = MsgPack.Deserialize<object>(new MemoryStream(bytes));
 					OnMessage.Invoke(this, new DataEventArgs(message));
 
 				}
@@ -212,7 +249,7 @@ namespace Colyseus
 			serializer.Patch(delta);
 
 			if (OnStateChange != null)
-				OnStateChange.Invoke(this, new StateChangeEventArgs<T>(serializer.GetState()));
+				OnStateChange.Invoke(this, new StateChangeEventArgs(serializer.GetState()));
 		}
 	}
 }
