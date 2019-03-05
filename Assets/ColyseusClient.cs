@@ -85,16 +85,16 @@ public class ColyseusClient : MonoBehaviour {
 			Debug.Log("Joined room successfully.");
 			m_SessionIdText.text = "sessionId: " + room.sessionId;
 
+			room.Listen("players/:id", OnPlayerChange, true);
+			room.Listen("players/:id/:axis", OnPlayerMove);
+			room.Listen("messages/:number", OnMessageAdded);
+			room.Listen(OnChangeFallback);
+
 			PlayerPrefs.SetString("sessionId", room.sessionId);
 			PlayerPrefs.Save();
 		};
+
 		room.OnStateChange += OnStateChangeHandler;
-
-		room.Listen("players/:id", this.OnPlayerChange);
-		room.Listen("players/:id/:axis", this.OnPlayerMove);
-		room.Listen("messages/:number", this.OnMessageAdded);
-		room.Listen(this.OnChangeFallback);
-
 		room.OnMessage += OnMessage;
 	}
 
@@ -118,16 +118,14 @@ public class ColyseusClient : MonoBehaviour {
 			Debug.Log("Joined room successfully.");
 			m_SessionIdText.text = "sessionId: " + room.sessionId;
 
+			// only register listeners after OnJoin.
+			room.Listen("players/:id", OnPlayerChange, true);
+			room.Listen("players/:id/:axis", OnPlayerMove);
+			room.Listen("messages/:number", OnMessageAdded);
+			room.Listen(OnChangeFallback);
 		};
+
 		room.OnStateChange += OnStateChangeHandler;
-
-		// only register listeners after OnJoin.
-		room.Listen("players/:id", this.OnPlayerChange);
-		room.Listen("players/:id/:axis", this.OnPlayerMove);
-		room.Listen("messages/:number", this.OnMessageAdded);
-		room.Listen(this.OnChangeFallback);
-
-
 		room.OnMessage += OnMessage;
 	}
 
@@ -136,12 +134,12 @@ public class ColyseusClient : MonoBehaviour {
 		room.Leave(false);
 
 		// Destroy player entities
-		foreach (KeyValuePair<string, GameObject> entry in this.players)
+		foreach (KeyValuePair<string, GameObject> entry in players)
 		{
 			Destroy(entry.Value);
 		}
 
-		this.players.Clear();
+		players.Clear();
 	}
 
 	void SendMessage()
@@ -156,10 +154,10 @@ public class ColyseusClient : MonoBehaviour {
 		}
 	}
 
-	void OnMessage (object sender, DataEventArgs e)
+	void OnMessage (object sender, MessageEventArgs e)
 	{
-//		var message = (IndexedDictionary<string, object>) e.Data;
-//		Debug.Log(data);
+		var message = (IndexedDictionary<string, object>) e.Message;
+		Debug.Log(message);
 	}
 
 	void OnStateChangeHandler (object sender, StateChangeEventArgs e)

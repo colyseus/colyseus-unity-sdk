@@ -26,18 +26,18 @@ namespace Colyseus
 	/// <summary>
 	/// Representation of a message received from the server.
 	/// </summary>
-	public class DataEventArgs : EventArgs
+	public class MessageEventArgs : EventArgs
 	{
 		/// <summary>
 		/// Message coming from the server.
 		/// </summary>
-		public object Data;
+		public object Message;
 
 		/// <summary>
 		/// </summary>
-		public DataEventArgs (object _data)
+		public MessageEventArgs (object _message)
 		{
-			Data = _data;
+			Message = _message;
 		}
 	}
 

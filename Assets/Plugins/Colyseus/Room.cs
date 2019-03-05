@@ -64,7 +64,7 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs when server sends a message to this <see cref="Room"/>
 		/// </summary>
-		public event EventHandler<DataEventArgs> OnMessage;
+		public event EventHandler<MessageEventArgs> OnMessage;
 
 		/// <summary>
 		/// Occurs after applying the patched state on this <see cref="Room"/>.
@@ -237,7 +237,7 @@ namespace Colyseus
 				else if (previousCode == Protocol.ROOM_DATA)
 				{
 					var message = MsgPack.Deserialize<object>(new MemoryStream(bytes));
-					OnMessage.Invoke(this, new DataEventArgs(message));
+					OnMessage.Invoke(this, new MessageEventArgs(message));
 
 				}
 				previousCode = 0;

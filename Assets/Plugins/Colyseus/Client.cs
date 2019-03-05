@@ -49,7 +49,7 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> receives a message from server.
 		/// </summary>
-		public event EventHandler<DataEventArgs> OnMessage;
+		public event EventHandler<MessageEventArgs> OnMessage;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Client"/> class with
