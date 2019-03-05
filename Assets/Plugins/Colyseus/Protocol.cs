@@ -11,8 +11,11 @@ namespace Colyseus
 		public static int USER_ID = 1;
 
 		//
-		// Room-related (10~20)
+		// Room-related (9~19)
 		//
+
+		/// <summary>When JOIN is requested.</summary>
+		public static int JOIN_REQUEST = 9;
 
 		/// <summary>When JOIN request is accepted.</summary>
 		public static int JOIN_ROOM = 10;

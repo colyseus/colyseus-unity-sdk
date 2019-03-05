@@ -35,6 +35,7 @@ namespace Colyseus
 		protected RoomAvailable[] roomsAvailableResponse = {
 			new RoomAvailable()
 		};
+		protected byte previousCode = 0;
 
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> connection has been established, and Client <see cref="id"/> is available.
@@ -107,7 +108,7 @@ namespace Colyseus
 			var room = new Room (roomName, options);
 			this.connectingRooms.Add (requestId, room);
 
-			this.connection.Send (new object[]{Protocol.JOIN_ROOM, roomName, options});
+			this.connection.Send (new object[]{Protocol.JOIN_REQUEST, roomName, options});
 
 			return room;
 		}
@@ -134,18 +135,7 @@ namespace Colyseus
 		{
 			int requestId = ++this._requestId;
 			this.connection.Send (new object[]{Protocol.ROOM_LIST, requestId, roomName});
-
 			this.roomsAvailableRequests.Add (requestId, callback);
-
-			// // USAGE
-			// this.client.GetAvailableRooms ("chat", (RoomAvailable[] obj) => {
-			// 	for (int i = 0; i < obj.Length; i++) {
-			// 		Debug.Log (obj [i].roomId);
-			// 		Debug.Log (obj [i].clients);
-			// 		Debug.Log (obj [i].maxClients);
-			// 		Debug.Log (obj [i].metadata);
-			// 	}
-			//});
 		}
 
 		/// <summary>
@@ -181,64 +171,85 @@ namespace Colyseus
 			return new Connection (uriBuilder.Uri);
 		}
 
-        private void ParseMessage (byte[] recv)
+        private void ParseMessage (byte[] bytes)
 		{
-			var message = MsgPack.Deserialize<List<object>> (new MemoryStream(recv));
-			var code = (byte) message [0];
 
-			if (code == Protocol.USER_ID) {
-				this.id = (string) message [1];
+			if (this.previousCode == 0)
+			{
+				var code = bytes[0];
 
-				if (this.OnOpen != null)
-					this.OnOpen.Invoke (this, EventArgs.Empty);
+				if (code == Protocol.USER_ID)
+				{
+					this.id = System.Text.Encoding.UTF8.GetString(bytes, 1, bytes.Length);
 
-			} else if (code == Protocol.JOIN_ROOM) {
-				var requestId = (byte) message [2];
+					if (this.OnOpen != null)
+						this.OnOpen.Invoke(this, EventArgs.Empty);
 
-				Room room;
-				if (this.connectingRooms.TryGetValue (requestId, out room)) {
-					room.id = (string) message [1];
+				}
+				else if (code == Protocol.JOIN_REQUEST)
+				{
+					var requestId = (byte)bytes[1];
 
-					this.endpoint.Path = "/" + room.id;
-					this.endpoint.Query = "colyseusid=" + this.id;
-
-					room.SetConnection (CreateConnection(room.id, room.options));
-					room.OnLeave += OnLeaveRoom;
-
-					if (this.rooms.ContainsKey(room.id))
+					Room room;
+					if (this.connectingRooms.TryGetValue(requestId, out room))
 					{
-						this.rooms.Remove(room.id);
-					}
-					this.rooms.Add (room.id, room);
-					this.connectingRooms.Remove (requestId);
+						room.id = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes.Length);
 
-				} else {
-					throw new Exception ("can't join room using requestId " + requestId.ToString());
+						this.endpoint.Path = "/" + room.id;
+						this.endpoint.Query = "colyseusid=" + this.id;
+
+						room.SetConnection(CreateConnection(room.id, room.options));
+						room.OnLeave += OnLeaveRoom;
+
+						if (this.rooms.ContainsKey(room.id))
+						{
+							this.rooms.Remove(room.id);
+						}
+						this.rooms.Add(room.id, room);
+						this.connectingRooms.Remove(requestId);
+
+					}
+					else
+					{
+						throw new Exception("can't join room using requestId " + requestId.ToString());
+					}
+
+				}
+				else if (code == Protocol.JOIN_ERROR)
+				{
+					string message = System.Text.Encoding.UTF8.GetString(bytes, 1, bytes.Length);
+					if (this.OnError != null)
+						this.OnError.Invoke(this, new ErrorEventArgs(message));
+
+				}
+				else if (code == Protocol.ROOM_LIST)
+				{
+					this.previousCode = code;
+				}
+			}
+			else
+			{
+				if (this.previousCode == Protocol.ROOM_LIST)
+				{
+					var message = MsgPack.Deserialize<List<object>>(new MemoryStream(bytes));
+					var requestId = Convert.ToInt32(message[0]);
+					List<object> _rooms = (List<object>)message[1];
+					RoomAvailable[] availableRooms = new RoomAvailable[_rooms.Count];
+
+					for (int i = 0; i < _rooms.Count; i++)
+					{
+						IDictionary<string, object> room = (IDictionary<string, object>)_rooms[i];
+						RoomAvailable _room = ObjectExtensions.ToObject<RoomAvailable>(_rooms[i]);
+						availableRooms[i] = _room;
+					}
+
+					this.roomsAvailableRequests[requestId].Invoke(availableRooms);
+					this.roomsAvailableRequests.Remove(requestId);
 				}
 
-			} else if (code == Protocol.JOIN_ERROR) {
-				if (this.OnError != null)
-					this.OnError.Invoke (this, new ErrorEventArgs ((string) message [2]));
-
-            } else if (code == Protocol.ROOM_LIST) {
-
-                var requestId = Convert.ToInt32(message[1]);
-                List<object> _rooms = (List<object>)message[2];
-                RoomAvailable[] availableRooms = new RoomAvailable[_rooms.Count];
-
-                for (int i = 0; i < _rooms.Count; i++) {
-                    IDictionary<string, object> room = (IDictionary<string, object>)_rooms[i];
-                    RoomAvailable _room = ObjectExtensions.ToObject<RoomAvailable>(_rooms[i]);
-                    availableRooms[i] = _room;
-                }
-
-                this.roomsAvailableRequests[requestId].Invoke(availableRooms);
-                this.roomsAvailableRequests.Remove(requestId);
-
-			} else {
-				if (this.OnMessage != null)
-					this.OnMessage.Invoke (this, new MessageEventArgs (message));
+				this.previousCode = 0;
 			}
+
 		}
 
 		protected void OnLeaveRoom (object sender, EventArgs args)
