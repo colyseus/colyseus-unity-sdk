@@ -83,14 +83,14 @@ public class ColyseusClient : MonoBehaviour {
 		};
 		room.OnJoin += (sender, e) => {
 			Debug.Log("Joined room successfully.");
-			m_SessionIdText.text = "sessionId: " + room.sessionId;
+			m_SessionIdText.text = "sessionId: " + room.SessionId;
 
 			room.Listen("players/:id", OnPlayerChange, true);
 			room.Listen("players/:id/:axis", OnPlayerMove);
 			room.Listen("messages/:number", OnMessageAdded);
 			room.Listen(OnChangeFallback);
 
-			PlayerPrefs.SetString("sessionId", room.sessionId);
+			PlayerPrefs.SetString("sessionId", room.SessionId);
 			PlayerPrefs.Save();
 		};
 
@@ -116,7 +116,7 @@ public class ColyseusClient : MonoBehaviour {
 		room.OnError += (sender, e) => Debug.LogError(e.Message);
 		room.OnJoin += (sender, e) => {
 			Debug.Log("Joined room successfully.");
-			m_SessionIdText.text = "sessionId: " + room.sessionId;
+			m_SessionIdText.text = "sessionId: " + room.SessionId;
 
 			// only register listeners after OnJoin.
 			room.Listen("players/:id", OnPlayerChange, true);

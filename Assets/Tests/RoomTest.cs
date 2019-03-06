@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.TestTools;
 using NUnit.Framework;
 using System.Collections;
@@ -24,15 +24,13 @@ public class RoomTest {
 		yield return new WaitForSeconds(0.1f);
 
 		component.room.OnJoin += (object sender, System.EventArgs e) => {
-			Assert.NotNull (component.room.id);
-			Assert.NotNull (component.room.sessionId);
+			Assert.NotNull (component.room.Id);
+			Assert.NotNull (component.room.SessionId);
 		};
 
-		/*
 		component.room.OnStateChange += (object sender, StateChangeEventArgs e) => {
-			Assert.NotNull (component.room.state ["players"]);
-			Assert.NotNull (component.room.state ["messages"]);
+			Assert.NotNull (component.room.State ["players"]);
+			Assert.NotNull (component.room.State ["messages"]);
 		};
-		*/
 	}
 }

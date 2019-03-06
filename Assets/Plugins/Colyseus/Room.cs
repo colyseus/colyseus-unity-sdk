@@ -27,15 +27,15 @@ namespace Colyseus
 	// public class Room<T> : IRoom
 	public class Room : IRoom
 	{
-		public string id;
-		public string name;
-		public string sessionId;
+		public string Id;
+		public string Name;
+		public string SessionId;
 
-		public Dictionary<string, object> options;
+		public Dictionary<string, object> Options;
 
-		public Connection connection;
+		public Connection Connection;
 
-		public string serializerId;
+		public string SerializerId;
 		// protected Serializer<T> serializer;
 		protected Serializer serializer;
 
@@ -82,8 +82,8 @@ namespace Colyseus
 		/// <param name="name">The name of the room</param>
 		public Room (string name, Dictionary<string, object> options = null)
 		{
-			this.name = name;
-			this.options = options;
+			this.Name = name;
+			this.Options = options;
 
 			// TODO: remove default serializer. it should arrive only after JOIN_ROOM.
 			this.serializer = (Colyseus.Serializer) new FossilDeltaSerializer();
@@ -91,29 +91,29 @@ namespace Colyseus
 
 		public void Recv ()
 		{
-			byte[] data = connection.Recv();
+			byte[] data = Connection.Recv();
 			if (data != null)
 			{
 				ParseMessage(data);
 			}
 		}
 
-		public IEnumerator Connect ()
+		public IEnumerator Connect()
 		{
-			return connection.Connect ();
+			return Connection.Connect();
 		}
 
 		public void SetConnection (Connection connection)
 		{
-			this.connection = connection;
+			this.Connection = connection;
 
-			this.connection.OnClose += (object sender, EventArgs e) => {
+			this.Connection.OnClose += (object sender, EventArgs e) => {
 				if (OnLeave != null) {
 					OnLeave.Invoke (this, e);
 				}
 			};
 
-			this.connection.OnError += (object sender, ErrorEventArgs e) => {
+			this.Connection.OnError += (object sender, ErrorEventArgs e) => {
 				if (OnError != null) {
 					OnError.Invoke(this, e);
 				}
@@ -131,19 +131,24 @@ namespace Colyseus
 			}
 		}
 
+		public IndexedDictionary<string, object> State
+		{
+			get { return serializer.GetState(); }
+		}
+
 		/// <summary>
 		/// Leave the room.
 		/// </summary>
 		public void Leave (bool consented = true)
 		{
-			if (id != null) {
+			if (Id != null) {
 				if (consented)
 				{
-					connection.Send(new object[] { Protocol.LEAVE_ROOM }); 
+					Connection.Send(new object[] { Protocol.LEAVE_ROOM }); 
 				}
 				else
 				{
-					connection.Close();
+					Connection.Close();
 				}
 
 			} else if (OnLeave != null) {
@@ -157,12 +162,12 @@ namespace Colyseus
 		/// <param name="data">Data to be sent</param>
 		public void Send (object data)
 		{
-			connection.Send(new object[]{Protocol.ROOM_DATA, id, data});
+			Connection.Send(new object[]{Protocol.ROOM_DATA, Id, data});
 		}
 
 		public Listener<Action<PatchObject>> Listen(Action<PatchObject> callback)
 		{
-			if (string.IsNullOrEmpty(serializerId))
+			if (string.IsNullOrEmpty(SerializerId))
 			{
 				Debug.LogWarning("room.Listen() should be called after room.OnJoin has been called (DEPRECATION WARNING)");
 			}
@@ -171,7 +176,7 @@ namespace Colyseus
 
 		public Listener<Action<DataChange>> Listen(string segments, Action<DataChange> callback, bool immediate = false)
 		{
-			if (string.IsNullOrEmpty(serializerId))
+			if (string.IsNullOrEmpty(SerializerId))
 			{
 				Debug.LogWarning("room.Listen() should be called after room.OnJoin has been called (DEPRECATION WARNING)");
 			}
@@ -188,11 +193,11 @@ namespace Colyseus
 				{
 					var offset = 1;
 
-					sessionId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
-					offset += sessionId.Length + 1;
+					SessionId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
+					offset += SessionId.Length + 1;
 
-					serializerId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
-					offset += serializerId.Length + 1;
+					SerializerId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
+					offset += SerializerId.Length + 1;
 
 					// TODO: use serializer defined by the back-end.
 					// serializer = (Colyseus.Serializer) new FossilDeltaSerializer();

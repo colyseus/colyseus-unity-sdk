@@ -18,21 +18,10 @@ namespace Colyseus
 		/// <summary>
 		/// Unique <see cref="Client"/> identifier.
 		/// </summary>
-		public string id;
-		protected UriBuilder endpoint;
-
-		protected Connection connection;
-
-		protected Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
-		protected Dictionary<int, IRoom> connectingRooms = new Dictionary<int, IRoom> ();
-
-		protected int _requestId;
-		protected Dictionary<int, Action<RoomAvailable[]>> roomsAvailableRequests = new Dictionary<int, Action<RoomAvailable[]>>();
-
-		protected byte previousCode = 0;
+		public string Id;
 
 		/// <summary>
-		/// Occurs when the <see cref="Client"/> connection has been established, and Client <see cref="id"/> is available.
+		/// Occurs when the <see cref="Client"/> connection has been established, and Client <see cref="Id"/> is available.
 		/// </summary>
 		public event EventHandler OnOpen;
 
@@ -46,10 +35,16 @@ namespace Colyseus
 		/// </summary>
 		public event EventHandler<ErrorEventArgs> OnError;
 
-		/// <summary>
-		/// Occurs when the <see cref="Client"/> receives a message from server.
-		/// </summary>
-		public event EventHandler<MessageEventArgs> OnMessage;
+		protected UriBuilder endpoint;
+		protected Connection connection;
+
+		protected Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
+		protected Dictionary<int, IRoom> connectingRooms = new Dictionary<int, IRoom> ();
+
+		protected int _requestId;
+		protected Dictionary<int, Action<RoomAvailable[]>> roomsAvailableRequests = new Dictionary<int, Action<RoomAvailable[]>>();
+
+		protected byte previousCode = 0;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Client"/> class with
@@ -60,7 +55,7 @@ namespace Colyseus
 		/// </param>
 		public Client (string _endpoint, string _id = null)
 		{
-			id = _id;
+			Id = _id;
 			endpoint = new UriBuilder(new Uri (_endpoint));
 			connection = CreateConnection();
 			connection.OnClose += (sender, e) =>
@@ -150,8 +145,8 @@ namespace Colyseus
 				options = new Dictionary<string, object> ();
 			}
 
-			if (id != null) {
-				options.Add ("colyseusid", id);
+			if (Id != null) {
+				options.Add ("colyseusid", Id);
 			}
 
 			var list = new List<string>();
@@ -178,7 +173,7 @@ namespace Colyseus
 
 				if (code == Protocol.USER_ID)
 				{
-					id = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes[1]);
+					Id = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes[1]);
 
 					if (OnOpen != null)
 						OnOpen.Invoke(this, EventArgs.Empty);
@@ -192,19 +187,19 @@ namespace Colyseus
 					if (connectingRooms.TryGetValue(requestId, out _room))
 					{
 						Room room = (Room)_room;
-						room.id = System.Text.Encoding.UTF8.GetString(bytes, 3, bytes[2]);
+						room.Id = System.Text.Encoding.UTF8.GetString(bytes, 3, bytes[2]);
 
-						endpoint.Path = "/" + room.id;
-						endpoint.Query = "colyseusid=" + this.id;
+						endpoint.Path = "/" + room.Id;
+						endpoint.Query = "colyseusid=" + this.Id;
 
-						room.SetConnection(CreateConnection(room.id, room.options));
+						room.SetConnection(CreateConnection(room.Id, room.Options));
 						room.OnLeave += OnLeaveRoom;
 
-						if (rooms.ContainsKey(room.id))
+						if (rooms.ContainsKey(room.Id))
 						{
-							rooms.Remove(room.id);
+							rooms.Remove(room.Id);
 						}
-						rooms.Add(room.id, room);
+						rooms.Add(room.Id, room);
 						connectingRooms.Remove(requestId);
 
 					}
@@ -254,7 +249,7 @@ namespace Colyseus
 		protected void OnLeaveRoom (object sender, EventArgs args)
 		{
 			Room room = (Room) sender;
-			rooms.Remove (room.id);
+			rooms.Remove (room.Id);
 		}
 
 	}
