@@ -59,7 +59,7 @@ public class ColyseusClient : MonoBehaviour {
 		client = new Client(endpoint);
 		client.OnOpen += (object sender, EventArgs e) => {
 			/* Update Demo UI */
-			m_IdText.text = "id: " + client.id;
+			m_IdText.text = "id: " + client.Id;
 		};
 		client.OnError += (sender, e) => Debug.LogError(e.Message);
 		client.OnClose += (sender, e) => Debug.Log("CONNECTION CLOSED");

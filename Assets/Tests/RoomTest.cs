@@ -18,7 +18,7 @@ public class RoomTest {
 		yield return new WaitForFixedUpdate();
 
 		component.client.OnOpen += (object sender, System.EventArgs e) => {
-			Assert.NotNull (component.client.id);
+			Assert.NotNull (component.client.Id);
 		};
 
 		yield return new WaitForSeconds(0.1f);

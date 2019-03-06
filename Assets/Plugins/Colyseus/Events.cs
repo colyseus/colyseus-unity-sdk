@@ -54,12 +54,17 @@ namespace Colyseus
 
 		public IndexedDictionary<string, object> State { get; private set; }
 
+		/// <summary>	
+		/// Boolean representing if the event is setting the state of the <see cref="Room" /> for the first time.	
+		/// </summary>
+		public bool IsFirstState;
 
 		/// <summary>
 		/// </summary>
-		public StateChangeEventArgs (IndexedDictionary<string, object> state)
+		public StateChangeEventArgs (IndexedDictionary<string, object> state, bool isFirstState = false)
 		{
 			this.State = state;
+			this.IsFirstState = isFirstState;
 		}
 	}
 }

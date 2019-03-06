@@ -127,7 +127,7 @@ namespace Colyseus
 			serializer.SetState(encodedState);
 
 			if (OnStateChange != null) {
-				OnStateChange.Invoke (this, new StateChangeEventArgs(serializer.GetState()));
+				OnStateChange.Invoke (this, new StateChangeEventArgs(serializer.GetState(), true));
 			}
 		}
 
