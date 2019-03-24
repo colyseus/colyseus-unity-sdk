@@ -1,6 +1,6 @@
-var Room = require('colyseus').Room;
+var colyseus = require('colyseus');
 
-module.exports = class DemoRoom extends Room {
+class DemoRoom extends colyseus.Room {
 
   constructor () {
     super();
@@ -64,3 +64,8 @@ module.exports = class DemoRoom extends Room {
   }
 
 }
+
+// use Fossil Delta Serializer
+colyseus.serialize(colyseus.FossilDeltaSerializer)(DemoRoom);
+
+module.exports = DemoRoom;
