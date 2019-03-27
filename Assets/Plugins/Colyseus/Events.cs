@@ -13,13 +13,13 @@ namespace Colyseus
 		/// <summary>
 		/// The error message
 		/// </summary>
-		public string Message = null;
+		public string Message;
 
 		/// <summary>
 		/// </summary>
 		public ErrorEventArgs (string message)
 		{
-			this.Message = message;
+			Message = message;
 		}
 	}
 
@@ -44,15 +44,14 @@ namespace Colyseus
 	/// <summary>
 	/// Room Update Message
 	/// </summary>
-	//public class StateChangeEventArgs<T> : EventArgs
-	public class StateChangeEventArgs : EventArgs
+	public class StateChangeEventArgs<T> : EventArgs
 	{
 		/// <summary>
 		/// New state of the <see cref="Room" />
 		/// </summary>
-		//public T State { get; private set; }
+		public T State { get; private set; }
 
-		public IndexedDictionary<string, object> State { get; private set; }
+		//public IndexedDictionary<string, object> State { get; private set; }
 
 		/// <summary>	
 		/// Boolean representing if the event is setting the state of the <see cref="Room" /> for the first time.	
@@ -61,10 +60,10 @@ namespace Colyseus
 
 		/// <summary>
 		/// </summary>
-		public StateChangeEventArgs (IndexedDictionary<string, object> state, bool isFirstState = false)
+		public StateChangeEventArgs (T state, bool isFirstState = false)
 		{
-			this.State = state;
-			this.IsFirstState = isFirstState;
+			State = state;
+			IsFirstState = isFirstState;
 		}
 	}
 }

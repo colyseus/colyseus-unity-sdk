@@ -18,26 +18,42 @@ namespace Colyseus
 
 	public interface IRoom 
 	{
-		// ...
+		string Id { get; set; }
+		Dictionary<string, object> Options { get; set; }
+
+		void Recv();
+		void SetConnection(Connection connection);
+
+		event EventHandler OnLeave;
 	}
 
 	/// <summary>
 	/// </summary>
 
 	// public class Room<T> : IRoom
-	public class Room : IRoom
+	public class Room<T> : IRoom
 	{
-		public string Id;
+		protected string id;
+		public string Id
+		{
+			get { return id;  }
+			set { id = value; }
+		}
+
 		public string Name;
 		public string SessionId;
 
-		public Dictionary<string, object> Options;
+		protected Dictionary<string, object> options;
+		public Dictionary<string, object> Options
+		{
+			get { return options;  }
+			set { options = value; }
+		}
 
 		public Connection Connection;
 
 		public string SerializerId;
-		// protected Serializer<T> serializer;
-		protected Serializer serializer;
+		protected ISerializer<T> serializer;
 
 		protected byte previousCode = 0;
 
@@ -70,7 +86,7 @@ namespace Colyseus
 		/// Occurs after applying the patched state on this <see cref="Room"/>.
 		/// </summary>
 		//public event EventHandler<StateChangeEventArgs<T>> OnStateChange;
-		public event EventHandler<StateChangeEventArgs> OnStateChange;
+		public event EventHandler<StateChangeEventArgs<T>> OnStateChange;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Room"/> class.
@@ -82,11 +98,8 @@ namespace Colyseus
 		/// <param name="name">The name of the room</param>
 		public Room (string name, Dictionary<string, object> options = null)
 		{
-			this.Name = name;
-			this.Options = options;
-
-			// TODO: remove default serializer. it should arrive only after JOIN_ROOM.
-			this.serializer = (Colyseus.Serializer) new FossilDeltaSerializer();
+			Name = name;
+			Options = options;
 		}
 
 		public void Recv ()
@@ -105,15 +118,15 @@ namespace Colyseus
 
 		public void SetConnection (Connection connection)
 		{
-			this.Connection = connection;
+			Connection = connection;
 
-			this.Connection.OnClose += (object sender, EventArgs e) => {
+			Connection.OnClose += (object sender, EventArgs e) => {
 				if (OnLeave != null) {
 					OnLeave.Invoke (this, e);
 				}
 			};
 
-			this.Connection.OnError += (object sender, ErrorEventArgs e) => {
+			Connection.OnError += (object sender, ErrorEventArgs e) => {
 				if (OnError != null) {
 					OnError.Invoke(this, e);
 				}
@@ -127,11 +140,11 @@ namespace Colyseus
 			serializer.SetState(encodedState);
 
 			if (OnStateChange != null) {
-				OnStateChange.Invoke (this, new StateChangeEventArgs(serializer.GetState(), true));
+				OnStateChange.Invoke (this, new StateChangeEventArgs<T>(serializer.GetState(), true));
 			}
 		}
 
-		public IndexedDictionary<string, object> State
+		public T State
 		{
 			get { return serializer.GetState(); }
 		}
@@ -169,7 +182,7 @@ namespace Colyseus
 		{
 			if (string.IsNullOrEmpty(SerializerId))
 			{
-				Debug.LogWarning("room.Listen() should be called after room.OnJoin has been called (DEPRECATION WARNING)");
+				throw new Exception("room.Listen() should be called after room.OnJoin");
 			}
 			return ((FossilDeltaSerializer)serializer).State.Listen(callback);
 		}
@@ -178,7 +191,7 @@ namespace Colyseus
 		{
 			if (string.IsNullOrEmpty(SerializerId))
 			{
-				Debug.LogWarning("room.Listen() should be called after room.OnJoin has been called (DEPRECATION WARNING)");
+				throw new Exception("room.Listen() should be called after room.OnJoin");
 			}
 			return ((FossilDeltaSerializer)serializer).State.Listen(segments, callback, immediate);
 		}
@@ -198,6 +211,15 @@ namespace Colyseus
 
 					SerializerId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
 					offset += SerializerId.Length + 1;
+
+					if (SerializerId == "schema")
+					{
+						serializer = new SchemaSerializer<T>();
+
+					} else if (SerializerId == "fossil-delta")
+					{
+						serializer = (ISerializer<T>) new FossilDeltaSerializer();
+					}
 
 					// TODO: use serializer defined by the back-end.
 					// serializer = (Colyseus.Serializer) new FossilDeltaSerializer();
@@ -254,7 +276,7 @@ namespace Colyseus
 			serializer.Patch(delta);
 
 			if (OnStateChange != null)
-				OnStateChange.Invoke(this, new StateChangeEventArgs(serializer.GetState()));
+				OnStateChange.Invoke(this, new StateChangeEventArgs<T>(serializer.GetState()));
 		}
 	}
 }

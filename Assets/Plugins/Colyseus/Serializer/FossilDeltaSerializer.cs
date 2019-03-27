@@ -5,7 +5,7 @@ using GameDevWare.Serialization;
 namespace Colyseus
 {
 	/* public class FossilDeltaSerializer<T> : Serializer<T> */
-	public class FossilDeltaSerializer : Serializer
+	public class FossilDeltaSerializer : ISerializer<IndexedDictionary<string, object>>
 	{
 		public StateContainer State = new StateContainer(new IndexedDictionary<string, object>());
 		protected byte[] previousState = null;

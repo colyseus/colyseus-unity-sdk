@@ -1,11 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections;
+
 using Colyseus;
+using GameDevWare.Serialization;
 
 public class ClientComponent : MonoBehaviour
 {
 	public Client client;
-	public Room room;
+	public Room<IndexedDictionary<string, object>> room;
 
 	// Use this for initialization
 	public IEnumerator Start () {

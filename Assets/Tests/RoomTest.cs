@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 using Colyseus;
+using GameDevWare.Serialization;
 
 public class RoomTest {
 	ClientComponent component;
@@ -28,7 +29,7 @@ public class RoomTest {
 			Assert.NotNull (component.room.SessionId);
 		};
 
-		component.room.OnStateChange += (object sender, StateChangeEventArgs e) => {
+		component.room.OnStateChange += (object sender, StateChangeEventArgs<IndexedDictionary<string, object>> e) => {
 			Assert.NotNull (component.room.State ["players"]);
 			Assert.NotNull (component.room.State ["messages"]);
 		};

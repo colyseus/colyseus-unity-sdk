@@ -38,7 +38,7 @@ namespace Colyseus
 		protected UriBuilder endpoint;
 		protected Connection connection;
 
-		protected Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
+		protected Dictionary<string, IRoom> rooms = new Dictionary<string, IRoom> ();
 		protected Dictionary<int, IRoom> connectingRooms = new Dictionary<int, IRoom> ();
 
 		protected int _requestId;
@@ -75,7 +75,7 @@ namespace Colyseus
 			byte[] data = connection.Recv();
 			if (data != null)
 			{
-				this.ParseMessage(data);
+				ParseMessage(data);
 			}
 
 			// TODO: this may not be a good idea?
@@ -89,21 +89,27 @@ namespace Colyseus
 		/// </summary>
 		/// <param name="roomName">The name of the Room to join.</param>
 		/// <param name="options">Custom join request options</param>
-		public Room Join (string roomName, Dictionary<string, object> options = null)
+		public Room<T> Join<T>(string roomName, Dictionary<string, object> options = null)
 		{
-			if (options == null) {
-				options = new Dictionary<string, object> ();
+			if (options == null)
+			{
+				options = new Dictionary<string, object>();
 			}
 
 			int requestId = ++_requestId;
-			options.Add ("requestId", requestId);
+			options.Add("requestId", requestId);
 
-			var room = new Room (roomName, options);
-			connectingRooms.Add (requestId, room);
+			var room = new Room<T>(roomName, options);
+			connectingRooms.Add(requestId, room);
 
-			connection.Send (new object[]{Protocol.JOIN_REQUEST, roomName, options});
+			connection.Send(new object[] { Protocol.JOIN_REQUEST, roomName, options });
 
 			return room;
+		}
+
+		public Room<IndexedDictionary<string, object>> Join (string roomName, Dictionary<string, object> options = null)
+		{
+			return Join<IndexedDictionary<string, object>>(roomName, options);
 		}
 
 		/// <summary>
@@ -111,12 +117,17 @@ namespace Colyseus
 		/// </summary>
 		/// <param name="roomName">The name of the Room to rejoin.</param>
 		/// <param name="sessionId">sessionId of client's previous connection</param>
-		public Room ReJoin (string roomName, string sessionId)
+		public Room<T> ReJoin<T>(string roomName, string sessionId)
 		{
-			Dictionary<string, object> options = new Dictionary<string, object> ();
-			options.Add ("sessionId", sessionId);
+			Dictionary<string, object> options = new Dictionary<string, object>();
+			options.Add("sessionId", sessionId);
 
-			return Join(roomName, options);
+			return Join<T>(roomName, options);
+		}
+
+		public Room<IndexedDictionary<string, object>> ReJoin (string roomName, string sessionId)
+		{
+			return ReJoin<IndexedDictionary<string, object>>(roomName, sessionId);
 		}
 
 		/// <summary>
@@ -183,10 +194,9 @@ namespace Colyseus
 				{
 					var requestId = bytes[1];
 
-					IRoom _room;
-					if (connectingRooms.TryGetValue(requestId, out _room))
+					IRoom room;
+					if (connectingRooms.TryGetValue(requestId, out room))
 					{
-						Room room = (Room)_room;
 						room.Id = System.Text.Encoding.UTF8.GetString(bytes, 3, bytes[2]);
 
 						endpoint.Path = "/" + room.Id;
@@ -248,7 +258,7 @@ namespace Colyseus
 
 		protected void OnLeaveRoom (object sender, EventArgs args)
 		{
-			Room room = (Room) sender;
+			IRoom room = (IRoom) sender;
 			rooms.Remove (room.Id);
 		}
 

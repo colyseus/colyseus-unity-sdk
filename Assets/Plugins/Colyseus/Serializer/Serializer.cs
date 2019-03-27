@@ -3,11 +3,11 @@ using GameDevWare.Serialization;
 
 namespace Colyseus
 {
-	public interface Serializer /* <T> */
+	public interface ISerializer<T>
 	{
 		void SetState(byte[] data);
-		// T GetState();
-		IndexedDictionary<string, object> GetState();
+		T GetState();
+		//IndexedDictionary<string, object> GetState();
 		void Patch(byte[] data);
 
 	    void Teardown ();
