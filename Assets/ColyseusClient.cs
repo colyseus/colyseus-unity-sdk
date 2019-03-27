@@ -117,8 +117,9 @@ public class ColyseusClient : MonoBehaviour {
 			Debug.Log("Joined room successfully.");
 			m_SessionIdText.text = "sessionId: " + room.SessionId;
 
-			// only register listeners after OnJoin.
-			// TODO: ????
+			room.State.players.OnAdd += OnPlayerAdd;
+			room.State.players.OnRemove += OnPlayerRemove;
+			room.State.players.OnChange += OnPlayerMove;
 		};
 
 		room.OnStateChange += OnStateChangeHandler;
