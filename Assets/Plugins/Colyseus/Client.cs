@@ -202,7 +202,14 @@ namespace Colyseus
 						endpoint.Path = "/" + room.Id;
 						endpoint.Query = "colyseusid=" + this.Id;
 
-						room.SetConnection(CreateConnection(room.Id, room.Options));
+						var processPath = "";
+						var nextIndex = 3 + room.Id.Length;
+						if (bytes.Length > nextIndex)
+						{
+							processPath = System.Text.Encoding.UTF8.GetString(bytes, nextIndex + 1, bytes[nextIndex]) + "/";
+						}
+
+						room.SetConnection(CreateConnection(processPath + room.Id, room.Options));
 						room.OnLeave += OnLeaveRoom;
 
 						if (rooms.ContainsKey(room.Id))
