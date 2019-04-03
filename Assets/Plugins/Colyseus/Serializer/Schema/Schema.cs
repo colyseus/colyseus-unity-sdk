@@ -89,6 +89,7 @@ namespace Colyseus.Schema
     object CreateItemInstance();
     object GetItems();
     void SetItems(object items);
+    void TriggerAll();
 
     bool HasSchemaChild { get; }
     int Count { get; }
@@ -165,6 +166,14 @@ namespace Colyseus.Schema
     public void SetItems(object items)
     {
       Items = (List<T>) items;
+    }
+
+    public void TriggerAll()
+    {
+      if (OnAdd == null) { return; }
+      for (var i = 0; i < Items.Count; i++) {
+        OnAdd.Invoke(this, new KeyValueEventArgs<T, int>((T) Items[i], (int) i));
+      }
     }
 
     public void InvokeOnAdd(object item, object index)
@@ -256,6 +265,15 @@ namespace Colyseus.Schema
       throw new NotImplementedException();
     }
 
+    public void TriggerAll()
+    {
+      if (OnAdd == null) { return; }
+      foreach(KeyValuePair<string, T> entry in Items)
+      {
+        OnAdd.Invoke(this, new KeyValueEventArgs<T, string>(entry.Value, entry.Key));
+      }
+    }
+
     public void InvokeOnAdd(object item, object index)
     {
       if (OnAdd != null) { OnAdd.Invoke(this, new KeyValueEventArgs<T, string>((T)item, (string)index)); }
@@ -289,16 +307,16 @@ namespace Colyseus.Schema
       foreach (FieldInfo field in fields)
       {
         object[] typeAttributes = field.GetCustomAttributes(typeof(Type), true);
-		for (var i=0; i<typeAttributes.Length; i++)
-		{
-			Type t = (Type)typeAttributes[i];
-			fieldsByIndex.Add(index++, field.Name);
-			fieldTypes.Add(field.Name, t.FieldType);
-			if (t.FieldType == "ref" || t.FieldType == "array" || t.FieldType == "map")
-			{
-				fieldChildTypes.Add(field.Name, t.ChildType);
-			}
-		}
+        for (var i=0; i<typeAttributes.Length; i++)
+        {
+          Type t = (Type)typeAttributes[i];
+          fieldsByIndex.Add(index++, field.Name);
+          fieldTypes.Add(field.Name, t.FieldType);
+          if (t.FieldType == "ref" || t.FieldType == "array" || t.FieldType == "map")
+          {
+            fieldChildTypes.Add(field.Name, t.ChildType);
+          }
+        }
       }
     }
 
@@ -575,6 +593,28 @@ namespace Colyseus.Schema
       {
         OnChange.Invoke(this, new OnChangeEventArgs(changes));
       }
+    }
+
+    public void TriggerAll()
+    {
+      if (OnChange == null) { return; }
+
+      var changes = new List<DataChange>();
+      foreach(KeyValuePair<int, string> entry in fieldsByIndex)
+      {
+        var field = entry.Value;
+        if (this[field] != null)
+        {
+          changes.Add(new DataChange
+          {
+            Field = field,
+            Value = this[field],
+            PreviousValue = null
+          });
+        }
+      }
+
+      OnChange.Invoke(this, new OnChangeEventArgs(changes));
     }
   }
 }
