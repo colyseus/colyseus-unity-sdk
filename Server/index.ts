@@ -1,5 +1,5 @@
-import * as http from "http";
-import * as express from "express";
+import http from "http";
+import express from "express";
 
 import { Server, serialize, FossilDeltaSerializer } from "colyseus";
 import { DemoRoom } from "./DemoRoom";
