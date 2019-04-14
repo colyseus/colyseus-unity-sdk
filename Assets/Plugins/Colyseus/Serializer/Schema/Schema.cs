@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -194,19 +195,19 @@ namespace Colyseus.Schema
 
   public class MapSchema<T> : ISchemaCollection
   {
-    public Dictionary<string, T> Items;
+    public OrderedDictionary Items = new OrderedDictionary();
     public event EventHandler<KeyValueEventArgs<T, string>> OnAdd;
     public event EventHandler<KeyValueEventArgs<T, string>> OnChange;
     public event EventHandler<KeyValueEventArgs<T, string>> OnRemove;
 
     public MapSchema()
     {
-      Items = new Dictionary<string, T>();
+      Items = new OrderedDictionary();
     }
 
-    public MapSchema(Dictionary<string, T> items = null)
+    public MapSchema(OrderedDictionary items = null)
     {
-      Items = items ?? new Dictionary<string, T>();
+      Items = items ?? new OrderedDictionary();
     }
 
     public ISchemaCollection Clone()
@@ -234,7 +235,7 @@ namespace Colyseus.Schema
     {
       get {
         T value;
-        Items.TryGetValue(key, out value);
+        TryGetValue(key, out value);
         return value;
       }
       set { Items[key] = value; }
@@ -244,10 +245,41 @@ namespace Colyseus.Schema
     {
       get {
         T value;
-        Items.TryGetValue(key as string, out value);
+        TryGetValue(key as string, out value);
         return value;
       }
       set { Items[(string) key] = (T) value; }
+    }
+
+    public object GetItems()
+    {
+      return Items;
+    }
+
+    public void Add(KeyValuePair<string, T> item)
+    {
+      Items[item.Key] = item.Value;
+    }
+
+    public void Clear()
+    {
+      Items.Clear();
+    }
+
+    public bool Contains(KeyValuePair<string, T> item)
+    {
+      return Items.Contains(item.Key);
+    }
+
+    public bool Remove(KeyValuePair<string, T> item)
+    {
+      T value;
+      if (TryGetValue(item.Key, out value) && Equals(value, item.Value))
+      {
+        Remove(item.Key);
+        return true;
+      }
+      return false;
     }
 
     public int Count
@@ -255,9 +287,47 @@ namespace Colyseus.Schema
       get { return Items.Count; }
     }
 
-    public object GetItems()
+    public bool ContainsKey(string key)
     {
-      return Items;
+      return Items.Contains(key);
+    }
+
+    public void Add(string key, T value)
+    {
+      Items.Add(key, value);
+    }
+
+    public bool Remove(string key)
+    {
+      var result = Items.Contains(key);
+      if (result)
+      {
+        Items.Remove(key);
+      }
+      return result;
+    }
+
+    public bool TryGetValue(string key, out T value)
+    {
+      object foundValue;
+      if ((foundValue = Items[key]) != null || Items.Contains(key))
+      {
+        // Either found with a non-null value, or contained value is null.
+        value = (T)foundValue;
+        return true;
+      }
+      value = default(T);
+      return false;
+    }
+
+    public ICollection Keys
+    {
+      get { return Items.Keys; }
+    }
+
+    public ICollection Values
+    {
+      get { return Items.Values; }
     }
 
     public void SetItems(object items)
@@ -489,7 +559,7 @@ namespace Colyseus.Schema
 
           bool hasIndexChange = false;
 
-          IDictionary items = currentValue.GetItems() as IDictionary;
+          OrderedDictionary items = currentValue.GetItems() as OrderedDictionary;
           string[] mapKeys = new string[items.Keys.Count];
           items.Keys.CopyTo(mapKeys, 0);
 
