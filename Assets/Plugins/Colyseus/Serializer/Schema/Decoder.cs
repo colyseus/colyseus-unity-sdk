@@ -218,7 +218,30 @@ namespace Colyseus.Schema
 
 		public string DecodeString(byte[] bytes, Iterator it)
 		{
-			int length = bytes[it.Offset++] & 0x1f;
+			int prefix = bytes[it.Offset++];
+
+			int length;
+			if (prefix < 0xc0) 
+			{
+				// fixstr
+				length = prefix & 0x1f;
+			}
+			else if (prefix == 0xd9) 
+			{
+				length = (int) DecodeUint8(bytes, it);
+			}
+			else if (prefix == 0xda)
+			{
+				length = (int) DecodeUint16(bytes, it);
+			}
+			else if (prefix == 0xdb)
+			{
+				length = (int) DecodeUint32(bytes, it);
+			} 
+			else
+			{
+				length = 0;
+			}
 
 			string str = System.Text.Encoding.UTF8.GetString(bytes, it.Offset, length);
 			it.Offset += length;
