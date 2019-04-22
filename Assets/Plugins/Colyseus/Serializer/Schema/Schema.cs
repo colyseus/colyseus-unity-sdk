@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Linq;
+
+using UnityEngine;
 
 /***
   Allowed primitive types:
@@ -28,15 +31,39 @@ using System.Reflection;
 
 namespace Colyseus.Schema
 {
-  [AttributeUsage(AttributeTargets.Field)]
+  class Context 
+  {
+    protected static Context instance = new Context();
+    protected List<System.Type> types = new List<System.Type>();
+    protected Dictionary<uint, System.Type> typeIds = new Dictionary<uint, System.Type>();
+
+    public static Context GetInstance()
+    {
+      return instance;
+    }
+
+    public void SetTypeId(System.Type type, uint typeid)
+    {
+			Debug.Log(">>>>>>> SET TYPE ID: " + typeid + ", Type => " + type.Name);
+      typeIds[typeid] = type;
+    }
+
+    public System.Type Get(uint typeid)
+    {
+      return typeIds[typeid];
+    }
+  }
+
+  [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
   public class Type : Attribute
   {
-
+    public int Index;
     public string FieldType;
     public System.Type ChildType;
 
-    public Type(string type, System.Type childType = null)
+    public Type(int index, string type, System.Type childType = null)
     {
+      Index = index; // GetType().GetFields() doesn't guarantee order of fields, need to manually track them here!
       FieldType = type;
       ChildType = childType;
     }
@@ -51,6 +78,7 @@ namespace Colyseus.Schema
     END_OF_STRUCTURE = 0xc1, // (msgpack spec: never used)
     NIL = 0xc0,
     INDEX_CHANGE = 0xd4,
+    TYPE_ID = 0xd5
   }
 
   public class DataChange
@@ -86,11 +114,12 @@ namespace Colyseus.Schema
     void InvokeOnAdd(object item, object index);
     void InvokeOnChange(object item, object index);
     void InvokeOnRemove(object item, object index);
-
-    object CreateItemInstance();
+    
     object GetItems();
     void SetItems(object items);
     void TriggerAll();
+
+    System.Type GetChildType();
 
     bool HasSchemaChild { get; }
     int Count { get; }
@@ -127,9 +156,9 @@ namespace Colyseus.Schema
       return clone;
     }
 
-    public object CreateItemInstance()
+    public System.Type GetChildType()
     {
-      return (T) Activator.CreateInstance(typeof(T));
+      return typeof(T);
     }
 
     public bool HasSchemaChild
@@ -221,9 +250,9 @@ namespace Colyseus.Schema
       return clone;
     }
 
-    public object CreateItemInstance()
+    public System.Type GetChildType()
     {
-      return (T) Activator.CreateInstance(typeof(T));
+      return typeof(T);
     }
 
     public bool HasSchemaChild
@@ -371,8 +400,6 @@ namespace Colyseus.Schema
 
     public Schema()
     {
-      int index = 0;
-
       FieldInfo[] fields = GetType().GetFields();
       foreach (FieldInfo field in fields)
       {
@@ -380,7 +407,7 @@ namespace Colyseus.Schema
         for (var i=0; i<typeAttributes.Length; i++)
         {
           Type t = (Type)typeAttributes[i];
-          fieldsByIndex.Add(index++, field.Name);
+          fieldsByIndex.Add(t.Index, field.Name);
           fieldTypes.Add(field.Name, t.FieldType);
           if (t.FieldType == "ref" || t.FieldType == "array" || t.FieldType == "map")
           {
@@ -411,6 +438,12 @@ namespace Colyseus.Schema
       var changes = new List<DataChange>();
       var totalBytes = bytes.Length;
 
+      // skip TYPE_ID of existing instances
+      if (bytes[it.Offset] == (byte) SPEC.TYPE_ID)
+      {
+        it.Offset += 2;
+      }
+
       while (it.Offset < totalBytes)
       {
         var index = bytes[it.Offset++];
@@ -440,7 +473,7 @@ namespace Colyseus.Schema
           }
           else
           {
-            value = this[field] ?? Activator.CreateInstance(childType);
+            value = this[field] ?? CreateTypeInstance(bytes, it, childType);
             (value as Schema).Decode(bytes, it);
           }
 
@@ -500,7 +533,7 @@ namespace Colyseus.Schema
 
               if (isNew)
               {
-                item = (Schema)currentValue.CreateItemInstance();
+                item = (Schema)CreateTypeInstance(bytes, it, currentValue.GetChildType());
 
               }
               else if (indexChangedFrom != -1)
@@ -514,7 +547,7 @@ namespace Colyseus.Schema
 
               if (item == null)
               {
-                item = (Schema)currentValue.CreateItemInstance();
+                item = (Schema)CreateTypeInstance(bytes, it, currentValue.GetChildType());
                 isNew = true;
               }
 
@@ -592,7 +625,7 @@ namespace Colyseus.Schema
 
             if (isNew && isSchemaType)
             {
-              item = (Schema)currentValue.CreateItemInstance();
+              item = (Schema)CreateTypeInstance(bytes, it, currentValue.GetChildType());
 
             } else if (previousKey != null)
             {
@@ -686,5 +719,54 @@ namespace Colyseus.Schema
 
       OnChange.Invoke(this, new OnChangeEventArgs(changes));
     }
+
+    protected object CreateTypeInstance(byte[] bytes, Iterator it, System.Type type)
+    {
+      if (bytes[it.Offset] == (byte) SPEC.TYPE_ID)
+      {
+        it.Offset++;
+        uint typeId = Decoder.GetInstance().DecodeUint8(bytes, it);
+        System.Type anotherType = Context.GetInstance().Get(typeId);
+				Debug.Log("CreateTypeInstance: (inherited) " + anotherType.Name);
+				return Activator.CreateInstance(anotherType);
+
+      } 
+      else 
+      {
+				Debug.Log("CreateTypeInstance: (default) " + type.Name);
+        return Activator.CreateInstance(type);
+      }
+    }
   }
+
+  public class ReflectionField : Schema
+  {
+    [Type(0, "string")]
+    public string name;
+
+    [Type(1, "string")]
+    public string type;
+
+    [Type(2, "uint8")]
+    public uint referencedType;
+  }
+
+  public class ReflectionType : Schema
+  {
+    [Type(0, "uint8")]
+    public uint id;
+
+    [Type(1, "array", typeof(ArraySchema<ReflectionField>))]
+    public ArraySchema<ReflectionField> fields = new ArraySchema<ReflectionField>();
+  }
+
+  public class Reflection : Schema
+  {
+    [Type(0, "array", typeof(ArraySchema<ReflectionType>))]
+    public ArraySchema<ReflectionType> types = new ArraySchema<ReflectionType>();
+
+    [Type(1, "uint8")]
+    public uint rootType;
+  }
+
 }

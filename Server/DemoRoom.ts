@@ -1,35 +1,48 @@
-import { Room, Client } from "colyseus";
+import { Room, Client, generateId } from "colyseus";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
-class Player extends Schema {
+class Entity extends Schema {
   @type("number")
   x: number = 0;
 
   @type("number")
   y: number = 0;
+}
 
+class Player extends Entity {
   @type("boolean")
   connected: boolean = true;
 }
 
+class Enemy extends Entity {
+  @type("number")
+  power: number = Math.random() * 10;
+}
+
 class State extends Schema {
-  @type({ map: Player })
-  players = new MapSchema<Player>();
+  @type({ map: Entity })
+  entities = new MapSchema<Entity>();
 }
 
 export class DemoRoom extends Room {
 
-  constructor () {
-    super();
-
-    this.setState(new State());
-  }
-
   onInit (options: any) {
     console.log("DemoRoom created!", options);
 
+    this.setState(new State());
+    this.populateEnemies();
+
     this.setPatchRate(1000 / 20);
     this.setSimulationInterval((dt) => this.update(dt));
+  }
+
+  populateEnemies () {
+    for (let i=0; i<=3; i++) {
+      const enemy = new Enemy();
+      enemy.x = Math.random() * 2;
+      enemy.y = Math.random() * 2;
+      this.state.entities[generateId()] = enemy;
+    }
   }
 
   requestJoin (options: any) {
@@ -39,11 +52,11 @@ export class DemoRoom extends Room {
 
   onJoin (client: Client, options: any) {
     console.log("client joined!", client.sessionId);
-    this.state.players[client.sessionId] = new Player();
+    this.state.entities[client.sessionId] = new Player();
   }
 
   async onLeave (client: Client, consented: boolean) {
-    this.state.players[client.sessionId].connected = false;
+    this.state.entities[client.sessionId].connected = false;
 
     try {
       if (consented) {
@@ -56,7 +69,7 @@ export class DemoRoom extends Room {
 
     } catch (e) {
       console.log("disconnected!", client.sessionId);
-      delete this.state.players[client.sessionId];
+      delete this.state.entities[client.sessionId];
     }
   }
 
@@ -64,9 +77,9 @@ export class DemoRoom extends Room {
     console.log(data, "received from", client.sessionId);
 
     if (data === "move_right") {
-      this.state.players[client.sessionId].x += 0.01;
+      this.state.entities[client.sessionId].x += 0.01;
     }
-    console.log(this.state.players[client.sessionId].x);
+    console.log(this.state.entities[client.sessionId].x);
 
     this.broadcast({ hello: "hello world" });
   }

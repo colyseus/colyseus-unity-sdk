@@ -8,7 +8,8 @@ const PORT = Number(process.env.PORT || 2567);
 
 const app = express();
 const gameServer = new Server({
-  server: http.createServer(app)
+  server: http.createServer(app),
+  pingTimeout: 0
 });
 
 // Register DemoRoom as "demo"

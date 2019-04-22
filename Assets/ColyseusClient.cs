@@ -21,7 +21,7 @@ public class ColyseusClient : MonoBehaviour {
 	protected Client client;
 	protected Room<State> room;
 
-	protected IndexedDictionary<Player, GameObject> players = new IndexedDictionary<Player, GameObject>();
+	protected IndexedDictionary<Entity, GameObject> entities = new IndexedDictionary<Entity, GameObject>();
 
 	// Use this for initialization
 	IEnumerator Start () {
@@ -85,9 +85,9 @@ public class ColyseusClient : MonoBehaviour {
 			Debug.Log("Joined room successfully.");
 			m_SessionIdText.text = "sessionId: " + room.SessionId;
 
-			room.State.players.OnAdd += OnPlayerAdd;
-			room.State.players.OnRemove += OnPlayerRemove;
-			room.State.players.OnChange += OnPlayerMove;
+			room.State.entities.OnAdd += OnEntityAdd;
+			room.State.entities.OnRemove += OnEntityRemove;
+			room.State.entities.OnChange += OnEntityMove;
 
 			PlayerPrefs.SetString("sessionId", room.SessionId);
 			PlayerPrefs.Save();
@@ -117,9 +117,9 @@ public class ColyseusClient : MonoBehaviour {
 			Debug.Log("Joined room successfully.");
 			m_SessionIdText.text = "sessionId: " + room.SessionId;
 
-			room.State.players.OnAdd += OnPlayerAdd;
-			room.State.players.OnRemove += OnPlayerRemove;
-			room.State.players.OnChange += OnPlayerMove;
+			room.State.entities.OnAdd += OnEntityAdd;
+			room.State.entities.OnRemove += OnEntityRemove;
+			room.State.entities.OnChange += OnEntityMove;
 		};
 
 		room.OnStateChange += OnStateChangeHandler;
@@ -131,12 +131,12 @@ public class ColyseusClient : MonoBehaviour {
 		room.Leave(false);
 
 		// Destroy player entities
-		foreach (KeyValuePair<Player, GameObject> entry in players)
+		foreach (KeyValuePair<Entity, GameObject> entry in entities)
 		{
 			Destroy(entry.Value);
 		}
 
-		players.Clear();
+		entities.Clear();
 	}
 
 	void SendMessage()
@@ -163,7 +163,7 @@ public class ColyseusClient : MonoBehaviour {
 		Debug.Log("State has been updated!");
 	}
 
-	void OnPlayerAdd(object sender, KeyValueEventArgs<Player, string> item)
+	void OnEntityAdd(object sender, KeyValueEventArgs<Entity, string> item)
 	{
 		GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
@@ -172,23 +172,23 @@ public class ColyseusClient : MonoBehaviour {
 		cube.transform.position = new Vector3(item.Value.x, item.Value.y, 0);
 
 		// add "player" to map of players
-		players.Add(item.Value, cube);
+		entities.Add(item.Value, cube);
 	}
 
-	void OnPlayerRemove(object sender, KeyValueEventArgs<Player, string> item)
+	void OnEntityRemove(object sender, KeyValueEventArgs<Entity, string> item)
 	{
 		GameObject cube;
-		players.TryGetValue(item.Value, out cube);
+		entities.TryGetValue(item.Value, out cube);
 		Destroy(cube);
 
-		players.Remove(item.Value);
+		entities.Remove(item.Value);
 	}
 
 
-	void OnPlayerMove (object sender, KeyValueEventArgs<Player, string> item)
+	void OnEntityMove (object sender, KeyValueEventArgs<Entity, string> item)
 	{
 		GameObject cube;
-		players.TryGetValue (item.Value, out cube);
+		entities.TryGetValue (item.Value, out cube);
 
 		Debug.Log(item.Value.x);
 
