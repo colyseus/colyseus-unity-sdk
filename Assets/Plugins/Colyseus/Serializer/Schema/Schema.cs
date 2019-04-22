@@ -498,6 +498,8 @@ namespace Colyseus.Schema
           // ensure current array has the same length as encoded one
           if (currentValue.Count > newLength)
           {
+            numChanges -= currentValue.Count - newLength;
+
             for (var i = newLength; i < currentValue.Count; i++)
             {
               var item = currentValue[i];
