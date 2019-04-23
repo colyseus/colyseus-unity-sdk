@@ -3,9 +3,6 @@ using System.Collections;
 using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Linq;
-
-using UnityEngine;
 
 /***
   Allowed primitive types:
@@ -44,7 +41,6 @@ namespace Colyseus.Schema
 
     public void SetTypeId(System.Type type, uint typeid)
     {
-			Debug.Log(">>>>>>> SET TYPE ID: " + typeid + ", Type => " + type.Name);
       typeIds[typeid] = type;
     }
 
@@ -729,13 +725,10 @@ namespace Colyseus.Schema
         it.Offset++;
         uint typeId = Decoder.GetInstance().DecodeUint8(bytes, it);
         System.Type anotherType = Context.GetInstance().Get(typeId);
-				Debug.Log("CreateTypeInstance: (inherited) " + anotherType.Name);
-				return Activator.CreateInstance(anotherType);
-
+        return Activator.CreateInstance(anotherType);
       } 
       else 
       {
-				Debug.Log("CreateTypeInstance: (default) " + type.Name);
         return Activator.CreateInstance(type);
       }
     }
