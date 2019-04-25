@@ -485,7 +485,7 @@ namespace Colyseus.Schema
           ISchemaCollection currentValue = valueRef.Clone();
 
           int newLength = Convert.ToInt32(decode.DecodeNumber(bytes, it));
-          int numChanges = Convert.ToInt32(decode.DecodeNumber(bytes, it));
+          int numChanges = Math.Min(Convert.ToInt32(decode.DecodeNumber(bytes, it)), newLength);
 
           hasChange = (numChanges > 0);
 
@@ -494,8 +494,6 @@ namespace Colyseus.Schema
           // ensure current array has the same length as encoded one
           if (currentValue.Count > newLength)
           {
-            numChanges -= currentValue.Count - newLength;
-
             for (var i = newLength; i < currentValue.Count; i++)
             {
               var item = currentValue[i];
