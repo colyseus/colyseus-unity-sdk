@@ -103,13 +103,14 @@ namespace Colyseus
 		}
 
 		public void Recv ()
-		{
-			byte[] data = Connection.Recv();
-			if (data != null)
-			{
-				ParseMessage(data);
-			}
-		}
+        {
+            byte[] data = Connection.Recv();
+            while (data != null)
+            {
+                ParseMessage(data);
+                data = Connection.Recv();
+            }
+        }
 
 		public IEnumerator Connect()
 		{

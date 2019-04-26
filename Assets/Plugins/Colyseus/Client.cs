@@ -73,10 +73,11 @@ namespace Colyseus
 		public void Recv()
 		{
 			byte[] data = connection.Recv();
-			if (data != null)
-			{
-				ParseMessage(data);
-			}
+            while (data != null)
+            {
+                ParseMessage(data);
+                data = connection.Recv();
+            }
 
 			// TODO: this may not be a good idea?
 			foreach (var room in rooms) {
