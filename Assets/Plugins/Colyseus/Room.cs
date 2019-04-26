@@ -104,9 +104,8 @@ namespace Colyseus
 
 		public void Recv ()
         {
-            DateTime start = DateTime.Now;
             byte[] data = Connection.Recv();
-            while (data != null && (DateTime.Now-start).TotalMilliseconds < 100)
+            while (data != null)
             {
                 ParseMessage(data);
                 data = Connection.Recv();
