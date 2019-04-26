@@ -103,13 +103,15 @@ namespace Colyseus
 		}
 
 		public void Recv ()
-		{
-			byte[] data = Connection.Recv();
-			if (data != null)
-			{
-				ParseMessage(data);
-			}
-		}
+        {
+            DateTime start = DateTime.Now;
+            byte[] data = Connection.Recv();
+            while (data != null && (DateTime.Now-start).TotalMilliseconds < 100)
+            {
+                ParseMessage(data);
+                data = Connection.Recv();
+            }
+        }
 
 		public IEnumerator Connect()
 		{
