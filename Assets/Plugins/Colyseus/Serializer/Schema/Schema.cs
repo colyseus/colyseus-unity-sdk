@@ -126,19 +126,19 @@ namespace Colyseus.Schema
 
   public class ArraySchema<T> : ISchemaCollection
   {
-    public List<T> Items;
+    public Dictionary<int, T> Items;
     public event EventHandler<KeyValueEventArgs<T, int>> OnAdd;
     public event EventHandler<KeyValueEventArgs<T, int>> OnChange;
     public event EventHandler<KeyValueEventArgs<T, int>> OnRemove;
 
     public ArraySchema()
     {
-      Items = new List<T>();
+      Items = new Dictionary<int, T>();
     }
 
-    public ArraySchema(List<T> items = null)
+    public ArraySchema(Dictionary<int, T> items = null)
     {
-      Items = items ?? new List<T>();
+      Items = items ?? new Dictionary<int, T>();
     }
 
     public ISchemaCollection Clone()
@@ -170,18 +170,21 @@ namespace Colyseus.Schema
     public T this[int index]
     {
       get {
-        return (Items.Count > index) ? (T)Items[index] : default(T);
+        T value;
+        Items.TryGetValue(index, out value);
+        return value;
       }
-      set { Items.Insert(index, value); }
+      set { Items[index] = value; }
     }
 
     public object this[object key]
     {
       get {
-        int k = (int)key;
-        return (Items.Count > k) ? (T)Items[k] : default(T);
+        T value;
+        Items.TryGetValue((int)key, out value);
+        return value;
       }
-      set { Items.Insert((int)key, (T)value); }
+      set { Items[(int)key] = (T)value; }
     }
 
     public object GetItems()
@@ -191,7 +194,15 @@ namespace Colyseus.Schema
 
     public void SetItems(object items)
     {
-      Items = (List<T>) items;
+      Items = (Dictionary<int, T>) items;
+    }
+
+    public void ForEach (Action<T> action)
+    {
+      foreach (KeyValuePair<int, T> item in Items)
+      {
+        action(item.Value);
+      }
     }
 
     public void TriggerAll()
@@ -358,6 +369,14 @@ namespace Colyseus.Schema
     public void SetItems(object items)
     {
       throw new NotImplementedException();
+    }
+
+    public void ForEach (Action<string, T> action)
+    {
+      foreach (KeyValuePair<string, T> item in Items)
+      {
+        action(item.Key, item.Value);
+      }
     }
 
     public void TriggerAll()
