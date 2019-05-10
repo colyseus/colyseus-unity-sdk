@@ -6,6 +6,7 @@
     "url": "git://github.com/gamestdio/colyseus-unity3d.git"
   },
   "scripts": {
+    "schema-codegen": "schema-codegen DemoRoom.ts --csharp --output ../Assets/",
     "start": "nodemon --watch '**.ts' --exec ts-node ./index.ts"
   },
   "engines": {
