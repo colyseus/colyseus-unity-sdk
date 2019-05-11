@@ -192,7 +192,7 @@ namespace Colyseus.Schema
         Items.TryGetValue((int)key, out value);
         return value;
       }
-      set { Items[(int)key] = (T)value; }
+      set { Items[(int)key] = (T)Convert.ChangeType(value, typeof(T)); }
     }
 
     public object GetItems()
@@ -282,7 +282,7 @@ namespace Colyseus.Schema
         TryGetValue(key, out value);
         return value;
       }
-      set { Items[key] = Convert.ChangeType(value, typeof(T)); }
+      set { Items[key] = value; }
     }
 
     public object this[object key]
