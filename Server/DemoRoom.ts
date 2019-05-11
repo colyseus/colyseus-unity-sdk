@@ -1,5 +1,5 @@
 import { Room, Client, generateId } from "colyseus";
-import { Schema, type, MapSchema } from "@colyseus/schema";
+import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 
 class Entity extends Schema {
   @type("number")
@@ -22,6 +22,9 @@ class Enemy extends Entity {
 class State extends Schema {
   @type({ map: Entity })
   entities = new MapSchema<Entity>();
+
+  @type(["number"])
+  arrayOfNumbers = new ArraySchema<number>();
 }
 
 export class DemoRoom extends Room {
@@ -42,6 +45,7 @@ export class DemoRoom extends Room {
       enemy.x = Math.random() * 2;
       enemy.y = Math.random() * 2;
       this.state.entities[generateId()] = enemy;
+      this.state.arrayOfNumbers.push(Math.random());
     }
   }
 

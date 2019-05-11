@@ -19,8 +19,8 @@ using System.Reflection;
     "uint64"
     "float32"
     "float64"
-       
-  Allowed reference types:   
+
+  Allowed reference types:
     "ref"
     "array"
     "map"
@@ -28,7 +28,7 @@ using System.Reflection;
 
 namespace Colyseus.Schema
 {
-  class Context 
+  class Context
   {
     protected static Context instance = new Context();
     protected List<System.Type> types = new List<System.Type>();
@@ -56,6 +56,7 @@ namespace Colyseus.Schema
     public int Index;
     public string FieldType;
     public System.Type ChildType;
+    public string ChildPrimitiveType;
 
     public Type(int index, string type, System.Type childType = null)
     {
@@ -63,9 +64,16 @@ namespace Colyseus.Schema
       FieldType = type;
       ChildType = childType;
     }
+
+    public Type(int index, string type, string childPrimitiveType)
+    {
+      Index = index; // GetType().GetFields() doesn't guarantee order of fields, need to manually track them here!
+      FieldType = type;
+      ChildPrimitiveType = childPrimitiveType;
+    }
   }
 
-  public class Iterator { 
+  public class Iterator {
     public int Offset = 0;
   }
 
@@ -110,7 +118,7 @@ namespace Colyseus.Schema
     void InvokeOnAdd(object item, object index);
     void InvokeOnChange(object item, object index);
     void InvokeOnRemove(object item, object index);
-    
+
     object GetItems();
     void SetItems(object items);
     void TriggerAll();
@@ -184,7 +192,7 @@ namespace Colyseus.Schema
         Items.TryGetValue((int)key, out value);
         return value;
       }
-      set { Items[(int)key] = (T)value; }
+      set { Items[(int)key] = (T)Convert.ChangeType(value, typeof(T)); }
     }
 
     public object GetItems()
@@ -408,6 +416,7 @@ namespace Colyseus.Schema
   {
     protected Dictionary<int, string> fieldsByIndex = new Dictionary<int, string>();
     protected Dictionary<string, string> fieldTypes = new Dictionary<string, string>();
+    protected Dictionary<string, string> fieldChildPrimitiveTypes = new Dictionary<string, string>();
     protected Dictionary<string, System.Type> fieldChildTypes = new Dictionary<string, System.Type>();
 
     public event EventHandler<OnChangeEventArgs> OnChange;
@@ -426,21 +435,28 @@ namespace Colyseus.Schema
           fieldTypes.Add(field.Name, t.FieldType);
           if (t.FieldType == "ref" || t.FieldType == "array" || t.FieldType == "map")
           {
-            fieldChildTypes.Add(field.Name, t.ChildType);
+            if (t.ChildPrimitiveType != null)
+            {
+              fieldChildPrimitiveTypes.Add(field.Name, t.ChildPrimitiveType);
+            }
+            else
+            {
+              fieldChildTypes.Add(field.Name, t.ChildType);
+            }
           }
         }
       }
     }
 
-    /* allow to retrieve property values by its string name */   
+    /* allow to retrieve property values by its string name */
     public object this[string propertyName]
     {
-      get { 
-        return GetType().GetField(propertyName).GetValue(this); 
+      get {
+        return GetType().GetField(propertyName).GetValue(this);
       }
       set {
       	var field = GetType().GetField(propertyName);
-        field.SetValue(this, Convert.ChangeType(value, field.FieldType)); 
+        field.SetValue(this, Convert.ChangeType(value, field.FieldType));
       }
     }
 
@@ -470,8 +486,12 @@ namespace Colyseus.Schema
 
         var field = fieldsByIndex[index];
         var fieldType = fieldTypes[field];
+
         System.Type childType;
         fieldChildTypes.TryGetValue(field, out childType);
+
+        string childPrimitiveType;
+        fieldChildPrimitiveTypes.TryGetValue(field, out childPrimitiveType);
 
         object value = null;
 
@@ -578,7 +598,7 @@ namespace Colyseus.Schema
             }
             else
             {
-              currentValue[newIndex] = decode.DecodePrimitiveType(fieldType, bytes, it);
+              currentValue[newIndex] = decode.DecodePrimitiveType(childPrimitiveType, bytes, it);
             }
 
             if (isNew)
@@ -666,7 +686,7 @@ namespace Colyseus.Schema
 
             } else if (!isSchemaType)
             {
-              currentValue[newKey] = decode.DecodePrimitiveType(fieldType, bytes, it);
+              currentValue[newKey] = decode.DecodePrimitiveType(childPrimitiveType, bytes, it);
             }
             else
             {
@@ -743,8 +763,8 @@ namespace Colyseus.Schema
         uint typeId = Decoder.GetInstance().DecodeUint8(bytes, it);
         System.Type anotherType = Context.GetInstance().Get(typeId);
         return Activator.CreateInstance(anotherType);
-      } 
-      else 
+      }
+      else
       {
         return Activator.CreateInstance(type);
       }

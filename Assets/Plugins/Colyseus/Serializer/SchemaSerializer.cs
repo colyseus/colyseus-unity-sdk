@@ -37,7 +37,7 @@ namespace Colyseus
 
 			Type[] allTypes = targetType.Assembly.GetTypes();
 			Type[] namespaceSchemaTypes = Array.FindAll(allTypes, t => (
-				t.Namespace == targetType.Namespace && 
+				t.Namespace == targetType.Namespace &&
 				typeof(Schema.Schema).IsAssignableFrom(targetType)
 			));
 
@@ -80,8 +80,8 @@ namespace Colyseus
 					Schema.ReflectionField reflectionField = reflectionType.fields[typedField.Index];
 
 					if (
-						reflectionField == null || 
-						reflectionField.type != typedField.FieldType || 
+						reflectionField == null ||
+						reflectionField.type.IndexOf(typedField.FieldType) != 0 ||
 						reflectionField.name != field.Name
 					) {
 						return false;
