@@ -76,7 +76,7 @@ namespace Colyseus.Schema
 			return null;
 		}
 
-		public object DecodeNumber(byte[] bytes, Iterator it)
+		public float DecodeNumber(byte[] bytes, Iterator it)
 		{
 			byte prefix = bytes[it.Offset++];
 
@@ -95,7 +95,7 @@ namespace Colyseus.Schema
 			else if (prefix == 0xcb)
 			{
 				// float 64
-				return DecodeFloat64(bytes, it);
+				return (float) DecodeFloat64(bytes, it);
 
 			}
 			else if (prefix == 0xcc)
@@ -150,7 +150,7 @@ namespace Colyseus.Schema
 				return (0xff - prefix + 1) * -1;
 			}
 
-			return double.NaN;
+			return float.NaN;
 		}
 
 		public int DecodeInt8(byte[] bytes, Iterator it)

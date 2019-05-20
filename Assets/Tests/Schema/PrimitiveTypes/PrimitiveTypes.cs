@@ -40,12 +40,39 @@ namespace SchemaTest.PrimitiveTypes {
 		public double float64 = 0;
 
 		[Type(10, "number")]
-		public float varint = 0;
+		public float varint_int8 = 0;
 
-		[Type(11, "string")]
+		[Type(11, "number")]
+		public float varint_uint8 = 0;
+
+		[Type(12, "number")]
+		public float varint_int16 = 0;
+
+		[Type(13, "number")]
+		public float varint_uint16 = 0;
+
+		[Type(14, "number")]
+		public float varint_int32 = 0;
+
+		[Type(15, "number")]
+		public float varint_uint32 = 0;
+
+		[Type(16, "number")]
+		public float varint_int64 = 0;
+
+		[Type(17, "number")]
+		public float varint_uint64 = 0;
+
+		[Type(18, "number")]
+		public float varint_float32 = 0;
+
+		[Type(19, "number")]
+		public float varint_float64 = 0;
+
+		[Type(20, "string")]
 		public string str = "";
 
-		[Type(12, "boolean")]
+		[Type(21, "boolean")]
 		public bool boolean = false;
 	}
 }

@@ -292,7 +292,7 @@ namespace Colyseus.Schema
         TryGetValue(key as string, out value);
         return value;
       }
-      set { Items[(string) key] = (T) value; }
+      set { Items[(string)key] = (T)Convert.ChangeType(value, typeof(T)); }
     }
 
     public object GetItems()
@@ -456,7 +456,7 @@ namespace Colyseus.Schema
       }
       set {
       	var field = GetType().GetField(propertyName);
-        field.SetValue(this, Convert.ChangeType(value, field.FieldType));
+        field.SetValue(this, value);
       }
     }
 
