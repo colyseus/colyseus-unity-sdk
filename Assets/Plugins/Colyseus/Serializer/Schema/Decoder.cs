@@ -53,6 +53,14 @@ namespace Colyseus.Schema
 			{
 				return DecodeUint32(bytes, it);
 			}
+			else if (type == "int64")
+			{
+				return DecodeInt64(bytes, it);
+			}
+			else if (type == "uint64")
+			{
+				return DecodeUint64(bytes, it);
+			}
 			else if (type == "float32")
 			{
 				return DecodeFloat32(bytes, it);
