@@ -12,7 +12,7 @@ using GameDevWare.Serialization;
 public class ColyseusClient : MonoBehaviour {
 
 	// UI Buttons are attached through Unity Inspector
-	public Button m_ConnectButton, m_JoinButton, m_ReJoinButton, m_SendMessageButton, m_LeaveButton;
+	public Button m_ConnectButton, m_JoinButton, m_ReJoinButton, m_SendMessageButton, m_LeaveButton, m_GetAvailableRoomsButton;
 	public InputField m_EndpointField;
 	public Text m_IdText, m_SessionIdText;
 
@@ -32,6 +32,7 @@ public class ColyseusClient : MonoBehaviour {
 		m_ReJoinButton.onClick.AddListener(ReJoinRoom);
 		m_SendMessageButton.onClick.AddListener(SendMessage);
 		m_LeaveButton.onClick.AddListener(LeaveRoom);
+		m_GetAvailableRoomsButton.onClick.AddListener(GetAvailableRooms);
 
 		/* Always call Recv if Colyseus connection is open */
 		while (true)
@@ -137,6 +138,21 @@ public class ColyseusClient : MonoBehaviour {
 		}
 
 		entities.Clear();
+	}
+
+	void GetAvailableRooms()
+	{
+		client.GetAvailableRooms(roomName, (RoomAvailable[] roomsAvailable) =>
+		{
+			Debug.Log("Available rooms (" + roomsAvailable.Length + ")");
+			for (var i=0; i< roomsAvailable.Length;i++)
+			{
+				Debug.Log("roomId: " + roomsAvailable[i].roomId);
+				Debug.Log("maxClients: " + roomsAvailable[i].maxClients);
+				Debug.Log("clients: " + roomsAvailable[i].clients);
+				Debug.Log("metadata: " + roomsAvailable[i].metadata);
+			}
+		});
 	}
 
 	void SendMessage()

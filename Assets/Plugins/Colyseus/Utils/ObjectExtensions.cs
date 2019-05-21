@@ -14,9 +14,15 @@ namespace Colyseus
             var someObjectType = someObject.GetType();
 
             foreach (var item in (IDictionary<string, object>)source) {
-                someObjectType
-                         .GetProperty(item.Key)
-                         .SetValue(someObject, item.Value, null);
+				var prop = someObjectType.GetProperty(item.Key);
+				try
+				{
+					prop.SetValue(someObject, Convert.ChangeType(item.Value, prop.PropertyType), null);
+
+				} catch (OverflowException e) {
+					// workaround for parsing Infinity on RoomAvailable.maxClients
+					prop.SetValue(someObject, uint.MaxValue, null);
+				}
             }
 
             return someObject;
