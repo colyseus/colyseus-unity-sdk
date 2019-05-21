@@ -192,7 +192,7 @@ namespace Colyseus.Schema
         Items.TryGetValue((int)key, out value);
         return value;
       }
-      set { Items[(int)key] = (T)Convert.ChangeType(value, typeof(T)); }
+      set { Items[(int)key] = (HasSchemaChild) ? (T)value : (T)Convert.ChangeType(value, typeof(T)); }
     }
 
     public object GetItems()
@@ -272,7 +272,7 @@ namespace Colyseus.Schema
 
     public bool HasSchemaChild
     {
-      get { return typeof(T) == typeof(Schema); }
+      get { return typeof(T).BaseType == typeof(Schema); }
     }
 
     public T this[string key]
@@ -292,7 +292,7 @@ namespace Colyseus.Schema
         TryGetValue(key as string, out value);
         return value;
       }
-      set { Items[(string)key] = (T)Convert.ChangeType(value, typeof(T)); }
+      set { Items[(string)key] = (HasSchemaChild) ? (T)value : (T)Convert.ChangeType(value, typeof(T)); }
     }
 
     public object GetItems()
