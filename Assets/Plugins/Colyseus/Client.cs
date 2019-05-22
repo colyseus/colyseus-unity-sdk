@@ -20,6 +20,8 @@ namespace Colyseus
 		/// </summary>
 		public string Id;
 
+		public Auth Auth;
+
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> connection has been established, and Client <see cref="Id"/> is available.
 		/// </summary>
@@ -57,12 +59,15 @@ namespace Colyseus
 		{
 			Id = _id;
 			endpoint = new UriBuilder(new Uri (_endpoint));
+			Auth = new Auth(endpoint.Uri);
+
 			connection = CreateConnection();
 			connection.OnClose += (sender, e) =>
 			{
-				if (this.OnClose != null)
-					this.OnClose.Invoke(sender, e);
+				if (OnClose != null)
+					OnClose.Invoke(sender, e);
 			};
+
 		}
 
 		public IEnumerator Connect()
@@ -99,6 +104,11 @@ namespace Colyseus
 
 			int requestId = ++_requestId;
 			options.Add("requestId", requestId);
+
+			if (Auth.HasToken)
+			{
+				options.Add("token", Auth.Token);
+			}
 
 			var room = new Room<T>(roomName, options);
 			connectingRooms.Add(requestId, room);

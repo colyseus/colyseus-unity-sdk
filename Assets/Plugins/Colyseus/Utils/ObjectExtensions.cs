@@ -19,7 +19,7 @@ namespace Colyseus
 				{
 					prop.SetValue(someObject, Convert.ChangeType(item.Value, prop.PropertyType), null);
 
-				} catch (OverflowException e) {
+				} catch (OverflowException) {
 					// workaround for parsing Infinity on RoomAvailable.maxClients
 					prop.SetValue(someObject, uint.MaxValue, null);
 				}
