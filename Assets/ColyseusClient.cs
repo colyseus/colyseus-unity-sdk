@@ -45,7 +45,7 @@ public class ColyseusClient : MonoBehaviour {
 		}
 	}
 
-	void ConnectToServer ()
+	async void ConnectToServer ()
 	{
 		/*
 		 * Get Colyseus endpoint from InputField
@@ -58,6 +58,10 @@ public class ColyseusClient : MonoBehaviour {
 		 * Connect into Colyeus Server
 		 */
 		client = new Client(endpoint);
+
+		await client.Auth.Login();
+		var friends = await client.Auth.GetFriends();
+
 		client.OnOpen += (object sender, EventArgs e) => {
 			/* Update Demo UI */
 			m_IdText.text = "id: " + client.Id;
