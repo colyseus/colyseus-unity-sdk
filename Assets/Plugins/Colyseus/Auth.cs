@@ -155,6 +155,22 @@ namespace Colyseus
 			return this;
 		}
 
+		public async Task<Auth> Save()
+		{
+			var uploadData = new IndexedDictionary<string, string>();
+			if (!string.IsNullOrEmpty(Username)) uploadData["username"] = Username;
+			if (!string.IsNullOrEmpty(DisplayName)) uploadData["displayName"] = DisplayName;
+			if (!string.IsNullOrEmpty(AvatarUrl)) uploadData["avatarUrl"] = AvatarUrl;
+			if (!string.IsNullOrEmpty(Lang)) uploadData["lang"] = Lang;
+			if (!string.IsNullOrEmpty(Location)) uploadData["location"] = Location;
+			if (!string.IsNullOrEmpty(Timezone)) uploadData["timezone"] = Timezone;
+
+			var bodyString = Json.SerializeToString(uploadData);
+			await Request<UserData>("PUT", "/auth", null, new UploadHandlerRaw(Encoding.UTF8.GetBytes(bodyString)));
+
+			return this;
+		}
+
 		public async Task<UserData[]> GetFriends()
 		{
 			return await Request<UserData[]>("GET", "/friends/all");
@@ -211,7 +227,7 @@ namespace Colyseus
 			PlayerPrefs.SetString("Token", Token);
 		}
 
-		protected async Task<T> Request<T>(string method, string segments, NameValueCollection query = null)
+		protected async Task<T> Request<T>(string method, string segments, NameValueCollection query = null, UploadHandlerRaw data = null)
 		{
 			if (query == null)
 			{
@@ -230,6 +246,13 @@ namespace Colyseus
 
 			// FIXME: replacing "ws" with "http" is too hacky!
 			req.url = uriBuilder.Uri.ToString().Replace("ws", "http");
+
+			// Send JSON on request body
+			if (data != null)
+			{
+				req.uploadHandler = data;
+				req.SetRequestHeader("Content-Type", "application/json");
+			}
 
 			// Request headers
 			req.SetRequestHeader("Accept", "application/json");

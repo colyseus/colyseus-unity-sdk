@@ -62,6 +62,10 @@ public class ColyseusClient : MonoBehaviour {
 		await client.Auth.Login();
 		var friends = await client.Auth.GetFriends();
 
+		// Update username
+		client.Auth.Username = "Jake";
+		await client.Auth.Save();
+
 		client.OnOpen += (object sender, EventArgs e) => {
 			/* Update Demo UI */
 			m_IdText.text = "id: " + client.Id;
