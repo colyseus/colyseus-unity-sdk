@@ -13,8 +13,10 @@
     "node": ">= 8.x"
   },
   "dependencies": {
+    "@colyseus/social": "^0.10.0",
     "colyseus": "^0.10.1",
     "express": "^4.13.3",
+    "express-jwt": "^5.3.1",
     "typescript": "^3.3.4000"
   },
   "devDependencies": {
