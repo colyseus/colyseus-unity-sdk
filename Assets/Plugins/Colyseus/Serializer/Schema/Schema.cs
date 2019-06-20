@@ -381,18 +381,18 @@ namespace Colyseus.Schema
 
     public void ForEach (Action<string, T> action)
     {
-      foreach (KeyValuePair<string, T> item in Items)
+      foreach (DictionaryEntry item in Items)
       {
-        action(item.Key, item.Value);
+        action((string)item.Key, (T)item.Value);
       }
     }
 
     public void TriggerAll()
     {
       if (OnAdd == null) { return; }
-      foreach(KeyValuePair<string, T> entry in Items)
+      foreach(DictionaryEntry item in Items)
       {
-        OnAdd.Invoke(this, new KeyValueEventArgs<T, string>(entry.Value, entry.Key));
+        OnAdd.Invoke(this, new KeyValueEventArgs<T, string>((T)item.Value, (string)item.Key));
       }
     }
 
