@@ -56,8 +56,7 @@ namespace Colyseus
 				if (
 					obj.ContainsKey(key) && 
 					obj[key] != null &&
-					!(!obj.ContainsKey(key) && mirror.ContainsKey(key) && 
-					!(obj is List<object>))
+					!(!obj.ContainsKey(key) && mirror.ContainsKey(key))
 				)
 				{
 					var oldVal = mirror[key];
