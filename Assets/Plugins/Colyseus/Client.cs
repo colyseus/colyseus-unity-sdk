@@ -93,7 +93,7 @@ namespace Colyseus
 
                 foreach (var room in ITRRooms) {
 					if(this.rooms.ContainsKey(room.Key)) {
-                    	this.rooms[room.Key].Recv();
+                    	this.rooms[room.Key]?.Recv();
 					}
                 }
             }catch(Exception e) {
