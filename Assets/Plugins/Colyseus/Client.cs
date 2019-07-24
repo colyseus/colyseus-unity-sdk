@@ -77,17 +77,26 @@ namespace Colyseus
 
 		public void Recv()
 		{
-			byte[] data = connection.Recv();
-            while (data != null)
-            {
-                ParseMessage(data);
-                data = connection.Recv();
-            }
+			// Let's not crash the game if we have errors eh?
+            try {
+                byte[] data = connection.Recv();
+                while (data != null) {
+                    ParseMessage(data);
+                    data = connection.Recv();
+                }
+				
+				// Make a local copy of the rooms so that we can iterate over them
+				// a collection becomes immutable during a foreach if the collection changes
+				// it will throw a missing reference exception. This allows you
+				// to iterate the rooms without the fear of that.
+				Dictionary<string, IRoom> ITRRooms = new Dictionary<string,IRoom>(rooms);
 
-			// TODO: this may not be a good idea?
-			foreach (var room in rooms) {
-				room.Value.Recv ();
-			}
+                foreach (var room in ITRRooms) {
+                    room.Value.Recv();
+                }
+            }catch(Exception e) {
+
+            }
 		}
 
 		/// <summary>
