@@ -92,7 +92,9 @@ namespace Colyseus
 				Dictionary<string, IRoom> ITRRooms = new Dictionary<string,IRoom>(rooms);
 
                 foreach (var room in ITRRooms) {
-                    room.Value.Recv();
+					if(this.rooms.ContainsKey(room.Key)) {
+                    	this.rooms[room.Key].Recv();
+					}
                 }
             }catch(Exception e) {
 
