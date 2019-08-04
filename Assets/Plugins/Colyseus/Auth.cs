@@ -1,5 +1,4 @@
 using System;
-using System.Web;
 using System.Text;
 using System.Collections.Specialized;
 using System.Runtime.Serialization;
@@ -9,6 +8,10 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 using GameDevWare.Serialization;
+
+#if NET_LEGACY
+using System.Web;
+#endif
 
 namespace Colyseus
 {
