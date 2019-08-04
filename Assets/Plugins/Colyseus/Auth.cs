@@ -249,7 +249,9 @@ namespace Colyseus
 			req.method = method;
 
 			// FIXME: replacing "ws" with "http" is too hacky!
-			req.url = uriBuilder.Uri.ToString().Replace("ws", "http");
+			uriBuilder.Scheme = uriBuilder.Scheme.Replace("ws", "http");
+
+			req.url = uriBuilder.Uri.ToString();
 
 			// Send JSON on request body
 			if (data != null)
