@@ -1,13 +1,10 @@
 using System;
 using System.Text;
 using System.Collections.Specialized;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 
 using UnityEngine;
 using UnityEngine.Networking;
-
-using GameDevWare.Serialization;
 
 #if NET_LEGACY
 using System.Web;
@@ -15,50 +12,56 @@ using System.Web;
 
 namespace Colyseus
 {
-	[DataContract]
+	[Serializable]
 	public class DeviceData
 	{
-		[DataMember(Name = "id")] public string Id = null;
-		[DataMember(Name = "platform")] public string Platform = null;
+		public string id = null;
+		public string platform = null;
 	}
 
-	[DataContract]
+	[Serializable]
 	public class UserData
 	{
-		[DataMember(Name = "token")] public string Token = null;
+		public string token = null;
 
-		[DataMember(Name = "_id")] public string _id = null;
-		[DataMember(Name = "username")] public string Username = null;
-		[DataMember(Name = "displayName")] public string DisplayName = null;
-		[DataMember(Name = "avatarUrl")] public string AvatarUrl = null;
+		public string _id = null;
+		public string username = null;
+		public string displayName = null;
+		public string avatarUrl = null;
 
-		[DataMember(Name = "isAnonymous")] public bool IsAnonymous = true;
-		[DataMember(Name = "email")] public string Email = null;
+		public bool isAnonymous = true;
+		public string email = null;
 
-		[DataMember(Name = "lang")] public string Lang = null;
-		[DataMember(Name = "location")] public string Location = null;
-		[DataMember(Name = "timezone")] public string Timezone = null;
-		[DataMember(Name = "metadata")] public object Metadata = null;
+		public string lang = null;
+		public string location = null;
+		public string timezone = null;
+		public object metadata = null;
 
-		[DataMember(Name = "devices")] public DeviceData[] Devices = null;
+		public DeviceData[] devices = null;
 
-		[DataMember(Name = "facebookId")] public string FacebookId = null;
-		[DataMember(Name = "twitterId")] public string TwitterId = null;
-		[DataMember(Name = "googleId")] public string GoogleId = null;
-		[DataMember(Name = "gameCenterId")] public string GameCenterId = null;
-		[DataMember(Name = "steamId")] public string SteamId = null;
+		public string facebookId = null;
+		public string twitterId = null;
+		public string googleId = null;
+		public string gameCenterId = null;
+		public string steamId = null;
 
-		[DataMember(Name = "friendIds")] public string[] FriendIds = null;
-		[DataMember(Name = "blockedUserIds")] public string[] BlockedUserIds = null;
+		public string[] friendIds = null;
+		public string[] blockedUserIds = null;
 
-		[DataMember(Name = "createdAt")] public DateTime CreatedAt = DateTime.MinValue;
-		[DataMember(Name = "updatedAt")] public DateTime UpdatedAt = DateTime.MinValue;
+		public DateTime createdAt = DateTime.MinValue;
+		public DateTime updatedAt = DateTime.MinValue;
 	}
 
-	[DataContract]
+	[Serializable]
+	public class UserDataCollection
+	{
+		public UserData[] users;
+	}
+
+	[Serializable]
 	public class StatusData
 	{
-		[DataMember(Name = "status")] public bool Status = false;
+		public bool Status = false;
 	}
 
 	public class Auth
@@ -130,30 +133,30 @@ namespace Colyseus
 			var userData = await Request<UserData>("POST", "/auth", queryParams);
 
 			_id = userData._id;
-			Username = userData.Username;
-			DisplayName = userData.DisplayName;
-			AvatarUrl = userData.AvatarUrl;
+			Username = userData.username;
+			DisplayName = userData.displayName;
+			AvatarUrl = userData.avatarUrl;
 
-			IsAnonymous = userData.IsAnonymous;
-			Email = userData.Email;
+			IsAnonymous = userData.isAnonymous;
+			Email = userData.email;
 
-			Lang = userData.Lang;
-			Location = userData.Location;
-			Timezone = userData.Timezone;
-			Metadata = userData.Metadata;
+			Lang = userData.lang;
+			Location = userData.location;
+			Timezone = userData.timezone;
+			Metadata = userData.metadata;
 
-			Devices = userData.Devices;
+			Devices = userData.devices;
 
-			FacebookId = userData.FacebookId;
-			TwitterId = userData.TwitterId;
-			GoogleId = userData.GoogleId;
-			GameCenterId = userData.GameCenterId;
-			SteamId = userData.SteamId;
+			FacebookId = userData.facebookId;
+			TwitterId = userData.twitterId;
+			GoogleId = userData.googleId;
+			GameCenterId = userData.gameCenterId;
+			SteamId = userData.steamId;
 
-			FriendIds = userData.FriendIds;
-			BlockedUserIds = userData.BlockedUserIds;
+			FriendIds = userData.friendIds;
+			BlockedUserIds = userData.blockedUserIds;
 
-			Token = userData.Token;
+			Token = userData.token;
 			PlayerPrefs.SetString("Token", Token);
 
 			return this;
@@ -161,33 +164,33 @@ namespace Colyseus
 
 		public async Task<Auth> Save()
 		{
-			var uploadData = new IndexedDictionary<string, string>();
-			if (!string.IsNullOrEmpty(Username)) uploadData["username"] = Username;
-			if (!string.IsNullOrEmpty(DisplayName)) uploadData["displayName"] = DisplayName;
-			if (!string.IsNullOrEmpty(AvatarUrl)) uploadData["avatarUrl"] = AvatarUrl;
-			if (!string.IsNullOrEmpty(Lang)) uploadData["lang"] = Lang;
-			if (!string.IsNullOrEmpty(Location)) uploadData["location"] = Location;
-			if (!string.IsNullOrEmpty(Timezone)) uploadData["timezone"] = Timezone;
+			UserData uploadData = new UserData();
+			if (!string.IsNullOrEmpty(Username)) uploadData.username = Username;
+			if (!string.IsNullOrEmpty(DisplayName)) uploadData.displayName = DisplayName;
+			if (!string.IsNullOrEmpty(AvatarUrl)) uploadData.avatarUrl = AvatarUrl;
+			if (!string.IsNullOrEmpty(Lang)) uploadData.lang = Lang;
+			if (!string.IsNullOrEmpty(Location)) uploadData.location = Location;
+			if (!string.IsNullOrEmpty(Timezone)) uploadData.timezone = Timezone;
 
-			var bodyString = Json.SerializeToString(uploadData);
+			var bodyString = JsonUtility.ToJson(uploadData);
 			await Request<UserData>("PUT", "/auth", null, new UploadHandlerRaw(Encoding.UTF8.GetBytes(bodyString)));
 
 			return this;
 		}
 
-		public async Task<UserData[]> GetFriends()
+		public async Task<UserDataCollection> GetFriends()
 		{
-			return await Request<UserData[]>("GET", "/friends/all");
+			return await Request<UserDataCollection>("GET", "/friends/all");
 		}
 
-		public async Task<UserData[]> GetOnlineFriends()
+		public async Task<UserDataCollection> GetOnlineFriends()
 		{
-			return await Request<UserData[]>("GET", "/friends/online");
+			return await Request<UserDataCollection>("GET", "/friends/online");
 		}
 
-		public async Task<UserData[]> GetFriendRequests()
+		public async Task<UserDataCollection> GetFriendRequests()
 		{
-			return await Request<UserData[]>("GET", "/friends/requests");
+			return await Request<UserDataCollection>("GET", "/friends/requests");
 		}
 
 		public async Task<StatusData> SendFriendRequest(string friendId)
@@ -273,7 +276,15 @@ namespace Colyseus
 				throw new Exception(req.error);
 			}
 
-			return Json.Deserialize<T>(req.downloadHandler.text);
+			var json = req.downloadHandler.text;
+
+			// Workaround for decoding a UserDataCollection
+			if (json.StartsWith("[", StringComparison.CurrentCulture))
+			{
+				json = "{\"users\": " + json + "}";
+			}
+
+			return JsonUtility.FromJson<T>(json);
 		}
 
 		protected string GetDeviceId()
