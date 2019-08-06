@@ -1,25 +1,22 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Colyseus
 {
-    /// <summary>
-    /// Manages a Nakama client and optional socket connection.
-    /// </summary>
-    /// <seealso cref="NakamaManagerUsage"/>
     public class ColyseusManager : MonoBehaviour
     {
-        private const string SessionPrefName = "nakama.session";
-        private const string SingletonName = "/[NakamaManager]";
+		public Client Client;
 
+        private const string SingletonName = "/[Colyseus]";
         private static readonly object Lock = new object();
-        private static NakamaManager _instance;
+        private static ColyseusManager _instance;
 
         /// <summary>
-        /// The singleton instance of the Nakama sdk manager.
+        /// The singleton instance of the Colyseus Manager.
         /// </summary>
-        public static NakamaManager Instance
+        public static ColyseusManager Instance
         {
             get
             {
@@ -32,71 +29,39 @@ namespace Colyseus
                         go = new GameObject(SingletonName);
                     }
 
-                    if (go.GetComponent<NakamaManager>() == null)
+                    if (go.GetComponent<ColyseusManager>() == null)
                     {
-                        go.AddComponent<NakamaManager>();
+                        go.AddComponent<ColyseusManager>();
                     }
                     DontDestroyOnLoad(go);
-                    _instance = go.GetComponent<NakamaManager>();
+                    _instance = go.GetComponent<ColyseusManager>();
                     return _instance;
                 }
             }
         }
 
-        public IClient Client { get; }
-        public ISocket Socket { get; }
-
-        public Task<ISession> Session { get; private set; }
-
-        private NakamaManager()
+        public Client CreateClient(string endpoint)
         {
-            Client = new Client("http", "127.0.0.1", 7350, "defaultkey")
-            {
-#if UNITY_EDITOR
-                Logger = new UnityLogger()
-#endif
-            };
-            Socket = Client.NewSocket();
-        }
+			Client = new Client(endpoint);
+			return Client;
+		}
 
-        private Task<ISession> AuthenticateAsync()
-        {
-            // Modify to fit the authentication strategy you want within your game.
-            // EXAMPLE:
-            const string deviceIdPrefName = "deviceid";
-            var deviceId = PlayerPrefs.GetString(deviceIdPrefName, SystemInfo.deviceUniqueIdentifier);
-#if UNITY_EDITOR
-            Debug.LogFormat("Device id: {0}", deviceId);
-#endif
-            // With device IDs save it locally in case of OS updates which can change the value on device.
-            PlayerPrefs.SetString(deviceIdPrefName, deviceId);
-            return Client.AuthenticateDeviceAsync(deviceId);
-        }
+		public async Task Connect()
+		{
+			await Client.Connect();
+		}
 
-        private void Awake()
-        {
-            // Restore session or create a new one.
-            var authToken = PlayerPrefs.GetString(SessionPrefName);
-            var session = Nakama.Session.Restore(authToken);
-            var expiredDate = DateTime.UtcNow.AddDays(-1);
-            if (session == null || session.HasExpired(expiredDate))
-            {
-                var sessionTask = AuthenticateAsync();
-                Session = sessionTask;
-                sessionTask.ContinueWith(t =>
-                {
-                    if (t.IsCompleted)
-                    {
-                        PlayerPrefs.SetString(SessionPrefName, t.Result.AuthToken);
-                    }
-                }, TaskScheduler.FromCurrentSynchronizationContext());
-            }
-            else
-            {
-                Session = Task.FromResult(session);
-            }
-        }
+		private void OnApplicationQuit()
+		{
+			if (Client != null)
+			{
+				foreach (KeyValuePair<string, IRoom> room in Client.rooms)
+				{
+					room.Value.Leave(false);
+				}
 
-        private void OnApplicationQuit() => Socket?.CloseAsync();
-    }
+				Client.Close();
+			}
+		}
+	}
 }

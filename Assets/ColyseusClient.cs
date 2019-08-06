@@ -1,9 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-using System.Collections;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+
+using System.Threading;
+using System.Threading.Tasks;
+
 using Colyseus;
 using Colyseus.Schema;
 
@@ -24,7 +27,7 @@ public class ColyseusClient : MonoBehaviour {
 	protected IndexedDictionary<Entity, GameObject> entities = new IndexedDictionary<Entity, GameObject>();
 
 	// Use this for initialization
-	IEnumerator Start () {
+	void Start () {
 		/* Demo UI */
 		m_ConnectButton.onClick.AddListener(ConnectToServer);
 
@@ -33,16 +36,6 @@ public class ColyseusClient : MonoBehaviour {
 		m_SendMessageButton.onClick.AddListener(SendMessage);
 		m_LeaveButton.onClick.AddListener(LeaveRoom);
 		m_GetAvailableRoomsButton.onClick.AddListener(GetAvailableRooms);
-
-		/* Always call Recv if Colyseus connection is open */
-		while (true)
-		{
-			if (client != null)
-			{
-				client.Recv();
-			}
-			yield return 0;
-		}
 	}
 
 	async void ConnectToServer ()
@@ -57,41 +50,37 @@ public class ColyseusClient : MonoBehaviour {
 		/*
 		 * Connect into Colyeus Server
 		 */
-		client = new Client(endpoint);
+		client = ColyseusManager.Instance.CreateClient(endpoint);
 
 		await client.Auth.Login();
+
 		var friends = await client.Auth.GetFriends();
 
 		// Update username
 		client.Auth.Username = "Jake";
 		await client.Auth.Save();
 
-		client.OnOpen += (object sender, EventArgs e) => {
+		client.OnOpen += () => {
 			/* Update Demo UI */
 			m_IdText.text = "id: " + client.Id;
 		};
-		client.OnError += (sender, e) => Debug.LogError(e.Message);
-		client.OnClose += (sender, e) => Debug.Log("CONNECTION CLOSED");
-		StartCoroutine(client.Connect());
+		client.OnError += (message) => Debug.LogError(message);
+		client.OnClose += (code) => Debug.Log("CONNECTION CLOSED");
+
+		await client.Connect();
 	}
 
-	void JoinRoom ()
+	public async void JoinRoom ()
 	{
-		room = client.Join<State>(roomName, new Dictionary<string, object>()
+		room = await client.Join<State>(roomName, new Dictionary<string, object>()
 		{
 			{ "create", true }
 		});
 
-		room.OnReadyToConnect += (sender, e) => {
-			Debug.Log("Ready to connect to room!");
-			StartCoroutine(room.Connect());
-		};
-		room.OnError += (sender, e) =>
-		{
-			Debug.LogError(e.Message);
-		};
-		room.OnJoin += (sender, e) => {
-			Debug.Log("Joined room successfully.");
+		room.OnLeave += (code) => Debug.Log("ROOM: ON LEAVE");
+		room.OnError += (message) => Debug.LogError(message);
+
+		room.OnJoin += () => {
 			m_SessionIdText.text = "sessionId: " + room.SessionId;
 
 			room.State.entities.OnAdd += OnEntityAdd;
@@ -106,7 +95,7 @@ public class ColyseusClient : MonoBehaviour {
 		room.OnMessage += OnMessage;
 	}
 
-	void ReJoinRoom ()
+	async void ReJoinRoom ()
 	{
 		string sessionId = PlayerPrefs.GetString("sessionId");
 		if (string.IsNullOrEmpty(sessionId))
@@ -115,14 +104,10 @@ public class ColyseusClient : MonoBehaviour {
 			return;
 		}
 
-		room = client.ReJoin<State>(roomName, sessionId);
+		room = await client.ReJoin<State>(roomName, sessionId);
 
-		room.OnReadyToConnect += (sender, e) => {
-			Debug.Log("Ready to connect to room!");
-			StartCoroutine(room.Connect());
-		};
-		room.OnError += (sender, e) => Debug.LogError(e.Message);
-		room.OnJoin += (sender, e) => {
+		room.OnError += (message) => Debug.LogError(message);
+		room.OnJoin += () => {
 			Debug.Log("Joined room successfully.");
 			m_SessionIdText.text = "sessionId: " + room.SessionId;
 
@@ -135,9 +120,9 @@ public class ColyseusClient : MonoBehaviour {
 		room.OnMessage += OnMessage;
 	}
 
-	void LeaveRoom()
+	async void LeaveRoom()
 	{
-		room.Leave(false);
+		await room.Leave(false);
 
 		// Destroy player entities
 		foreach (KeyValuePair<Entity, GameObject> entry in entities)
@@ -148,9 +133,9 @@ public class ColyseusClient : MonoBehaviour {
 		entities.Clear();
 	}
 
-	void GetAvailableRooms()
+	async void GetAvailableRooms()
 	{
-		client.GetAvailableRooms(roomName, (RoomAvailable[] roomsAvailable) =>
+		await client.GetAvailableRooms(roomName, (RoomAvailable[] roomsAvailable) =>
 		{
 			Debug.Log("Available rooms (" + roomsAvailable.Length + ")");
 			for (var i=0; i< roomsAvailable.Length;i++)

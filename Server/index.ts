@@ -1,5 +1,6 @@
 import http from "http";
 import express from "express";
+import cors from "cors";
 
 import { Server, serialize, FossilDeltaSerializer } from "colyseus";
 import { DemoRoom } from "./DemoRoom";
@@ -13,6 +14,12 @@ const gameServer = new Server({
   server: http.createServer(app),
   pingTimeout: 0
 });
+
+/**
+ * CORS should be used during development only.
+ * Please remove CORS on production, unless you're hosting the server and client on different domains.
+ */
+app.use(cors());
 
 // Register DemoRoom as "demo"
 gameServer.register("demo", DemoRoom);

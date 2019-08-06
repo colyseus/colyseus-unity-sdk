@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Threading.Tasks;
 
 using Colyseus;
 using GameDevWare.Serialization;
@@ -10,28 +11,22 @@ public class ClientComponent : MonoBehaviour
 	public Room<IndexedDictionary<string, object>> room;
 
 	// Use this for initialization
-	public IEnumerator Start () {
+	public async void Start () {
 		client = new Client("ws://localhost:2567");
 
-		yield return StartCoroutine(client.Connect());
+		await client.Connect();
 
-		room = client.Join("chat");
-		room.OnReadyToConnect += (sender, e) => StartCoroutine ( room.Connect() );
+		room = await client.Join("chat");
+		await room.Connect();
 
-		while (true)
-		{
-			client.Recv();
-			yield return 0;
-		}
-
-		OnApplicationQuit();
+		// OnApplicationQuit();
 	}
 
-	void OnDestroy ()
+	async void OnDestroy ()
 	{
 		// Make sure client will disconnect from the server
-		room.Leave ();
-		client.Close ();
+		await room.Leave ();
+		await client.Close ();
 	}
 
 	void OnApplicationQuit()

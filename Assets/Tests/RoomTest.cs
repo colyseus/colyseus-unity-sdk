@@ -18,13 +18,13 @@ public class RoomTest {
 
 		yield return new WaitForFixedUpdate();
 
-		component.client.OnOpen += (object sender, System.EventArgs e) => {
+		component.client.OnOpen += () => {
 			Assert.NotNull (component.client.Id);
 		};
 
 		yield return new WaitForSeconds(0.1f);
 
-		component.room.OnJoin += (object sender, System.EventArgs e) => {
+		component.room.OnJoin += () => {
 			Assert.NotNull (component.room.Id);
 			Assert.NotNull (component.room.SessionId);
 		};
