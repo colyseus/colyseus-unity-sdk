@@ -70,6 +70,7 @@ namespace Colyseus
 			connection = CreateConnection();
 			connection.OnMessage += (bytes) => ParseMessage(bytes);
 			connection.OnClose += (code) => OnClose?.Invoke(code);
+			connection.OnError += (message) => OnError?.Invoke(message);
 		}
 
 		public async Task Connect()
