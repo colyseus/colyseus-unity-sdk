@@ -92,26 +92,9 @@ namespace Colyseus.Schema
     public object PreviousValue;
   }
 
-  public class OnChangeEventArgs : EventArgs
-  {
-    public List<DataChange> Changes;
-    public OnChangeEventArgs(List<DataChange> changes)
-    {
-      Changes = changes;
-    }
-  }
-
-  public class KeyValueEventArgs<T, K> : EventArgs
-  {
-    public T Value;
-    public K Key;
-
-    public KeyValueEventArgs(T value, K key)
-    {
-      Value = value;
-      Key = key;
-    }
-  }
+  public delegate void OnChangeEventHandler(List<DataChange> changes);
+  public delegate void KeyValueEventHandler<T, K>(T value, K key);
+  public delegate void OnRemoveEventHandler();
 
   public interface ISchemaCollection
   {
@@ -135,9 +118,9 @@ namespace Colyseus.Schema
   public class ArraySchema<T> : ISchemaCollection
   {
     public Dictionary<int, T> Items;
-    public event EventHandler<KeyValueEventArgs<T, int>> OnAdd;
-    public event EventHandler<KeyValueEventArgs<T, int>> OnChange;
-    public event EventHandler<KeyValueEventArgs<T, int>> OnRemove;
+    public event KeyValueEventHandler<T, int> OnAdd;
+    public event KeyValueEventHandler<T, int> OnChange;
+    public event KeyValueEventHandler<T, int> OnRemove;
 
     public ArraySchema()
     {
@@ -217,32 +200,32 @@ namespace Colyseus.Schema
     {
       if (OnAdd == null) { return; }
       for (var i = 0; i < Items.Count; i++) {
-        OnAdd.Invoke(this, new KeyValueEventArgs<T, int>((T) Items[i], (int) i));
+        OnAdd.Invoke((T) Items[i], (int) i);
       }
     }
 
     public void InvokeOnAdd(object item, object index)
     {
-      if (OnAdd != null) { OnAdd.Invoke(this, new KeyValueEventArgs<T, int>((T) item, (int) index)); }
+      OnAdd?.Invoke((T) item, (int) index);
     }
 
     public void InvokeOnChange(object item, object index)
     {
-      if (OnChange != null) { OnChange.Invoke(this, new KeyValueEventArgs<T, int>((T) item, (int) index)); }
+      OnChange?.Invoke((T) item, (int) index);
     }
 
     public void InvokeOnRemove(object item, object index)
     {
-      if (OnRemove != null) { OnRemove.Invoke(this, new KeyValueEventArgs<T, int>((T) item, (int) index)); }
+      OnRemove?.Invoke((T) item, (int) index);
     }
   }
 
   public class MapSchema<T> : ISchemaCollection
   {
     public OrderedDictionary Items = new OrderedDictionary();
-    public event EventHandler<KeyValueEventArgs<T, string>> OnAdd;
-    public event EventHandler<KeyValueEventArgs<T, string>> OnChange;
-    public event EventHandler<KeyValueEventArgs<T, string>> OnRemove;
+    public event KeyValueEventHandler<T, string> OnAdd;
+    public event KeyValueEventHandler<T, string> OnChange;
+    public event KeyValueEventHandler<T, string> OnRemove;
 
     public MapSchema()
     {
@@ -392,23 +375,23 @@ namespace Colyseus.Schema
       if (OnAdd == null) { return; }
       foreach(DictionaryEntry item in Items)
       {
-        OnAdd.Invoke(this, new KeyValueEventArgs<T, string>((T)item.Value, (string)item.Key));
+        OnAdd.Invoke((T)item.Value, (string)item.Key);
       }
     }
 
     public void InvokeOnAdd(object item, object index)
     {
-      if (OnAdd != null) { OnAdd.Invoke(this, new KeyValueEventArgs<T, string>((T)item, (string)index)); }
+      OnAdd?.Invoke((T)item, (string)index);
     }
 
     public void InvokeOnChange(object item, object index)
     {
-      if (OnChange != null) { OnChange.Invoke(this, new KeyValueEventArgs<T, string>((T)item, (string)index)); }
+      OnChange?.Invoke((T)item, (string)index);
     }
 
     public void InvokeOnRemove(object item, object index)
     {
-      if (OnRemove != null) { OnRemove.Invoke(this, new KeyValueEventArgs<T, string>((T)item, (string)index)); }
+      OnRemove?.Invoke((T)item, (string)index);
     }
   }
 
@@ -419,8 +402,8 @@ namespace Colyseus.Schema
     protected Dictionary<string, string> fieldChildPrimitiveTypes = new Dictionary<string, string>();
     protected Dictionary<string, System.Type> fieldChildTypes = new Dictionary<string, System.Type>();
 
-    public event EventHandler<OnChangeEventArgs> OnChange;
-    public event EventHandler OnRemove;
+    public event OnChangeEventHandler OnChange;
+    public event OnRemoveEventHandler OnRemove;
 
     public Schema()
     {
@@ -536,9 +519,9 @@ namespace Colyseus.Schema
             for (var i = newLength; i < currentValue.Count; i++)
             {
               var item = currentValue[i];
-              if (item is Schema && (item as Schema).OnRemove != null)
+              if (item is Schema)
               {
-                (item as Schema).OnRemove.Invoke(this, new EventArgs());
+                (item as Schema).OnRemove?.Invoke();
               }
               currentValue.InvokeOnRemove(item, i);
             }
@@ -675,9 +658,9 @@ namespace Colyseus.Schema
             {
               it.Offset++;
 
-              if (item != null && (item as Schema).OnRemove != null)
+              if (item != null)
               {
-                (item as Schema).OnRemove.Invoke(this, new EventArgs());
+                (item as Schema).OnRemove?.Invoke();
               }
 
               valueRef.InvokeOnRemove(item, newKey);
@@ -727,9 +710,9 @@ namespace Colyseus.Schema
         this[field] = value;
       }
 
-      if (changes.Count > 0 && OnChange != null)
+      if (changes.Count > 0)
       {
-        OnChange.Invoke(this, new OnChangeEventArgs(changes));
+        OnChange?.Invoke(changes);
       }
     }
 
@@ -752,7 +735,7 @@ namespace Colyseus.Schema
         }
       }
 
-      OnChange.Invoke(this, new OnChangeEventArgs(changes));
+      OnChange.Invoke(changes);
     }
 
     protected object CreateTypeInstance(byte[] bytes, Iterator it, System.Type type)

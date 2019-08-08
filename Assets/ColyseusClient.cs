@@ -160,61 +160,51 @@ public class ColyseusClient : MonoBehaviour {
 		}
 	}
 
-	void OnMessage (object sender, MessageEventArgs e)
+	void OnMessage (object msg)
 	{
-		var message = (IndexedDictionary<string, object>) e.Message;
+		var message = (IndexedDictionary<string, object>)msg;
 		Debug.Log(message);
 	}
 
-	void OnStateChangeHandler (object sender, StateChangeEventArgs<State> e)
+	void OnStateChangeHandler (State state, bool isFirstState)
 	{
 		// Setup room first state
 		Debug.Log("State has been updated!");
 	}
 
-	void OnEntityAdd(object sender, KeyValueEventArgs<Entity, string> item)
+	void OnEntityAdd(Entity entity, string key)
 	{
 		GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
-		Debug.Log("Player add! x => " + item.Value.x + ", y => " + item.Value.y);
+		Debug.Log("Player add! x => " + entity.x + ", y => " + entity.y);
 
-		cube.transform.position = new Vector3(item.Value.x, item.Value.y, 0);
+		cube.transform.position = new Vector3(entity.x, entity.y, 0);
 
 		// add "player" to map of players
-		entities.Add(item.Value, cube);
+		entities.Add(entity, cube);
 	}
 
-	void OnEntityRemove(object sender, KeyValueEventArgs<Entity, string> item)
+	void OnEntityRemove(Entity entity, string key)
 	{
 		GameObject cube;
-		entities.TryGetValue(item.Value, out cube);
+		entities.TryGetValue(entity, out cube);
 		Destroy(cube);
 
-		entities.Remove(item.Value);
+		entities.Remove(entity);
 	}
 
 
-	void OnEntityMove (object sender, KeyValueEventArgs<Entity, string> item)
+	void OnEntityMove(Entity entity, string key)
 	{
 		GameObject cube;
-		entities.TryGetValue (item.Value, out cube);
+		entities.TryGetValue (entity, out cube);
 
-		Debug.Log(item.Value.x);
+		Debug.Log(entity);
 
-		cube.transform.Translate (new Vector3 (item.Value.x, item.Value.y, 0));
+		cube.transform.Translate (new Vector3 (entity.x, entity.y, 0));
 	}
 
 	void OnApplicationQuit()
 	{
-		// Make sure client will disconnect from the server
-		if (room != null)
-		{
-			room.Leave();
-		}
-
-		if (client != null)
-		{
-			client.Close();
-		}
 	}
 }

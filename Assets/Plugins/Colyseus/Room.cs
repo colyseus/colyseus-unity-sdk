@@ -28,6 +28,9 @@ namespace Colyseus
 
 	public class Room<T> : IRoom
 	{
+		public delegate void RoomOnMessageEventHandler(object message);
+		public delegate void RoomOnStateChangeEventHandler(T state, bool isFirstState);
+
 		protected string id;
 		public string Id
 		{
@@ -70,13 +73,12 @@ namespace Colyseus
 		/// <summary>
 		/// Occurs when server sends a message to this <see cref="Room"/>
 		/// </summary>
-		public event EventHandler<MessageEventArgs> OnMessage;
+		public event RoomOnMessageEventHandler OnMessage;
 
 		/// <summary>
 		/// Occurs after applying the patched state on this <see cref="Room"/>.
 		/// </summary>
-		//public event EventHandler<StateChangeEventArgs<T>> OnStateChange;
-		public event EventHandler<StateChangeEventArgs<T>> OnStateChange;
+		public event RoomOnStateChangeEventHandler OnStateChange;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Room"/> class.
@@ -109,7 +111,7 @@ namespace Colyseus
 		public void SetState(byte[] encodedState)
 		{
 			serializer.SetState(encodedState);
-			OnStateChange?.Invoke (this, new StateChangeEventArgs<T>(serializer.GetState(), true));
+			OnStateChange?.Invoke (serializer.GetState(), true);
 		}
 
 		public T State
@@ -228,7 +230,7 @@ namespace Colyseus
 				else if (previousCode == Protocol.ROOM_DATA)
 				{
 					var message = MsgPack.Deserialize<object>(new MemoryStream(bytes));
-					OnMessage?.Invoke(this, new MessageEventArgs(message));
+					OnMessage?.Invoke(message);
 
 				}
 				previousCode = 0;
@@ -238,7 +240,7 @@ namespace Colyseus
 		protected void Patch (byte[] delta)
 		{
 			serializer.Patch(delta);
-			OnStateChange?.Invoke(this, new StateChangeEventArgs<T>(serializer.GetState()));
+			OnStateChange?.Invoke(serializer.GetState(), false);
 		}
 	}
 }

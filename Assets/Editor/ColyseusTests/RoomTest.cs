@@ -29,7 +29,7 @@ public class RoomTest {
 			Assert.NotNull (component.room.SessionId);
 		};
 
-		component.room.OnStateChange += (object sender, StateChangeEventArgs<IndexedDictionary<string, object>> e) => {
+		component.room.OnStateChange += (IndexedDictionary<string, object> state, bool isFirstState) => {
 			Assert.NotNull (component.room.State ["players"]);
 			Assert.NotNull (component.room.State ["messages"]);
 		};
