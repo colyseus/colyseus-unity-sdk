@@ -1,11 +1,14 @@
 using System;
 using System.IO;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using GameDevWare.Serialization;
 
 namespace Colyseus
 {
+	public delegate void ColyseusOpenEventHandler();
+	public delegate void ColyseusCloseEventHandler(UnityWebSockets.WebSocketCloseCode code);
+	public delegate void ColyseusErrorEventHandler(string message);
+
 	public class RoomAvailable
 	{
 		public string roomId { get; set; }
@@ -14,16 +17,12 @@ namespace Colyseus
 		public object metadata { get; set; }
 	}
 
-	public interface IRoom 
+	public interface IRoom
 	{
-		string Id { get; set; }
-		Dictionary<string, object> Options { get; set; }
+		event ColyseusCloseEventHandler OnLeave;
 
 		Task Connect();
 		Task Leave(bool consented);
-
-		void SetConnection(Connection connection);
-		event ColyseusCloseEventHandler OnLeave;
 	}
 
 	public class Room<T> : IRoom
@@ -31,22 +30,9 @@ namespace Colyseus
 		public delegate void RoomOnMessageEventHandler(object message);
 		public delegate void RoomOnStateChangeEventHandler(T state, bool isFirstState);
 
-		protected string id;
-		public string Id
-		{
-			get { return id;  }
-			set { id = value; }
-		}
-
+		public string Id;
 		public string Name;
 		public string SessionId;
-
-		protected Dictionary<string, object> options;
-		public Dictionary<string, object> Options
-		{
-			get { return options;  }
-			set { options = value; }
-		}
 
 		public Connection Connection;
 
@@ -88,10 +74,9 @@ namespace Colyseus
 		/// The <see cref="Client"/> client connection instance.
 		/// </param>
 		/// <param name="name">The name of the room</param>
-		public Room (string name, Dictionary<string, object> options = null)
+		public Room (string name)
 		{
 			Name = name;
-			Options = options;
 		}
 
 		public async Task Connect()
@@ -145,7 +130,7 @@ namespace Colyseus
 		/// <param name="data">Data to be sent</param>
 		public async Task Send (object data)
 		{
-			await Connection.Send(new object[]{Protocol.ROOM_DATA, Id, data});
+			await Connection.Send(new object[]{Protocol.ROOM_DATA, data});
 		}
 
 		public Listener<Action<PatchObject>> Listen(Action<PatchObject> callback)
@@ -175,9 +160,6 @@ namespace Colyseus
 				if (code == Protocol.JOIN_ROOM)
 				{
 					var offset = 1;
-
-					SessionId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
-					offset += SessionId.Length + 1;
 
 					SerializerId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
 					offset += SerializerId.Length + 1;

@@ -8,6 +8,7 @@ namespace Colyseus
     public class ColyseusManager : MonoBehaviour
     {
 		public Client Client;
+		public List<IRoom> rooms = new List<IRoom>();
 
         private const string SingletonName = "/[Colyseus]";
         private static readonly object Lock = new object();
@@ -46,21 +47,21 @@ namespace Colyseus
 			return Client;
 		}
 
-		public async Task Connect()
+		public async Task AddRoom(IRoom room)
 		{
-			await Client.Connect();
+			room.OnLeave += (code) => rooms.Remove(room);
+			rooms.Add(room);
+			await room.Connect();
 		}
 
 		private void OnApplicationQuit()
 		{
 			if (Client != null)
 			{
-				foreach (KeyValuePair<string, IRoom> room in Client.rooms)
+				foreach (var room in rooms)
 				{
-					room.Value.Leave(false);
+					room.Leave(false);
 				}
-
-				Client.Close();
 			}
 		}
 	}

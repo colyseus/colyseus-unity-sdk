@@ -15,7 +15,15 @@ using GameDevWare.Serialization;
 public class ColyseusClient : MonoBehaviour {
 
 	// UI Buttons are attached through Unity Inspector
-	public Button m_ConnectButton, m_JoinButton, m_ReJoinButton, m_SendMessageButton, m_LeaveButton, m_GetAvailableRoomsButton;
+	public Button 
+		m_ConnectButton,
+		m_CreateButton,
+		m_JoinOrCreateButton,
+		m_JoinButton, 
+		m_ReconnectButton, 
+		m_SendMessageButton, 
+		m_LeaveButton, 
+		m_GetAvailableRoomsButton;
 	public InputField m_EndpointField;
 	public Text m_IdText, m_SessionIdText;
 
@@ -31,8 +39,10 @@ public class ColyseusClient : MonoBehaviour {
 		/* Demo UI */
 		m_ConnectButton.onClick.AddListener(ConnectToServer);
 
+		m_CreateButton.onClick.AddListener(CreateRoom);
+		m_JoinOrCreateButton.onClick.AddListener(JoinOrCreateRoom);
 		m_JoinButton.onClick.AddListener(JoinRoom);
-		m_ReJoinButton.onClick.AddListener(ReJoinRoom);
+		m_ReconnectButton.onClick.AddListener(ReconnectRoom);
 		m_SendMessageButton.onClick.AddListener(SendMessage);
 		m_LeaveButton.onClick.AddListener(LeaveRoom);
 		m_GetAvailableRoomsButton.onClick.AddListener(GetAvailableRooms);
@@ -59,62 +69,87 @@ public class ColyseusClient : MonoBehaviour {
 		// Update username
 		client.Auth.Username = "Jake";
 		await client.Auth.Save();
-
-		client.OnOpen += () => {
-			/* Update Demo UI */
-			m_IdText.text = "id: " + client.Id;
-		};
-		client.OnError += (message) => Debug.LogError(message);
-		client.OnClose += (code) => Debug.Log("CONNECTION CLOSED");
-
-		await client.Connect();
 	}
 
-	public async void JoinRoom ()
+	public async void CreateRoom()
 	{
-		room = await client.Join<State>(roomName, new Dictionary<string, object>()
-		{
-			{ "create", true }
-		});
+		room = await client.Create<State>(roomName, new Dictionary<string, object>() { });
+
+		m_SessionIdText.text = "sessionId: " + room.SessionId;
+
+		room.State.entities.OnAdd += OnEntityAdd;
+		room.State.entities.OnRemove += OnEntityRemove;
+		room.State.entities.OnChange += OnEntityMove;
+
+		PlayerPrefs.SetString("roomId", room.Id);
+		PlayerPrefs.SetString("sessionId", room.SessionId);
+		PlayerPrefs.Save();
 
 		room.OnLeave += (code) => Debug.Log("ROOM: ON LEAVE");
 		room.OnError += (message) => Debug.LogError(message);
-
-		room.OnJoin += () => {
-			m_SessionIdText.text = "sessionId: " + room.SessionId;
-
-			room.State.entities.OnAdd += OnEntityAdd;
-			room.State.entities.OnRemove += OnEntityRemove;
-			room.State.entities.OnChange += OnEntityMove;
-
-			PlayerPrefs.SetString("sessionId", room.SessionId);
-			PlayerPrefs.Save();
-		};
-
 		room.OnStateChange += OnStateChangeHandler;
 		room.OnMessage += OnMessage;
 	}
 
-	async void ReJoinRoom ()
+	public async void JoinOrCreateRoom()
 	{
+		room = await client.JoinOrCreate<State>(roomName, new Dictionary<string, object>() { });
+
+		m_SessionIdText.text = "sessionId: " + room.SessionId;
+
+		room.State.entities.OnAdd += OnEntityAdd;
+		room.State.entities.OnRemove += OnEntityRemove;
+		room.State.entities.OnChange += OnEntityMove;
+
+		PlayerPrefs.SetString("roomId", room.Id);
+		PlayerPrefs.SetString("sessionId", room.SessionId);
+		PlayerPrefs.Save();
+
+		room.OnLeave += (code) => Debug.Log("ROOM: ON LEAVE");
+		room.OnError += (message) => Debug.LogError(message);
+		room.OnStateChange += OnStateChangeHandler;
+		room.OnMessage += OnMessage;
+	}
+
+	public async void JoinRoom ()
+	{
+		room = await client.Join<State>(roomName, new Dictionary<string, object>() {});
+
+		m_SessionIdText.text = "sessionId: " + room.SessionId;
+
+		room.State.entities.OnAdd += OnEntityAdd;
+		room.State.entities.OnRemove += OnEntityRemove;
+		room.State.entities.OnChange += OnEntityMove;
+
+		PlayerPrefs.SetString("roomId", room.Id);
+		PlayerPrefs.SetString("sessionId", room.SessionId);
+		PlayerPrefs.Save();
+
+		room.OnLeave += (code) => Debug.Log("ROOM: ON LEAVE");
+		room.OnError += (message) => Debug.LogError(message);
+		room.OnStateChange += OnStateChangeHandler;
+		room.OnMessage += OnMessage;
+	}
+
+	async void ReconnectRoom ()
+	{
+		string roomId = PlayerPrefs.GetString("roomId");
 		string sessionId = PlayerPrefs.GetString("sessionId");
-		if (string.IsNullOrEmpty(sessionId))
+		if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(roomId))
 		{
-			Debug.Log("Cannot ReJoin without having a sessionId");
+			Debug.Log("Cannot Reconnect without having a roomId and sessionId");
 			return;
 		}
 
-		room = await client.ReJoin<State>(roomName, sessionId);
+		room = await client.Reconnect<State>(roomId, sessionId);
+		Debug.Log("Reconnected into room successfully.");
+		m_SessionIdText.text = "sessionId: " + room.SessionId;
+
+		room.State.entities.OnAdd += OnEntityAdd;
+		room.State.entities.OnRemove += OnEntityRemove;
+		room.State.entities.OnChange += OnEntityMove;
 
 		room.OnError += (message) => Debug.LogError(message);
-		room.OnJoin += () => {
-			Debug.Log("Joined room successfully.");
-			m_SessionIdText.text = "sessionId: " + room.SessionId;
-
-			room.State.entities.OnAdd += OnEntityAdd;
-			room.State.entities.OnRemove += OnEntityRemove;
-			room.State.entities.OnChange += OnEntityMove;
-		};
 
 		room.OnStateChange += OnStateChangeHandler;
 		room.OnMessage += OnMessage;
@@ -135,17 +170,16 @@ public class ColyseusClient : MonoBehaviour {
 
 	async void GetAvailableRooms()
 	{
-		await client.GetAvailableRooms(roomName, (RoomAvailable[] roomsAvailable) =>
+		var roomsAvailable = await client.GetAvailableRooms(roomName);
+
+		Debug.Log("Available rooms (" + roomsAvailable.Length + ")");
+		for (var i = 0; i < roomsAvailable.Length; i++)
 		{
-			Debug.Log("Available rooms (" + roomsAvailable.Length + ")");
-			for (var i=0; i< roomsAvailable.Length;i++)
-			{
-				Debug.Log("roomId: " + roomsAvailable[i].roomId);
-				Debug.Log("maxClients: " + roomsAvailable[i].maxClients);
-				Debug.Log("clients: " + roomsAvailable[i].clients);
-				Debug.Log("metadata: " + roomsAvailable[i].metadata);
-			}
-		});
+			Debug.Log("roomId: " + roomsAvailable[i].roomId);
+			Debug.Log("maxClients: " + roomsAvailable[i].maxClients);
+			Debug.Log("clients: " + roomsAvailable[i].clients);
+			Debug.Log("metadata: " + roomsAvailable[i].metadata);
+		}
 	}
 
 	void SendMessage()

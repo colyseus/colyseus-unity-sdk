@@ -1,37 +1,28 @@
 using UnityEngine;
 using UnityEngine.TestTools;
 using NUnit.Framework;
-using System.Collections;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 
-using Colyseus;
-using GameDevWare.Serialization;
 
 public class RoomTest {
 	ClientComponent component;
 
 	[UnityTest]
-	public IEnumerator TestConnection()
+	public async Task TestConnection()
 	{
 		var gameObject = new GameObject();
 		component = gameObject.AddComponent<ClientComponent>();
 
-		yield return new WaitForFixedUpdate();
+		await Task.Run(() =>
+		{
+			component.room.OnJoin += () => {
+				Assert.NotNull(component.room.Id);
+				Assert.NotNull(component.room.SessionId);
+			};
 
-		component.client.OnOpen += () => {
-			Assert.NotNull (component.client.Id);
-		};
-
-		yield return new WaitForSeconds(0.1f);
-
-		component.room.OnJoin += () => {
-			Assert.NotNull (component.room.Id);
-			Assert.NotNull (component.room.SessionId);
-		};
-
-		component.room.OnStateChange += (IndexedDictionary<string, object> state, bool isFirstState) => {
-			Assert.NotNull (component.room.State ["players"]);
-			Assert.NotNull (component.room.State ["messages"]);
-		};
+			component.room.OnStateChange += (State state, bool isFirstState) => {
+				Assert.NotNull(component.room.State.entities);
+			};
+		});
 	}
 }

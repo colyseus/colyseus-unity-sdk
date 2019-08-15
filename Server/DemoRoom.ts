@@ -30,7 +30,7 @@ class State extends Schema {
 
 export class DemoRoom extends Room {
 
-  onInit (options: any) {
+  onCreate (options: any) {
     console.log("DemoRoom created!", options);
 
     this.setState(new State());
@@ -40,7 +40,8 @@ export class DemoRoom extends Room {
     this.setSimulationInterval((dt) => this.update(dt));
   }
 
-  async onAuth (options) {
+  async onAuth (client, options) {
+    console.log("onAuth(), options!", options);
     return await User.findById(verifyToken(options.token)._id);
   }
 
@@ -52,11 +53,6 @@ export class DemoRoom extends Room {
       this.state.entities[generateId()] = enemy;
       this.state.arrayOfNumbers.push(Math.random());
     }
-  }
-
-  requestJoin (options: any) {
-    console.log("request join!", options);
-    return true;
   }
 
   onJoin (client: Client, options: any, user: IUser) {
