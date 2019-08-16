@@ -112,7 +112,7 @@ namespace Colyseus
 		public async Task<RoomListingData[]> GetAvailableRooms (string roomName = "")
 		{
 			var uriBuilder = new UriBuilder(Endpoint.Uri);
-			uriBuilder.Path += "/matchmake/" + roomName;
+			uriBuilder.Path += "matchmake/" + roomName;
 			uriBuilder.Scheme = uriBuilder.Scheme.Replace("ws", "http"); // FIXME: replacing "ws" with "http" is too hacky!
 
 			var req = new UnityWebRequest();
@@ -127,7 +127,7 @@ namespace Colyseus
 			var json = req.downloadHandler.text;
 			if (json.StartsWith("[", StringComparison.CurrentCulture))
 			{
-				json = "{\"rooms\": " + json + "}";
+				json = "{\"rooms\":" + json + "}";
 			}
 
 			var response = JsonUtility.FromJson<RoomListingCollection>(json);
@@ -143,8 +143,6 @@ namespace Colyseus
 
 			if (Auth.HasToken)
 			{
-				Debug.Log("HAS TOKEN =>");
-				Debug.Log(Auth.Token);
 				options.Add("token", Auth.Token);
 			}
 
