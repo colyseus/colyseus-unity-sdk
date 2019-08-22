@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
 using GameDevWare.Serialization;
@@ -6,7 +6,7 @@ using GameDevWare.Serialization;
 namespace Colyseus
 {
 	public delegate void ColyseusOpenEventHandler();
-	public delegate void ColyseusCloseEventHandler(UnityWebSockets.WebSocketCloseCode code);
+	public delegate void ColyseusCloseEventHandler(NativeWebSocket.WebSocketCloseCode code);
 	public delegate void ColyseusErrorEventHandler(string message);
 
 	public class RoomAvailable
@@ -120,7 +120,7 @@ namespace Colyseus
 				}
 
 			} else if (OnLeave != null) {
-				OnLeave?.Invoke (UnityWebSockets.WebSocketCloseCode.Normal);
+				OnLeave?.Invoke (NativeWebSocket.WebSocketCloseCode.Normal);
 			}
 		}
 
