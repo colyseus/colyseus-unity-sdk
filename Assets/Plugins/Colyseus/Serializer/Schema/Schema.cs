@@ -679,11 +679,11 @@ namespace Colyseus.Schema
 
             if (isNew)
             {
-              currentValue.InvokeOnAdd(item, newKey);
+              currentValue.InvokeOnAdd(currentValue[newKey], newKey);
             }
             else
             {
-              currentValue.InvokeOnChange(item, newKey);
+              currentValue.InvokeOnChange(currentValue[newKey], newKey);
             }
           }
 
