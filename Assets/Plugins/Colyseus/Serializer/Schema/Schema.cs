@@ -102,7 +102,7 @@ namespace Colyseus.Schema
     void InvokeOnChange(object item, object index);
     void InvokeOnRemove(object item, object index);
 
-    object GetItems();
+    IDictionary GetItems();
     void SetItems(object items);
     void TriggerAll();
 
@@ -178,7 +178,7 @@ namespace Colyseus.Schema
       set { Items[(int)key] = (HasSchemaChild) ? (T)value : (T)Convert.ChangeType(value, typeof(T)); }
     }
 
-    public object GetItems()
+    public IDictionary GetItems()
     {
       return Items;
     }
@@ -278,7 +278,7 @@ namespace Colyseus.Schema
       set { Items[(string)key] = (HasSchemaChild) ? (T)value : (T)Convert.ChangeType(value, typeof(T)); }
     }
 
-    public object GetItems()
+    public IDictionary GetItems()
     {
       return Items;
     }
@@ -516,6 +516,8 @@ namespace Colyseus.Schema
           // ensure current array has the same length as encoded one
           if (currentValue.Count > newLength)
           {
+            IDictionary items = currentValue.GetItems();
+
             for (var i = newLength; i < currentValue.Count; i++)
             {
               var item = currentValue[i];
@@ -523,12 +525,10 @@ namespace Colyseus.Schema
               {
                 (item as Schema).OnRemove?.Invoke();
               }
+
+              items.Remove(i);
               currentValue.InvokeOnRemove(item, i);
             }
-
-            // reduce items length
-            List<object> items = currentValue.GetItems() as List<object>;
-            currentValue.SetItems(items.GetRange(0, newLength));
           }
 
           for (var i = 0; i < numChanges; i++)
