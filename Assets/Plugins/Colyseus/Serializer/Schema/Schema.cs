@@ -518,7 +518,7 @@ namespace Colyseus.Schema
           {
             IDictionary items = currentValue.GetItems();
 
-            for (var i = newLength; i < currentValue.Count; i++)
+            for (int i = newLength, l = currentValue.Count; i < l; i++)
             {
               var item = currentValue[i];
               if (item is Schema)
