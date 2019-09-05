@@ -68,6 +68,11 @@ public class SchemaDeserializerTest
 	{
 		var state = new SchemaTest.ArraySchemaTypes.ArraySchemaTypes();
 		byte[] bytes = { 0, 2, 2, 0, 0, 100, 1, 208, 156, 193, 1, 0, 100, 1, 208, 156, 193, 1, 4, 4, 0, 0, 1, 10, 2, 20, 3, 30, 2, 3, 3, 0, 163, 111, 110, 101, 1, 163, 116, 119, 111, 2, 165, 116, 104, 114, 101, 101, 3, 3, 3, 0, 232, 3, 0, 0, 1, 208, 7, 0, 0, 2, 72, 244, 255, 255 };
+
+		state.arrayOfSchemas.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfSchemas => " + key);
+		state.arrayOfNumbers.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfNumbers => " + key);
+		state.arrayOfStrings.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfStrings => " + key);
+		state.arrayOfInt32.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfInt32 => " + key);
 		state.Decode(bytes);
 
 		Assert.AreEqual(state.arrayOfSchemas.Count, 2);
@@ -111,19 +116,50 @@ public class SchemaDeserializerTest
 	public void MapSchemaTypesTest()
 	{
 		var state = new SchemaTest.MapSchemaTypes.MapSchemaTypes();
-		byte[] bytes = { 0, 2, 163, 111, 110, 101, 0, 100, 1, 204, 200, 193, 163, 116, 119, 111, 0, 205, 44, 1, 1, 205, 144, 1, 193, 1, 3, 163, 111, 110, 101, 1, 163, 116, 119, 111, 2, 165, 116, 104, 114, 101, 101, 3 };
+		byte[] bytes = { 0, 3, 163, 111, 110, 101, 0, 100, 1, 204, 200, 193, 163, 116, 119, 111, 0, 205, 44, 1, 1, 205, 144, 1, 193, 165, 116, 104, 114, 101, 101, 0, 205, 244, 1, 1, 205, 88, 2, 193, 1, 3, 163, 111, 110, 101, 1, 163, 116, 119, 111, 2, 165, 116, 104, 114, 101, 101, 3, 2, 3, 163, 111, 110, 101, 163, 79, 110, 101, 163, 116, 119, 111, 163, 84, 119, 111, 165, 116, 104, 114, 101, 101, 165, 84, 104, 114, 101, 101, 3, 3, 163, 111, 110, 101, 232, 3, 0, 0, 163, 116, 119, 111, 24, 252, 255, 255, 165, 116, 104, 114, 101, 101, 208, 7, 0, 0 };
+
+		state.mapOfSchemas.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfSchemas => " + key);
+		state.mapOfNumbers.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfNumbers => " + key);
+		state.mapOfStrings.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfStrings => " + key);
+		state.mapOfInt32.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfInt32 => " + key);
+
+		state.mapOfSchemas.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfSchemas => " + key);
+		state.mapOfNumbers.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfNumbers => " + key);
+		state.mapOfStrings.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfStrings => " + key);
+		state.mapOfInt32.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfInt32 => " + key);
+
 		state.Decode(bytes);
 
-		Assert.AreEqual(state.mapOfSchemas.Count, 2);
+		Assert.AreEqual(state.mapOfSchemas.Count, 3);
 		Assert.AreEqual(state.mapOfSchemas["one"].x, 100);
 		Assert.AreEqual(state.mapOfSchemas["one"].y, 200);
 		Assert.AreEqual(state.mapOfSchemas["two"].x, 300);
 		Assert.AreEqual(state.mapOfSchemas["two"].y, 400);
+		Assert.AreEqual(state.mapOfSchemas["three"].x, 500);
+		Assert.AreEqual(state.mapOfSchemas["three"].y, 600);
 
 		Assert.AreEqual(state.mapOfNumbers.Count, 3);
 		Assert.AreEqual(state.mapOfNumbers["one"], 1);
 		Assert.AreEqual(state.mapOfNumbers["two"], 2);
 		Assert.AreEqual(state.mapOfNumbers["three"], 3);
+
+		Assert.AreEqual(state.mapOfStrings.Count, 3);
+		Assert.AreEqual(state.mapOfStrings["one"], "One");
+		Assert.AreEqual(state.mapOfStrings["two"], "Two");
+		Assert.AreEqual(state.mapOfStrings["three"], "Three");
+
+		Assert.AreEqual(state.mapOfInt32.Count, 3);
+		Assert.AreEqual(state.mapOfInt32["one"], 1000);
+		Assert.AreEqual(state.mapOfInt32["two"], -1000);
+		Assert.AreEqual(state.mapOfInt32["three"], 2000);
+
+		byte[] deleteBytes = { 1, 2, 163, 116, 119, 111, 192, 165, 116, 104, 114, 101, 101, 192, 0, 2, 163, 116, 119, 111, 192, 165, 116, 104, 114, 101, 101, 192, 2, 2, 163, 116, 119, 111, 192, 165, 116, 104, 114, 101, 101, 192, 3, 2, 163, 116, 119, 111, 192, 165, 116, 104, 114, 101, 101, 192 };
+		state.Decode(deleteBytes);
+
+		Assert.AreEqual(state.mapOfSchemas.Count, 1);
+		Assert.AreEqual(state.mapOfNumbers.Count, 1);
+		Assert.AreEqual(state.mapOfStrings.Count, 1);
+		Assert.AreEqual(state.mapOfInt32.Count, 1);
 	}
 
 	[Test]

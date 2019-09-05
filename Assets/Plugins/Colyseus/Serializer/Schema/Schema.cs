@@ -650,7 +650,7 @@ namespace Colyseus.Schema
                 : decode.DecodeString(bytes, it);
 
             object item;
-            bool isNew = (!hasIndexChange && valueRef[newKey] == null) || (hasIndexChange && previousKey == null && hasMapIndex);
+            bool isNew = (!hasIndexChange && !valueRef.ContainsKey(newKey)) || (hasIndexChange && previousKey == null && hasMapIndex);
 
             if (isNew && isSchemaType)
             {
@@ -669,7 +669,7 @@ namespace Colyseus.Schema
             {
               it.Offset++;
 
-              if (item != null)
+              if (item != null && isSchemaType)
               {
                 (item as Schema).OnRemove?.Invoke();
               }
