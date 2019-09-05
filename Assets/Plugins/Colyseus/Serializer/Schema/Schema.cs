@@ -107,6 +107,7 @@ namespace Colyseus.Schema
     void TriggerAll();
 
     System.Type GetChildType();
+    bool ContainsKey(object key);
 
     bool HasSchemaChild { get; }
     int Count { get; }
@@ -146,6 +147,11 @@ namespace Colyseus.Schema
     public System.Type GetChildType()
     {
       return typeof(T);
+    }
+
+    public bool ContainsKey(object key)
+    {
+      return Items.ContainsKey((int)key);
     }
 
     public bool HasSchemaChild
@@ -251,6 +257,11 @@ namespace Colyseus.Schema
     public System.Type GetChildType()
     {
       return typeof(T);
+    }
+
+    public bool ContainsKey(object key)
+    {
+      return Items.Contains(key);
     }
 
     public bool HasSchemaChild
@@ -543,7 +554,7 @@ namespace Colyseus.Schema
               hasIndexChange = true;
             }
 
-            var isNew = (!hasIndexChange && currentValue[newIndex] == null) || (hasIndexChange && indexChangedFrom != -1);
+            var isNew = (!hasIndexChange && !currentValue.ContainsKey(newIndex)) || (hasIndexChange && indexChangedFrom != -1);
 
             if (currentValue.HasSchemaChild)
             {
