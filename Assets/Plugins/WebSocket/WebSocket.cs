@@ -165,6 +165,11 @@ namespace NativeWebSocket {
       return Task.CompletedTask;
     }
 
+	public void CancelConnection () {
+		if (State == WebSocketState.Open)
+			Close (WebSocketCloseCode.Abnormal);
+	}
+
     public Task Close (WebSocketCloseCode code = WebSocketCloseCode.Normal, string reason = null) {
       int ret = WebSocketClose (this.instanceId, (int) code, reason);
 
