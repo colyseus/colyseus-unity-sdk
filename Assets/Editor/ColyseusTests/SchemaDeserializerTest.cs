@@ -153,7 +153,7 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(state.mapOfInt32["two"], -1000);
 		Assert.AreEqual(state.mapOfInt32["three"], 2000);
 
-		byte[] deleteBytes = { 1, 2, 163, 116, 119, 111, 192, 165, 116, 104, 114, 101, 101, 192, 0, 2, 163, 116, 119, 111, 192, 165, 116, 104, 114, 101, 101, 192, 2, 2, 163, 116, 119, 111, 192, 165, 116, 104, 114, 101, 101, 192, 3, 2, 163, 116, 119, 111, 192, 165, 116, 104, 114, 101, 101, 192 };
+		byte[] deleteBytes = { 1, 2, 1, 192, 2, 192, 0, 2, 1, 192, 2, 192, 2, 2, 1, 192, 2, 192, 3, 2, 1, 192, 2, 192 };
 		state.Decode(deleteBytes);
 
 		Assert.AreEqual(state.mapOfSchemas.Count, 1);
