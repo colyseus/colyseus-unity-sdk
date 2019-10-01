@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -25,8 +25,12 @@ namespace Colyseus
 			OnClose += _OnClose;
 		}
 
-		public async Task Send(object[] data)
+		public async Task Send<T>(T data)
 		{
+			//Since the input is of type T we cannot assume that an object is serializable.
+			if(!data.GetType().IsSerializable)
+				throw new NotSerializableException("Object passed to Connection.Send is not serializable.");
+
 			var serializationOutput = new MemoryStream ();
 			MsgPack.Serialize (data, serializationOutput);
 
