@@ -163,6 +163,33 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
+	public void MapSchemaInt8Test()
+	{
+		var state = new SchemaTest.MapSchemaInt8.MapSchemaInt8();
+		byte[] bytes = { 0, 171, 72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 1, 6, 163, 98, 98, 98, 1, 163, 97, 97, 97, 1, 163, 50, 50, 49, 1, 163, 48, 50, 49, 1, 162, 49, 53, 1, 162, 49, 48, 1 };
+
+		state.Decode(bytes);
+
+		Assert.AreEqual(state.status, "Hello world");
+		Assert.AreEqual(state.mapOfInt8["bbb"], 1);
+		Assert.AreEqual(state.mapOfInt8["aaa"], 1);
+		Assert.AreEqual(state.mapOfInt8["221"], 1);
+		Assert.AreEqual(state.mapOfInt8["021"], 1);
+		Assert.AreEqual(state.mapOfInt8["15"], 1);
+		Assert.AreEqual(state.mapOfInt8["10"], 1);
+
+		byte[] addBytes = { 1, 1, 5, 2 };
+		state.Decode(addBytes);
+
+		Assert.AreEqual(state.mapOfInt8["bbb"], 1);
+		Assert.AreEqual(state.mapOfInt8["aaa"], 1);
+		Assert.AreEqual(state.mapOfInt8["221"], 1);
+		Assert.AreEqual(state.mapOfInt8["021"], 1);
+		Assert.AreEqual(state.mapOfInt8["15"], 1);
+		Assert.AreEqual(state.mapOfInt8["10"], 2);
+	}
+
+	[Test]
 	public void InheritedTypesTest()
 	{
 		var serializer = new Colyseus.SchemaSerializer<SchemaTest.InheritedTypes.InheritedTypes>();
