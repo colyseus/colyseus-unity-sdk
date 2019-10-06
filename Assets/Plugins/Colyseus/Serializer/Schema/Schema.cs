@@ -478,6 +478,12 @@ namespace Colyseus.Schema
           break;
         }
 
+        // Schema version mismatch (backwards compatibility)
+        if (!fieldsByIndex.ContainsKey(index))
+        {
+          continue;
+        }
+
         var field = fieldsByIndex[index];
         var fieldType = fieldTypes[field];
 
