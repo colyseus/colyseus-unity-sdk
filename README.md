@@ -43,9 +43,7 @@ RELEASE_VERSION will be used for multiple things:
 2. Check Github releases for new draft (can take a while)
 
 Check the build status here: https://dev.azure.com/colyseus/colyseus-unity3d/_build
-
 Check the deploy status here: https://dev.azure.com/colyseus/colyseus-unity3d/_release?_a=releases&view=mine&definitionId=1
-
 Change the release notes if necessary
 
 3. Publish Release
