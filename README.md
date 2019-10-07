@@ -41,6 +41,7 @@ RELEASE_VERSION will be used for multiple things:
 - It will add this string as a suffix to attachments of the release (example: plugins-0.11.0.zip
 
 2. Check Github releases for new draft (can take a while)
-Change the releasenotes if necessary
+
+Change the release notes if necessary
 
 3. Publish Release
