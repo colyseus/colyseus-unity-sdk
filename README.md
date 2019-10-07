@@ -44,7 +44,7 @@ RELEASE_VERSION will be used for multiple things:
 
 Check the build status here: https://dev.azure.com/colyseus/colyseus-unity3d/_build
 
-Check the deploy status here: https://dev.azure.com/colyseus/colyseus-unity3d/_release?_a=releases&view=mine&definitionId=1
+Check the deploy status here: https://dev.azure.com/colyseus/colyseus-unity3d/_release
 
 Change the release notes if necessary
 
