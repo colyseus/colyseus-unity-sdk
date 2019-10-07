@@ -21,6 +21,33 @@
   </h3>
 </div>
 
+
+| Description | Status |
+| ------| -------|
+| Master Branch Build Status | [![Build Status](https://dev.azure.com/colyseus/colyseus-unity3d/_apis/build/status/colyseus-unity3d-CI?branchName=master)](https://dev.azure.com/colyseus/colyseus-unity3d/_build/latest?definitionId=1&branchName=master) |
+
+
+## Releasing a new version
+
+How to create a release:
+
+### 1. Create release branch (release/REALESE_VERSION)
+
+Example branch name: `release/0.11.0`
+
+RELEASE_VERSION will be used for multiple things:
+- It will tag the commit with this string
+- It will name the release with this string
+- It will add this string as a suffix to attachments of the release (example: plugins-0.11.0.zip
+
+### 2. Check Github releases for new draft (can take a while)
+
+- Check the build status here: https://dev.azure.com/colyseus/colyseus-unity3d/_build
+- Check the deploy status here: https://dev.azure.com/colyseus/colyseus-unity3d/_release
+- Change the release notes if necessary
+
+### 3. Publish Release
+
 ## License
 
 MIT
