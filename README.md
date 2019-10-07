@@ -22,6 +22,7 @@
 </div>
 
 Master Branch Build Status
+
 [![Build Status](https://dev.azure.com/colyseus/colyseus-unity3d/_apis/build/status/colyseus-unity3d-CI?branchName=master)](https://dev.azure.com/colyseus/colyseus-unity3d/_build/latest?definitionId=1&branchName=master)
 
 ## License
