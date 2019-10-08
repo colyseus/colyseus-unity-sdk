@@ -31,7 +31,7 @@
 
 How to create a release:
 
-### 1. Create release branch (release/REALESE_VERSION)
+### 1. Create release branch (release/RELEASE_VERSION)
 
 Example branch name: `release/0.11.0`
 
