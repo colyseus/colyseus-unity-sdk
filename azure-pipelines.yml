@@ -2,12 +2,18 @@
 # https://aka.ms/yaml
 
 trigger:
-- master
+  batch: true
+  branches:
+    include:
+    - master
+    - releases/*
 
 pool:
   name: Azure Pipelines
 
 steps:
+- checkout: self
+
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: plugins'
   inputs:
