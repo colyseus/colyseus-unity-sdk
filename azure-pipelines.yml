@@ -9,11 +9,9 @@ trigger:
     - releases/*
 
 pool:
-  name: Azure Pipelines
+  vmImage: 'windows-latest'
 
 steps:
-- checkout: self
-
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: plugins'
   inputs:
