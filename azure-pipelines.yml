@@ -31,7 +31,7 @@ stages:
       inputs:
         targetType: 'inline'
         script: 'Install-UnitySetupInstance -Installers (Find-UnitySetupInstaller -Version ''$(getunity.projectVersion)'' -Components Windows,Windows_IL2CPP) -Verbose'
-    - script: '"C:\Program Files\Unity\Hub\Editor\$(getunity.projectVersion)\Editor\Unity.exe" -batchmode -nographics -projectPath . -runTests -testPlatform editmode -testResults ./testresults.xml -editorTestsCategories "CI" -username $(unity.username) -password $(unity.password) -serial $(unity.serial)'
+    - script: '"C:\Program Files\Unity\Hub\Editor\$(getunity.projectVersion)\Editor\Unity.exe" -batchmode -projectPath . -runTests -testPlatform editmode -testResults ./testresults.xml -editorTestsCategories "CI" -username $(unity.username) -password $(unity.password) -serial $(unity.serial)'
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Artifact: plugins'
       inputs:
