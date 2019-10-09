@@ -8,12 +8,15 @@ trigger:
     - master
     - releases/*
 
-pool:
-  vmImage: 'windows-latest'
-
-steps:
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact: plugins'
-  inputs:
-    PathtoPublish: Assets/Plugins
-    ArtifactName: plugins
+stages:
+- stage: build
+  jobs:
+  - job: build
+    pool:
+      vmImage: 'windows-latest'
+    steps:
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact: plugins'
+      inputs:
+        PathtoPublish: Assets/Plugins
+        ArtifactName: plugins
