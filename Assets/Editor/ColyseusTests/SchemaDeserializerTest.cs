@@ -17,7 +17,6 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
-	[Category("CI")]
 	public void PrimitiveTypesTest()
 	{
 		var state = new SchemaTest.PrimitiveTypes.PrimitiveTypes();
@@ -51,7 +50,6 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ChildSchemaTypesTest()
 	{
 		var state = new SchemaTest.ChildSchemaTypes.ChildSchemaTypes();
@@ -66,7 +64,6 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ArraySchemaTypesTest()
 	{
 		var state = new SchemaTest.ArraySchemaTypes.ArraySchemaTypes();
@@ -116,7 +113,6 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
-	[Category("CI")]
 	public void MapSchemaTypesTest()
 	{
 		var state = new SchemaTest.MapSchemaTypes.MapSchemaTypes();
@@ -167,7 +163,6 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
-	[Category("CI")]
 	public void MapSchemaInt8Test()
 	{
 		var state = new SchemaTest.MapSchemaInt8.MapSchemaInt8();
@@ -195,7 +190,6 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
-	[Category("CI")]
 	public void InheritedTypesTest()
 	{
 		var serializer = new Colyseus.SchemaSerializer<SchemaTest.InheritedTypes.InheritedTypes>();
@@ -226,7 +220,6 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
-	[Category("CI")]
 	public void BackwardsForwardsTest()
 	{
 		byte[] statev1bytes = { 1, 1, 163, 111, 110, 101, 0, 203, 112, 221, 224, 174, 225, 40, 220, 63, 1, 203, 58, 33, 152, 138, 117, 58, 224, 63, 193, 0, 171, 72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100 };

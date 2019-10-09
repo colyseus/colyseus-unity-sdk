@@ -18,7 +18,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenAddString() {
 		var newData = GetRawData ();
 		newData ["some_string"] = "hello!";
@@ -35,7 +34,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenReplaceNull() {
 		var newData = GetRawData ();
 
@@ -52,7 +50,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenAddNull() {
 		var newData = GetRawData ();
 		newData ["null_new"] = null;
@@ -69,7 +66,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenAddRemove() {
 		var newData = GetRawData ();
 
@@ -95,7 +91,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenReplace() {
 		var newData = GetRawData ();
 
@@ -128,7 +123,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenReplaceString() {
 		var newData = GetRawData ();
 		newData ["turn"] = "mutated";
@@ -145,7 +139,6 @@ public class StateContainerTest {
 
 
 	[Test]
-	[Category("CI")]
 	public void ListenWithoutPlaceholder() {
 		var newData = GetRawData ();
 
@@ -164,7 +157,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenAddArray() {
 		var newData = GetRawData ();
 		var messages = (List<object>) newData ["messages"];
@@ -182,7 +174,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenRemoveArray() {
 		var newData = GetRawData ();
 		var messages = (List<object>) newData ["messages"];
@@ -213,7 +204,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenInitialState() {
 		var container = new StateContainer (new IndexedDictionary<string, object>());
 		var listenCalls = 0;
@@ -240,7 +230,6 @@ public class StateContainerTest {
 	}
 
 	[Test]
-	[Category("CI")]
 	public void ListenWithImmediate()
 	{
 		var container = new StateContainer(GetRawData());
