@@ -15,6 +15,9 @@ stages:
     pool:
       vmImage: 'windows-latest'
     steps:
+    - task: UnityGetProjectVersionTask@1
+      name: getunityversion
+      displayName: 'Get Unity Version'
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Artifact: plugins'
       inputs:
