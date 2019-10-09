@@ -20,3 +20,25 @@ stages:
       inputs:
         PathtoPublish: Assets/Plugins
         ArtifactName: plugins
+- stage: release
+  dependsOn: build
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/release')
+  jobs:
+  - job: github_release
+    pool:
+      vmImage: 'windows-latest'
+    steps:
+    - task: ArchiveFiles@2
+      displayName: 'Archive $(System.DefaultWorkingDirectory)/_colyseus-unity3d-CI/plugins'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)/_colyseus-unity3d-CI/plugins'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/plugins-$(Build.SourceBranchName).zip'
+    - task: GitHubRelease@1
+      displayName: 'GitHub release (create)'
+      inputs:
+        gitHubConnection: 'github connection 2'
+        tagSource: userSpecifiedTag
+        tag: '$(Build.SourceBranchName)'
+        title: '$(Build.SourceBranchName)'
+        assets: '$(Build.ArtifactStagingDirectory)/*.zip'
+        isDraft: true
