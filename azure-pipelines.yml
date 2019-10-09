@@ -18,6 +18,7 @@ stages:
     - task: UnityGetProjectVersionTask@1
       name: getunityversion
       displayName: 'Get Unity Version'
+    - script:  echo $(getunityversion.projectVersion)
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Artifact: plugins'
       inputs:
