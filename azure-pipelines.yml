@@ -22,7 +22,7 @@ stages:
         ArtifactName: plugins
 - stage: release
   dependsOn: build
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/release')
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'))
   jobs:
   - job: github_release
     pool:
