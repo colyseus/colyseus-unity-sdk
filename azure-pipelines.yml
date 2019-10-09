@@ -36,7 +36,7 @@ stages:
     - task: GitHubRelease@1
       displayName: 'GitHub release (create)'
       inputs:
-        gitHubConnection: 'github connection 2'
+        gitHubConnection: 'colyseus'
         tagSource: userSpecifiedTag
         tag: '$(Build.SourceBranchName)'
         title: '$(Build.SourceBranchName)'
