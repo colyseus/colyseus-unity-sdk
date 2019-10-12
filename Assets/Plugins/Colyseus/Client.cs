@@ -134,6 +134,41 @@ namespace Colyseus
 			return response.rooms;
 		}
 
+		public async Task<Room<T>> ConsumeSeatReservation<T>(MatchMakeResponse response)
+		{
+			var room = new Room<T>(response.room.name)
+			{
+				Id = response.room.roomId,
+				SessionId = response.sessionId
+			};
+
+			var queryString = new Dictionary<string, object>();
+			queryString.Add("sessionId", room.SessionId);
+
+			room.SetConnection(CreateConnection(response.room.processId + "/" + room.Id, queryString));
+
+			var tcs = new TaskCompletionSource<Room<T>>();
+
+			void OnError(string message)
+			{
+				room.OnError -= OnError;
+				tcs.SetException(new Exception(message));
+			};
+
+			void OnJoin()
+			{
+				room.OnError -= OnError;
+				tcs.TrySetResult(room);
+			}
+
+			room.OnError += OnError;
+			room.OnJoin += OnJoin;
+
+			ColyseusManager.Instance.AddRoom(room);
+
+			return await tcs.Task;
+		}
+
 		protected async Task<Room<T>> CreateMatchMakeRequest<T>(string method, string roomName, Dictionary<string, object> options)
 		{
 			if (options == null)
@@ -180,37 +215,7 @@ namespace Colyseus
 				throw new MatchMakeException(response.error, response.code);
 			}
 
-			var room = new Room<T>(roomName)
-			{
-				Id = response.room.roomId,
-				SessionId = response.sessionId
-			};
-
-			var queryString = new Dictionary<string, object>();
-			queryString.Add("sessionId", room.SessionId);
-
-			room.SetConnection(CreateConnection(response.room.processId + "/" + room.Id, queryString));
-
-			var tcs = new TaskCompletionSource<Room<T>>();
-
-			void OnError(string message)
-			{
-				room.OnError -= OnError;
-				tcs.SetException(new Exception(message));
-			};
-
-			void OnJoin()
-			{
-				room.OnError -= OnError;
-				tcs.TrySetResult(room);
-			}
-
-			room.OnError += OnError;
-			room.OnJoin += OnJoin;
-
-			ColyseusManager.Instance.AddRoom(room);
-
-			return await tcs.Task;
+			return await ConsumeSeatReservation<T>(response);
 		}
 
 		protected Connection CreateConnection (string path = "", Dictionary<string, object> options = null)
