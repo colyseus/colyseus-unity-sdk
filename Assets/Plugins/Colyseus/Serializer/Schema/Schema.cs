@@ -449,7 +449,7 @@ namespace Colyseus.Schema
         return GetType().GetField(propertyName).GetValue(this);
       }
       set {
-          var field = GetType().GetField(propertyName);
+        var field = GetType().GetField(propertyName);
         field.SetValue(this, value);
       }
     }
