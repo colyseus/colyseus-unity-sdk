@@ -20,7 +20,7 @@ public class SchemaDeserializerTest
 	public void PrimitiveTypesTest()
 	{
 		var state = new SchemaTest.PrimitiveTypes.PrimitiveTypes();
-		byte[] bytes = { 0, 128, 1, 255, 2, 0, 128, 3, 255, 255, 4, 0, 0, 0, 128, 5, 255, 255, 255, 255, 6, 0, 0, 0, 0, 0, 0, 0, 128, 7, 255, 255, 255, 255, 255, 255, 31, 0, 8, 255, 255, 127, 255, 9, 255, 255, 255, 255, 255, 255, 239, 127, 10, 208, 128, 11, 204, 255, 12, 209, 0, 128, 13, 205, 255, 255, 14, 210, 0, 0, 0, 128, 15, 203, 0, 0, 224, 255, 255, 255, 239, 65, 16, 203, 0, 0, 0, 0, 0, 0, 224, 195, 17, 203, 255, 255, 255, 255, 255, 255, 63, 67, 18, 203, 61, 255, 145, 224, 255, 255, 239, 199, 19, 203, 255, 255, 255, 255, 255, 255, 239, 127, 20, 171, 72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 21, 1 };
+		byte[] bytes = { 0, 128, 1, 255, 2, 0, 128, 3, 255, 255, 4, 0, 0, 0, 128, 5, 255, 255, 255, 255, 6, 0, 0, 0, 0, 0, 0, 0, 128, 7, 255, 255, 255, 255, 255, 255, 31, 0, 8, 204, 204, 204, 253, 9, 255, 255, 255, 255, 255, 255, 239, 127, 10, 208, 128, 11, 204, 255, 12, 209, 0, 128, 13, 205, 255, 255, 14, 210, 0, 0, 0, 128, 15, 203, 0, 0, 224, 255, 255, 255, 239, 65, 16, 203, 0, 0, 0, 0, 0, 0, 224, 195, 17, 203, 255, 255, 255, 255, 255, 255, 63, 67, 18, 203, 61, 255, 145, 224, 255, 255, 239, 199, 19, 203, 153, 153, 153, 153, 153, 153, 185, 127, 20, 171, 72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 21, 1 };
 		state.Decode(bytes);
 
 		Assert.AreEqual(state.int8, -128);
@@ -31,7 +31,7 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(state.uint32, 4294967295);
 		Assert.AreEqual(state.int64, -9223372036854775808);
 		Assert.AreEqual(state.uint64, 9007199254740991);
-		Assert.AreEqual(state.float32, -3.40282347E+38f);
+		Assert.AreEqual(state.float32, -3.40282347E+37f);
 		Assert.AreEqual(state.float64, 1.7976931348623157e+308);
 
 		Assert.AreEqual(state.varint_int8, -128);
@@ -67,7 +67,7 @@ public class SchemaDeserializerTest
 	public void ArraySchemaTypesTest()
 	{
 		var state = new SchemaTest.ArraySchemaTypes.ArraySchemaTypes();
-		byte[] bytes = { 0, 2, 2, 0, 0, 100, 1, 208, 156, 193, 1, 0, 100, 1, 208, 156, 193, 1, 4, 4, 0, 0, 1, 10, 2, 20, 3, 30, 2, 3, 3, 0, 163, 111, 110, 101, 1, 163, 116, 119, 111, 2, 165, 116, 104, 114, 101, 101, 3, 3, 3, 0, 232, 3, 0, 0, 1, 208, 7, 0, 0, 2, 72, 244, 255, 255 };
+		byte[] bytes = { 0, 2, 2, 0, 0, 100, 1, 208, 156, 193, 1, 0, 100, 1, 208, 156, 193, 1, 4, 4, 0, 0, 1, 10, 2, 20, 3, 205, 192, 13, 2, 3, 3, 0, 163, 111, 110, 101, 1, 163, 116, 119, 111, 2, 165, 116, 104, 114, 101, 101, 3, 3, 3, 0, 232, 3, 0, 0, 1, 192, 13, 0, 0, 2, 72, 244, 255, 255 };
 
 		state.arrayOfSchemas.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfSchemas => " + key);
 		state.arrayOfNumbers.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfNumbers => " + key);
@@ -85,7 +85,7 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(state.arrayOfNumbers[0], 0);
 		Assert.AreEqual(state.arrayOfNumbers[1], 10);
 		Assert.AreEqual(state.arrayOfNumbers[2], 20);
-		Assert.AreEqual(state.arrayOfNumbers[3], 30);
+		Assert.AreEqual(state.arrayOfNumbers[3], 3520);
 
 		Assert.AreEqual(state.arrayOfStrings.Count, 3);
 		Assert.AreEqual(state.arrayOfStrings[0], "one");
@@ -94,7 +94,7 @@ public class SchemaDeserializerTest
 
 		Assert.AreEqual(state.arrayOfInt32.Count, 3);
 		Assert.AreEqual(state.arrayOfInt32[0], 1000);
-		Assert.AreEqual(state.arrayOfInt32[1], 2000);
+		Assert.AreEqual(state.arrayOfInt32[1], 3520);
 		Assert.AreEqual(state.arrayOfInt32[2], -3000);
 
 		state.arrayOfSchemas.OnRemove += (value, key) => Debug.Log("onRemove, arrayOfSchemas => " + key);
@@ -116,7 +116,7 @@ public class SchemaDeserializerTest
 	public void MapSchemaTypesTest()
 	{
 		var state = new SchemaTest.MapSchemaTypes.MapSchemaTypes();
-		byte[] bytes = { 0, 3, 163, 111, 110, 101, 0, 100, 1, 204, 200, 193, 163, 116, 119, 111, 0, 205, 44, 1, 1, 205, 144, 1, 193, 165, 116, 104, 114, 101, 101, 0, 205, 244, 1, 1, 205, 88, 2, 193, 1, 3, 163, 111, 110, 101, 1, 163, 116, 119, 111, 2, 165, 116, 104, 114, 101, 101, 3, 2, 3, 163, 111, 110, 101, 163, 79, 110, 101, 163, 116, 119, 111, 163, 84, 119, 111, 165, 116, 104, 114, 101, 101, 165, 84, 104, 114, 101, 101, 3, 3, 163, 111, 110, 101, 232, 3, 0, 0, 163, 116, 119, 111, 24, 252, 255, 255, 165, 116, 104, 114, 101, 101, 208, 7, 0, 0 };
+		byte[] bytes = { 0, 3, 163, 111, 110, 101, 0, 100, 1, 204, 200, 193, 163, 116, 119, 111, 0, 205, 44, 1, 1, 205, 144, 1, 193, 165, 116, 104, 114, 101, 101, 0, 205, 244, 1, 1, 205, 88, 2, 193, 1, 3, 163, 111, 110, 101, 1, 163, 116, 119, 111, 2, 165, 116, 104, 114, 101, 101, 205, 192, 13, 2, 3, 163, 111, 110, 101, 163, 79, 110, 101, 163, 116, 119, 111, 163, 84, 119, 111, 165, 116, 104, 114, 101, 101, 165, 84, 104, 114, 101, 101, 3, 3, 163, 111, 110, 101, 192, 13, 0, 0, 163, 116, 119, 111, 24, 252, 255, 255, 165, 116, 104, 114, 101, 101, 208, 7, 0, 0 };
 
 		state.mapOfSchemas.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfSchemas => " + key);
 		state.mapOfNumbers.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfNumbers => " + key);
@@ -141,7 +141,7 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(state.mapOfNumbers.Count, 3);
 		Assert.AreEqual(state.mapOfNumbers["one"], 1);
 		Assert.AreEqual(state.mapOfNumbers["two"], 2);
-		Assert.AreEqual(state.mapOfNumbers["three"], 3);
+		Assert.AreEqual(state.mapOfNumbers["three"], 3520);
 
 		Assert.AreEqual(state.mapOfStrings.Count, 3);
 		Assert.AreEqual(state.mapOfStrings["one"], "One");
@@ -149,11 +149,11 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(state.mapOfStrings["three"], "Three");
 
 		Assert.AreEqual(state.mapOfInt32.Count, 3);
-		Assert.AreEqual(state.mapOfInt32["one"], 1000);
+		Assert.AreEqual(state.mapOfInt32["one"], 3520);
 		Assert.AreEqual(state.mapOfInt32["two"], -1000);
 		Assert.AreEqual(state.mapOfInt32["three"], 2000);
 
-		byte[] deleteBytes = { 1, 2, 1, 192, 2, 192, 0, 2, 1, 192, 2, 192, 2, 2, 1, 192, 2, 192, 3, 2, 1, 192, 2, 192 };
+		byte[] deleteBytes = { 1, 2, 192, 1, 192, 2, 0, 2, 192, 1, 192, 2, 2, 2, 192, 1, 192, 2, 3, 2, 192, 1, 192, 2 };
 		state.Decode(deleteBytes);
 
 		Assert.AreEqual(state.mapOfSchemas.Count, 1);
@@ -222,7 +222,7 @@ public class SchemaDeserializerTest
 	[Test]
 	public void BackwardsForwardsTest()
 	{
-		byte[] statev1bytes = { 1, 1, 163, 111, 110, 101, 0, 203, 112, 221, 224, 174, 225, 40, 220, 63, 1, 203, 58, 33, 152, 138, 117, 58, 224, 63, 193, 0, 171, 72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100 };
+		byte[] statev1bytes = { 1, 1, 163, 111, 110, 101, 0, 203, 64, 45, 212, 207, 108, 69, 148, 63, 1, 203, 120, 56, 150, 252, 58, 73, 224, 63, 193, 0, 171, 72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100 };
 		byte[] statev2bytes = { 0, 171, 72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 2, 10 };
 
 		var statev2 = new SchemaTest.Forwards.StateV2();

@@ -449,7 +449,7 @@ namespace Colyseus.Schema
         return GetType().GetField(propertyName).GetValue(this);
       }
       set {
-      	var field = GetType().GetField(propertyName);
+        var field = GetType().GetField(propertyName);
         field.SetValue(this, value);
       }
     }
@@ -471,6 +471,9 @@ namespace Colyseus.Schema
 
       while (it.Offset < totalBytes)
       {
+        var isNil = decode.NilCheck(bytes, it);
+        if (isNil) { it.Offset++; }
+
         var index = bytes[it.Offset++];
 
         if (index == (byte) SPEC.END_OF_STRUCTURE)
@@ -498,19 +501,17 @@ namespace Colyseus.Schema
         object change = null;
         bool hasChange = false;
 
-        if (fieldType == "ref")
+        if (isNil)
         {
-          // child schema type
-          if (decode.NilCheck(bytes, it))
-          {
-            it.Offset++;
             value = null;
-          }
-          else
-          {
-            value = this[field] ?? CreateTypeInstance(bytes, it, childType);
-            (value as Schema).Decode(bytes, it);
-          }
+            hasChange = true;
+        }
+
+        // Child schema type
+        else if (fieldType == "ref")
+        {
+          value = this[field] ?? CreateTypeInstance(bytes, it, childType);
+          (value as Schema).Decode(bytes, it);
 
           hasChange = true;
         }
@@ -586,13 +587,6 @@ namespace Colyseus.Schema
                 isNew = true;
               }
 
-              if (decode.NilCheck(bytes, it))
-              {
-                it.Offset++;
-                valueRef.InvokeOnRemove(item, newIndex);
-                continue;
-              }
-
               item.Decode(bytes, it);
               currentValue[newIndex] = item;
             }
@@ -640,6 +634,9 @@ namespace Colyseus.Schema
               break;
             }
 
+            var isNilItem = decode.NilCheck(bytes, it);
+            if (isNilItem) { it.Offset++; }
+
             string previousKey = null;
             if (decode.IndexChangeCheck(bytes, it))
             {
@@ -671,10 +668,8 @@ namespace Colyseus.Schema
               item = valueRef[newKey];
             }
 
-            if (decode.NilCheck(bytes, it))
+            if (isNilItem)
             {
-              it.Offset++;
-
               if (item != null && isSchemaType)
               {
                 (item as Schema).OnRemove?.Invoke();
