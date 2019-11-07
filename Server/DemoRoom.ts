@@ -36,6 +36,11 @@ export class DemoRoom extends Room {
     this.setState(new State());
     this.populateEnemies();
 
+    this.setMetadata({
+      str: "hello",
+      number: 10
+    });
+
     this.setPatchRate(1000 / 20);
     this.setSimulationInterval((dt) => this.update(dt));
   }

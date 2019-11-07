@@ -11,27 +11,27 @@ using UnityEngine.Networking;
 namespace Colyseus
 {
 	[Serializable]
-	public class RoomListingData
+	public class RoomAvailable
 	{
 		public uint clients;
 		public uint maxClients;
 		public string name;
 		public string roomId;
-		public object metadata;
 		public string processId;
+		// public object metadata;
 	}
 
 	[Serializable]
-	public class RoomListingCollection
+	public class RoomAvailableCollection<T>
 	{
-		public RoomListingData[] rooms;
+		public T[] rooms;
 	}
 
 	[Serializable]
 	public class MatchMakeResponse
 	{
 		// success
-		public RoomListingData room;
+		public RoomAvailable room;
 		public string sessionId;
 		// error
 		public int code;
@@ -109,7 +109,12 @@ namespace Colyseus
 		//	return await ReJoin<IndexedDictionary<string, object>>(roomName, sessionId);
 		//}
 
-		public async Task<RoomListingData[]> GetAvailableRooms (string roomName = "")
+		public async Task<RoomAvailable[]> GetAvailableRooms(string roomName = "")
+		{
+			return await GetAvailableRooms<RoomAvailable>(roomName);
+		}
+
+		public async Task<T[]> GetAvailableRooms<T> (string roomName = "")
 		{
 			var uriBuilder = new UriBuilder(Endpoint.Uri);
 			uriBuilder.Path += "matchmake/" + roomName;
@@ -130,7 +135,7 @@ namespace Colyseus
 				json = "{\"rooms\":" + json + "}";
 			}
 
-			var response = JsonUtility.FromJson<RoomListingCollection>(json);
+			var response = JsonUtility.FromJson<RoomAvailableCollection<T>>(json);
 			return response.rooms;
 		}
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using GameDevWare.Serialization;
@@ -8,14 +8,6 @@ namespace Colyseus
 	public delegate void ColyseusOpenEventHandler();
 	public delegate void ColyseusCloseEventHandler(NativeWebSocket.WebSocketCloseCode code);
 	public delegate void ColyseusErrorEventHandler(string message);
-
-	public class RoomAvailable
-	{
-		public string roomId { get; set; }
-		public uint clients { get; set; }
-		public uint maxClients { get; set; }
-		public object metadata { get; set; }
-	}
 
 	public interface IRoom
 	{
@@ -112,7 +104,7 @@ namespace Colyseus
 			if (Id != null) {
 				if (consented)
 				{
-					await Connection.Send(new object[] { Protocol.LEAVE_ROOM }); 
+					await Connection.Send(new object[] { Protocol.LEAVE_ROOM });
 				}
 				else
 				{
@@ -194,7 +186,7 @@ namespace Colyseus
 					await Leave();
 
 				}
-				else 
+				else
 				{
 					previousCode = code;
 

@@ -12,17 +12,30 @@ using Colyseus.Schema;
 
 using GameDevWare.Serialization;
 
+[Serializable]
+class Metadata
+{
+	public string str;
+	public int number;
+}
+
+[Serializable]
+class CustomRoomAvailable : RoomAvailable
+{
+	public Metadata metadata;
+}
+
 public class ColyseusClient : MonoBehaviour {
 
 	// UI Buttons are attached through Unity Inspector
-	public Button 
+	public Button
 		m_ConnectButton,
 		m_CreateButton,
 		m_JoinOrCreateButton,
-		m_JoinButton, 
-		m_ReconnectButton, 
-		m_SendMessageButton, 
-		m_LeaveButton, 
+		m_JoinButton,
+		m_ReconnectButton,
+		m_SendMessageButton,
+		m_LeaveButton,
 		m_GetAvailableRoomsButton;
 	public InputField m_EndpointField;
 	public Text m_IdText, m_SessionIdText;
@@ -170,7 +183,7 @@ public class ColyseusClient : MonoBehaviour {
 
 	async void GetAvailableRooms()
 	{
-		var roomsAvailable = await client.GetAvailableRooms(roomName);
+		var roomsAvailable = await client.GetAvailableRooms<CustomRoomAvailable>(roomName);
 
 		Debug.Log("Available rooms (" + roomsAvailable.Length + ")");
 		for (var i = 0; i < roomsAvailable.Length; i++)
@@ -178,7 +191,8 @@ public class ColyseusClient : MonoBehaviour {
 			Debug.Log("roomId: " + roomsAvailable[i].roomId);
 			Debug.Log("maxClients: " + roomsAvailable[i].maxClients);
 			Debug.Log("clients: " + roomsAvailable[i].clients);
-			Debug.Log("metadata: " + roomsAvailable[i].metadata);
+			Debug.Log("metadata.str: " + roomsAvailable[i].metadata.str);
+			Debug.Log("metadata.number: " + roomsAvailable[i].metadata.number);
 		}
 	}
 
