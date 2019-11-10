@@ -210,8 +210,19 @@ public class ColyseusClient : MonoBehaviour {
 
 	void OnMessage (object msg)
 	{
-		var message = (IndexedDictionary<string, object>)msg;
-		Debug.Log(message);
+		if (msg is Message)
+		{
+			var message = (Message)msg;
+			Debug.Log("Received schema-encoded message:");
+			Debug.Log("message.num => " + message.num + ", message.str => " + message.str);
+		}
+		else
+		{
+			// msgpack-encoded message
+			var message = (IndexedDictionary<string, object>)msg;
+			Debug.Log("Received msgpack-encoded message:");
+			Debug.Log(message["hello"]);
+		}
 	}
 
 	void OnStateChangeHandler (State state, bool isFirstState)

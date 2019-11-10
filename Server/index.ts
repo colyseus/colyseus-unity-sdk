@@ -16,12 +16,10 @@ const app = express();
  * Please remove CORS on production, unless you're hosting the server and client on different domains.
  */
 app.use(cors());
-app.use(express.json());
 
 const gameServer = new Server({
   server: http.createServer(app),
-  express: app,
-  pingTimeout: 0
+  pingInterval: 0,
 });
 
 // Register DemoRoom as "demo"

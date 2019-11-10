@@ -23,9 +23,14 @@ class Enemy extends Entity {
 class State extends Schema {
   @type({ map: Entity })
   entities = new MapSchema<Entity>();
+}
 
-  @type(["number"])
-  arrayOfNumbers = new ArraySchema<number>();
+/**
+ * Demonstrate sending schema data types as messages
+ */
+class Message extends Schema {
+  @type("number") num;
+  @type("string") str;
 }
 
 export class DemoRoom extends Room {
@@ -56,7 +61,6 @@ export class DemoRoom extends Room {
       enemy.x = Math.random() * 2;
       enemy.y = Math.random() * 2;
       this.state.entities[generateId()] = enemy;
-      this.state.arrayOfNumbers.push(Math.random());
     }
   }
 
@@ -88,6 +92,11 @@ export class DemoRoom extends Room {
 
     if (data === "move_right") {
       this.state.entities[client.sessionId].x += 0.01;
+
+      const message = new Message();
+      message.num = Math.floor(Math.random() * 100);
+      message.str = "sending to a single client";
+      this.send(client, message);
     }
     console.log(this.state.entities[client.sessionId].x);
 

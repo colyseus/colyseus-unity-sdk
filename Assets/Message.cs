@@ -7,8 +7,11 @@
 
 using Colyseus.Schema;
 
-public class State : Schema {
-	[Type(0, "map", typeof(MapSchema<Entity>))]
-	public MapSchema<Entity> entities = new MapSchema<Entity>();
+public class Message : Schema {
+	[Type(0, "number")]
+	public float num = 0;
+
+	[Type(1, "string")]
+	public string str = "";
 }
 

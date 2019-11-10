@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Colyseus
 {
@@ -35,14 +35,17 @@ namespace Colyseus
 		/// <summary>When server sends <see cref="Room"/> state to its clients.</summary>
 		public static int ROOM_STATE_PATCH = 15;
 
-		// 
+		/// <summary>When server sends a Schema-encoded message.</summary>
+		public static int ROOM_DATA_SCHEMA = 16;
+
+		//
 		// Matchmaking messages (20~30)
-		// 
+		//
 		public static int ROOM_LIST = 20;
 
-		// 
+		//
 		// Generic messages (50~60)
-		// 
+		//
 
 		/// <summary>When server doesn't understand a request, it returns <see cref="BAD_REQUEST"/> to the <see cref="Client"/></summary>
 		public static int BAD_REQUEST = 50;
