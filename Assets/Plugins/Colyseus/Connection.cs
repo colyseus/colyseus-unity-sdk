@@ -14,7 +14,7 @@ namespace Colyseus
 		public bool IsOpen = false;
 		protected Queue<byte[]> _enqueuedCalls = new Queue<byte[]>();
 
-		public Connection(string url) : base(url)
+		public Connection(string url, Dictionary<string, string> headers) : base(url, headers)
 		{
 			Initialize();
 		}
