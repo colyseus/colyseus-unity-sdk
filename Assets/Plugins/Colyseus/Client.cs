@@ -169,7 +169,7 @@ namespace Colyseus
 			room.OnError += OnError;
 			room.OnJoin += OnJoin;
 
-			ColyseusManager.Instance.AddRoom(room);
+			_ = ColyseusManager.Instance.AddRoom(room);
 
 			return await tcs.Task;
 		}
