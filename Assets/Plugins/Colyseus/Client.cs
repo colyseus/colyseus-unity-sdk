@@ -72,31 +72,31 @@ namespace Colyseus
 			Auth = new Auth(Endpoint.Uri);
 		}
 
-		public async Task<Room<T>> JoinOrCreate<T>(string roomName, Dictionary<string, object> options = null)
+		public async Task<Room<T>> JoinOrCreate<T>(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
 		{
-			return await CreateMatchMakeRequest<T>("joinOrCreate", roomName, options);
+			return await CreateMatchMakeRequest<T>("joinOrCreate", roomName, options, headers);
 		}
 
-		public async Task<Room<T>> Create<T>(string roomName, Dictionary<string, object> options = null)
+		public async Task<Room<T>> Create<T>(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
 		{
-			return await CreateMatchMakeRequest<T>("create", roomName, options);
+			return await CreateMatchMakeRequest<T>("create", roomName, options, headers);
 		}
 
-		public async Task<Room<T>> Join<T>(string roomName, Dictionary<string, object> options = null)
+		public async Task<Room<T>> Join<T>(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
 		{
-			return await CreateMatchMakeRequest<T>("join", roomName, options);
+			return await CreateMatchMakeRequest<T>("join", roomName, options, headers);
 		}
 
-		public async Task<Room<T>> JoinById<T>(string roomId, Dictionary<string, object> options = null)
+		public async Task<Room<T>> JoinById<T>(string roomId, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
 		{
-			return await CreateMatchMakeRequest<T>("joinById", roomId, options);
+			return await CreateMatchMakeRequest<T>("joinById", roomId, options, headers);
 		}
 
-		public async Task<Room<T>> Reconnect<T>(string roomId, string sessionId)
+		public async Task<Room<T>> Reconnect<T>(string roomId, string sessionId, Dictionary<string, string> headers = null)
 		{
 			Dictionary<string, object> options = new Dictionary<string, object>();
 			options.Add("sessionId", sessionId);
-			return await CreateMatchMakeRequest<T>("joinById", roomId, options);
+			return await CreateMatchMakeRequest<T>("joinById", roomId, options, headers);
 		}
 
 		//public async Task<Room<IndexedDictionary<string, object>>> Join(string roomName, Dictionary<string, object> options = null)
@@ -139,7 +139,7 @@ namespace Colyseus
 			return response.rooms;
 		}
 
-		public async Task<Room<T>> ConsumeSeatReservation<T>(MatchMakeResponse response)
+		public async Task<Room<T>> ConsumeSeatReservation<T>(MatchMakeResponse response, Dictionary<string, string> headers)
 		{
 			var room = new Room<T>(response.room.name)
 			{
@@ -150,7 +150,7 @@ namespace Colyseus
 			var queryString = new Dictionary<string, object>();
 			queryString.Add("sessionId", room.SessionId);
 
-			room.SetConnection(CreateConnection(response.room.processId + "/" + room.Id, queryString));
+			room.SetConnection(CreateConnection(response.room.processId + "/" + room.Id, queryString, headers));
 
 			var tcs = new TaskCompletionSource<Room<T>>();
 
@@ -174,11 +174,16 @@ namespace Colyseus
 			return await tcs.Task;
 		}
 
-		protected async Task<Room<T>> CreateMatchMakeRequest<T>(string method, string roomName, Dictionary<string, object> options)
+		protected async Task<Room<T>> CreateMatchMakeRequest<T>(string method, string roomName, Dictionary<string, object> options, Dictionary<string, string> headers)
 		{
 			if (options == null)
 			{
 				options = new Dictionary<string, object>();
+			}
+
+			if (headers == null)
+			{
+				headers = new Dictionary<string, string>();
 			}
 
 			if (Auth.HasToken)
@@ -206,6 +211,10 @@ namespace Colyseus
 			req.SetRequestHeader("Content-Type", "application/json");
 			req.SetRequestHeader("Accept", "application/json");
 
+			foreach (var header in headers) {
+				req.SetRequestHeader(header.Key, header.Value);
+			}
+
 			req.downloadHandler = new DownloadHandlerBuffer();
 			await req.SendWebRequest();
 
@@ -220,10 +229,10 @@ namespace Colyseus
 				throw new MatchMakeException(response.error, response.code);
 			}
 
-			return await ConsumeSeatReservation<T>(response);
+			return await ConsumeSeatReservation<T>(response, headers);
 		}
 
-		protected Connection CreateConnection (string path = "", Dictionary<string, object> options = null)
+		protected Connection CreateConnection (string path = "", Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
 		{
 			if (options == null) {
 				options = new Dictionary<string, object> ();
@@ -241,7 +250,7 @@ namespace Colyseus
 				Query = string.Join("&", list.ToArray())
 			};
 
-			return new Connection (uriBuilder.ToString());
+			return new Connection (uriBuilder.ToString(), headers);
 		}
 
 	}

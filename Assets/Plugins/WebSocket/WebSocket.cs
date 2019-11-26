@@ -250,6 +250,7 @@ namespace NativeWebSocket {
     public event WebSocketCloseEventHandler OnClose;
 
     private Uri uri;
+    private Dictionary<string, string> headers;
     private ClientWebSocket m_Socket = new ClientWebSocket ();
 
     private CancellationTokenSource m_TokenSource;
@@ -261,8 +262,14 @@ namespace NativeWebSocket {
     private List<ArraySegment<byte>> sendBytesQueue = new List<ArraySegment<byte>> ();
     private List<ArraySegment<byte>> sendTextQueue = new List<ArraySegment<byte>> ();
 
-    public WebSocket (string url) {
+    public WebSocket (string url, Dictionary<string, string> headers = null) {
       uri = new Uri (url);
+
+      if (headers == null) {
+        this.headers = new Dictionary<string, string> ();
+      } else {
+        this.headers = headers;
+      }
 
       string protocol = uri.Scheme;
       if (!protocol.Equals ("ws") && !protocol.Equals ("wss"))
@@ -279,6 +286,10 @@ namespace NativeWebSocket {
         m_CancellationToken = m_TokenSource.Token;
 
         m_Socket = new ClientWebSocket ();
+
+        foreach (var header in headers) {
+          m_Socket.Options.SetRequestHeader(header.Key, header.Value);
+        }
 
         await m_Socket.ConnectAsync (uri, m_CancellationToken);
         OnOpen?.Invoke ();
