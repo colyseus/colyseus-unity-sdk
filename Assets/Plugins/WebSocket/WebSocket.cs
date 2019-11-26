@@ -429,7 +429,7 @@ namespace NativeWebSocket {
             }
           }
         }
-      } catch (Exception e) {
+      } catch (Exception) {
         m_TokenSource.Cancel ();
         OnClose?.Invoke (WebSocketCloseCode.Abnormal);
       }
