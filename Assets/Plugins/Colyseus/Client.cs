@@ -139,7 +139,7 @@ namespace Colyseus
 			return response.rooms;
 		}
 
-		public async Task<Room<T>> ConsumeSeatReservation<T>(MatchMakeResponse response, Dictionary<string, string> headers)
+		public async Task<Room<T>> ConsumeSeatReservation<T>(MatchMakeResponse response, Dictionary<string, string> headers = null)
 		{
 			var room = new Room<T>(response.room.name)
 			{
