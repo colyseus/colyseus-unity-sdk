@@ -6,15 +6,17 @@ namespace Colyseus
 	public class SchemaSerializer<T> : ISerializer<T> // where T : Colyseus.Schema.Schema
 	{
 		protected T state;
+		protected Schema.Iterator it = new Schema.Iterator();
 
 		public SchemaSerializer()
 		{
 			state = Activator.CreateInstance<T>();
 		}
 
-		public void SetState(byte[] data)
+		public void SetState(byte[] data, int offset = 0)
 		{
-			(state as Schema.Schema).Decode(data);
+			it.Offset = offset;
+			(state as Schema.Schema).Decode(data, it);
 		}
 
 		public T GetState()
@@ -22,9 +24,10 @@ namespace Colyseus
 			return state;
 		}
 
-		public void Patch(byte[] data)
+		public void Patch(byte[] data, int offset = 0)
 		{
-			(state as Schema.Schema).Decode(data);
+			it.Offset = offset;
+			(state as Schema.Schema).Decode(data, it);
 		}
 
 	    public void Teardown ()
