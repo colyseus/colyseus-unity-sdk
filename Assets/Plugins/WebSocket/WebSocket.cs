@@ -137,7 +137,7 @@ namespace NativeWebSocket {
     public event WebSocketErrorEventHandler OnError;
     public event WebSocketCloseEventHandler OnClose;
 
-    public WebSocket (string url) {
+    public WebSocket (string url, Dictionary<string, string> headers = null) {
       if (!WebSocketFactory.isInitialized) {
         WebSocketFactory.Initialize ();
       }
