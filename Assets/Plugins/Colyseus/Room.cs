@@ -31,8 +31,6 @@ namespace Colyseus
 		public string SerializerId;
 		protected ISerializer<T> serializer;
 
-		protected byte previousCode = 0;
-
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> successfully connects to the <see cref="Room"/>.
 		/// </summary>
@@ -85,9 +83,9 @@ namespace Colyseus
 			Connection.OnMessage += (bytes) => ParseMessage(bytes);
 		}
 
-		public void SetState(byte[] encodedState)
+		public void SetState(byte[] encodedState, int offset)
 		{
-			serializer.SetState(encodedState);
+			serializer.SetState(encodedState, offset);
 			OnStateChange?.Invoke (serializer.GetState(), true);
 		}
 
@@ -145,80 +143,74 @@ namespace Colyseus
 
 		protected async void ParseMessage (byte[] bytes)
 		{
-			if (previousCode == 0)
+			byte code = bytes[0];
+
+			if (code == Protocol.JOIN_ROOM)
 			{
-				byte code = bytes[0];
+				var offset = 1;
 
-				if (code == Protocol.JOIN_ROOM)
+				SerializerId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
+				offset += SerializerId.Length + 1;
+
+				if (SerializerId == "schema")
 				{
-					var offset = 1;
+					serializer = new SchemaSerializer<T>();
 
-					SerializerId = System.Text.Encoding.UTF8.GetString(bytes, offset+1, bytes[offset]);
-					offset += SerializerId.Length + 1;
-
-					if (SerializerId == "schema")
-					{
-						serializer = new SchemaSerializer<T>();
-
-					} else if (SerializerId == "fossil-delta")
-					{
-						serializer = (ISerializer<T>) new FossilDeltaSerializer();
-					}
-
-					if (bytes.Length > offset)
-					{
-						serializer.Handshake(bytes, offset);
-					}
-
-					OnJoin?.Invoke();
-				}
-				else if (code == Protocol.JOIN_ERROR)
+				} else if (SerializerId == "fossil-delta")
 				{
-					var message = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes[1]);
-					OnError?.Invoke(message);
-
+					serializer = (ISerializer<T>) new FossilDeltaSerializer();
 				}
-				else if (code == Protocol.ROOM_DATA_SCHEMA)
+
+				if (bytes.Length > offset)
 				{
-					Type messageType = Schema.Context.GetInstance().Get(bytes[1]);
-
-					var message = (Schema.Schema) Activator.CreateInstance(messageType);
-					message.Decode(bytes, new Schema.Iterator { Offset = 2 });
-
-					OnMessage?.Invoke(message);
+					serializer.Handshake(bytes, offset);
 				}
-				else if (code == Protocol.LEAVE_ROOM)
-				{
-					await Leave();
 
-				}
-				else
-				{
-					previousCode = code;
+				OnJoin?.Invoke();
 
-				}
-			} else
+				// Acknowledge JOIN_ROOM
+				await Connection.Send(new object[] { Protocol.JOIN_ROOM });
+			}
+			else if (code == Protocol.JOIN_ERROR)
 			{
-				if (previousCode == Protocol.ROOM_STATE)
-				{
-					SetState(bytes);
-				}
-				else if (previousCode == Protocol.ROOM_STATE_PATCH)
-				{
-					Patch(bytes);
-				}
-				else if (previousCode == Protocol.ROOM_DATA)
-				{
-					var message = MsgPack.Deserialize<object>(new MemoryStream(bytes));
-					OnMessage?.Invoke(message);
-				}
-				previousCode = 0;
+				var message = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes[1]);
+				OnError?.Invoke(message);
+
+			}
+			else if (code == Protocol.ROOM_DATA_SCHEMA)
+			{
+				Type messageType = Schema.Context.GetInstance().Get(bytes[1]);
+
+				var message = (Schema.Schema) Activator.CreateInstance(messageType);
+				message.Decode(bytes, new Schema.Iterator { Offset = 2 });
+
+				OnMessage?.Invoke(message);
+			}
+			else if (code == Protocol.LEAVE_ROOM)
+			{
+				await Leave();
+
+			}
+			else if (code == Protocol.ROOM_STATE)
+			{
+				SetState(bytes, 1);
+			}
+			else if (code == Protocol.ROOM_STATE_PATCH)
+			{
+				Patch(bytes, 1);
+			}
+			else if (code == Protocol.ROOM_DATA)
+			{
+				var message = MsgPack.Deserialize<object>(new MemoryStream(
+					ArrayUtils.SubArray(bytes, 1, bytes.Length-1)
+				));
+				OnMessage?.Invoke(message);
 			}
 		}
 
-		protected void Patch (byte[] delta)
+		protected void Patch (byte[] delta, int offset)
 		{
-			serializer.Patch(delta);
+			serializer.Patch(delta, offset);
 			OnStateChange?.Invoke(serializer.GetState(), false);
 		}
 	}
