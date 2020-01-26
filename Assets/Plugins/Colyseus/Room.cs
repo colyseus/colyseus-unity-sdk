@@ -201,6 +201,7 @@ namespace Colyseus
 			}
 			else if (code == Protocol.ROOM_DATA)
 			{
+				// TODO: de-serialize message with an offset, to avoid creating a new buffer
 				var message = MsgPack.Deserialize<object>(new MemoryStream(
 					ArrayUtils.SubArray(bytes, 1, bytes.Length-1)
 				));
