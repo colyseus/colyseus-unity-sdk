@@ -524,12 +524,13 @@ namespace Colyseus.Schema
           int newLength = Convert.ToInt32(decode.DecodeNumber(bytes, it));
           int numChanges = Math.Min(Convert.ToInt32(decode.DecodeNumber(bytes, it)), newLength);
 
-          hasChange = (numChanges > 0);
+          bool hasRemoval = (currentValue.Count > newLength);
+          hasChange = (numChanges > 0) || hasRemoval;
 
           bool hasIndexChange = false;
 
           // ensure current array has the same length as encoded one
-          if (currentValue.Count > newLength)
+          if (hasRemoval)
           {
             IDictionary items = currentValue.GetItems();
 
