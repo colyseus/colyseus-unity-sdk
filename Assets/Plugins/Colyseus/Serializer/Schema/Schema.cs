@@ -498,7 +498,6 @@ namespace Colyseus.Schema
 
         object value = null;
 
-        object change = null;
         bool hasChange = false;
 
         if (isNil)
@@ -519,8 +518,6 @@ namespace Colyseus.Schema
         // Array type
         else if (fieldType == "array")
         {
-          change = new List<object>();
-
           ISchemaCollection valueRef = (ISchemaCollection)(this[field] ?? Activator.CreateInstance(childType));
           ISchemaCollection currentValue = valueRef.Clone();
 
@@ -603,8 +600,6 @@ namespace Colyseus.Schema
             {
               currentValue.InvokeOnChange(currentValue[newIndex], newIndex);
             }
-
-            (change as List<object>).Add(currentValue[newIndex]);
           }
 
           value = currentValue;
@@ -714,7 +709,7 @@ namespace Colyseus.Schema
           changes.Add(new DataChange
           {
             Field = field,
-            Value = (change != null) ? change : value,
+            Value = value,
             PreviousValue = this[field]
           });
         }
