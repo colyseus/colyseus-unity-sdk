@@ -11,8 +11,7 @@ public class ClientComponent : MonoBehaviour
 	public async void Start () {
 		client = new Client("ws://localhost:2567");
 
-		room = await client.Join<State>("demo");
-		await room.Connect();
+		room = await client.JoinOrCreate<State>("demo");
 
 		// OnApplicationQuit();
 	}

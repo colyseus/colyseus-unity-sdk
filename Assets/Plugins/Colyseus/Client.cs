@@ -72,6 +72,9 @@ namespace Colyseus
 			Auth = new Auth(Endpoint.Uri);
 		}
 
+		/**
+		 * Join
+		 */
 		public async Task<Room<T>> JoinOrCreate<T>(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
 		{
 			return await CreateMatchMakeRequest<T>("joinOrCreate", roomName, options, headers);
@@ -99,15 +102,35 @@ namespace Colyseus
 			return await CreateMatchMakeRequest<T>("joinById", roomId, options, headers);
 		}
 
-		//public async Task<Room<IndexedDictionary<string, object>>> Join(string roomName, Dictionary<string, object> options = null)
-		//{
-		//	return await Join<IndexedDictionary<string, object>>(roomName, options);
-		//}
+		//
+		// Fossil-Delta versions for joining the state
+		//
+		public async Task<Room<IndexedDictionary<string, object>>> JoinOrCreate(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+		{
+			return await CreateMatchMakeRequest<IndexedDictionary<string, object>>("joinOrCreate", roomName, options, headers);
+		}
 
-		//public async Task<Room<IndexedDictionary<string, object>>> ReJoin (string roomName, string sessionId)
-		//{
-		//	return await ReJoin<IndexedDictionary<string, object>>(roomName, sessionId);
-		//}
+		public async Task<Room<IndexedDictionary<string, object>>> Create(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+		{
+			return await CreateMatchMakeRequest<IndexedDictionary<string, object>>("create", roomName, options, headers);
+		}
+
+		public async Task<Room<IndexedDictionary<string, object>>> Join(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+		{
+			return await CreateMatchMakeRequest<IndexedDictionary<string, object>>("join", roomName, options, headers);
+		}
+
+		public async Task<Room<IndexedDictionary<string, object>>> JoinById(string roomId, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+		{
+			return await CreateMatchMakeRequest<IndexedDictionary<string, object>>("joinById", roomId, options, headers);
+		}
+
+		public async Task<Room<IndexedDictionary<string, object>>> Reconnect(string roomId, string sessionId, Dictionary<string, string> headers = null)
+		{
+			Dictionary<string, object> options = new Dictionary<string, object>();
+			options.Add("sessionId", sessionId);
+			return await CreateMatchMakeRequest<IndexedDictionary<string, object>>("joinById", roomId, options, headers);
+		}
 
 		public async Task<RoomAvailable[]> GetAvailableRooms(string roomName = "")
 		{

@@ -27,8 +27,8 @@ namespace Colyseus
 
 		public async Task Send(object[] data)
 		{
-			var serializationOutput = new MemoryStream ();
-			MsgPack.Serialize (data, serializationOutput);
+			var serializationOutput = new MemoryStream();
+			MsgPack.Serialize(data, serializationOutput, SerializationOptions.SuppressTypeInformation);
 
 			byte[] packedData = serializationOutput.ToArray ();
 

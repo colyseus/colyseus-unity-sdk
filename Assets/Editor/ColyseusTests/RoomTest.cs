@@ -8,7 +8,7 @@ public class RoomTest {
 	ClientComponent component;
 
 	[UnityTest]
-	public async Task TestConnection()
+	public async void TestConnection()
 	{
 		var gameObject = new GameObject();
 		component = gameObject.AddComponent<ClientComponent>();

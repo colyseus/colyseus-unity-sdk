@@ -6,6 +6,7 @@ import { Server } from "colyseus";
 import { DemoRoom } from "./DemoRoom";
 
 import socialRoutes from "@colyseus/social/express";
+import { FossilDeltaTestRoom } from "./FossilDeltaTestRoom";
 
 const PORT = Number(process.env.PORT || 2567);
 
@@ -24,6 +25,7 @@ const gameServer = new Server({
 
 // Register DemoRoom as "demo"
 gameServer.define("demo", DemoRoom);
+gameServer.define("fossildelta", FossilDeltaTestRoom);
 
 app.use("/", socialRoutes);
 

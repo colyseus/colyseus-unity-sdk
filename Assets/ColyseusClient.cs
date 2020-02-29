@@ -25,6 +25,12 @@ class CustomRoomAvailable : RoomAvailable
 	public Metadata metadata;
 }
 
+class CustomData
+{
+	public int integer;
+	public string str;
+}
+
 public class ColyseusClient : MonoBehaviour {
 
 	// UI Buttons are attached through Unity Inspector
@@ -201,6 +207,12 @@ public class ColyseusClient : MonoBehaviour {
 		if (room != null)
 		{
 			room.Send("move_right");
+
+			// Sending typed data to the server
+			room.Send(new CustomData() {
+				integer = 100,
+				str = "Hello world!"
+			});
 		}
 		else
 		{
