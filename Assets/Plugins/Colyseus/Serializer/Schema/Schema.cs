@@ -463,14 +463,14 @@ namespace Colyseus.Schema
       var changes = new List<DataChange>();
       var totalBytes = bytes.Length;
 
-      // skip TYPE_ID of existing instances
-      if (bytes[it.Offset] == (byte) SPEC.TYPE_ID)
-      {
-        it.Offset += 2;
-      }
-
       while (it.Offset < totalBytes)
       {
+        // skip TYPE_ID of existing instances
+        if (bytes[it.Offset] == (byte) SPEC.TYPE_ID)
+        {
+          it.Offset += 2;
+        }
+
         var isNil = decode.NilCheck(bytes, it);
         if (isNil) { it.Offset++; }
 
