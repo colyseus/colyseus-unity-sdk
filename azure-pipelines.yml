@@ -16,10 +16,10 @@ stages:
       vmImage: 'windows-latest'
     steps:
     - task: PublishBuildArtifacts@1
-      displayName: 'Publish Artifact: plugins'
+      displayName: 'Publish Artifact: Plugins'
       inputs:
         PathtoPublish: Assets/Plugins
-        ArtifactName: plugins
+        ArtifactName: Plugins
 - stage: release
   dependsOn: build
   condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'))
@@ -30,16 +30,16 @@ stages:
     steps:
     - task: DownloadBuildArtifacts@0
       inputs:
-        artifactName: plugins
+        artifactName: Plugins
         buildType: 'current'
         downloadType: 'single'
         downloadPath: '$(System.ArtifactsDirectory)'
     - task: ArchiveFiles@2
       inputs:
-        rootFolderOrFile: '$(System.ArtifactsDirectory)/plugins'
+        rootFolderOrFile: '$(System.ArtifactsDirectory)/Plugins'
         includeRootFolder: true
         archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/plugins-$(Build.SourceBranchName).zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Plugins-$(Build.SourceBranchName).zip'
         replaceExistingArchive: true
     - task: GitHubRelease@1
       displayName: 'GitHub release (create)'
