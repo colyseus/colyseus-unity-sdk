@@ -31,6 +31,11 @@ class CustomData
 	public string str;
 }
 
+class TypeMessage
+{
+	public bool hello;
+}
+
 public class ColyseusClient : MonoBehaviour {
 
 	// UI Buttons are attached through Unity Inspector
@@ -93,61 +98,19 @@ public class ColyseusClient : MonoBehaviour {
 	public async void CreateRoom()
 	{
 		room = await client.Create<State>(roomName, new Dictionary<string, object>() { });
-
-		m_SessionIdText.text = "sessionId: " + room.SessionId;
-
-		room.State.entities.OnAdd += OnEntityAdd;
-		room.State.entities.OnRemove += OnEntityRemove;
-		room.State.entities.OnChange += OnEntityMove;
-
-		PlayerPrefs.SetString("roomId", room.Id);
-		PlayerPrefs.SetString("sessionId", room.SessionId);
-		PlayerPrefs.Save();
-
-		room.OnLeave += (code) => Debug.Log("ROOM: ON LEAVE");
-		room.OnError += (message) => Debug.LogError(message);
-		room.OnStateChange += OnStateChangeHandler;
-		room.OnMessage += OnMessage;
+		RegisterRoomHandlers();
 	}
 
 	public async void JoinOrCreateRoom()
 	{
 		room = await client.JoinOrCreate<State>(roomName, new Dictionary<string, object>() { });
-
-		m_SessionIdText.text = "sessionId: " + room.SessionId;
-
-		room.State.entities.OnAdd += OnEntityAdd;
-		room.State.entities.OnRemove += OnEntityRemove;
-		room.State.entities.OnChange += OnEntityMove;
-
-		PlayerPrefs.SetString("roomId", room.Id);
-		PlayerPrefs.SetString("sessionId", room.SessionId);
-		PlayerPrefs.Save();
-
-		room.OnLeave += (code) => Debug.Log("ROOM: ON LEAVE");
-		room.OnError += (message) => Debug.LogError(message);
-		room.OnStateChange += OnStateChangeHandler;
-		room.OnMessage += OnMessage;
+		RegisterRoomHandlers();
 	}
 
 	public async void JoinRoom ()
 	{
 		room = await client.Join<State>(roomName, new Dictionary<string, object>() {});
-
-		m_SessionIdText.text = "sessionId: " + room.SessionId;
-
-		room.State.entities.OnAdd += OnEntityAdd;
-		room.State.entities.OnRemove += OnEntityRemove;
-		room.State.entities.OnChange += OnEntityMove;
-
-		PlayerPrefs.SetString("roomId", room.Id);
-		PlayerPrefs.SetString("sessionId", room.SessionId);
-		PlayerPrefs.Save();
-
-		room.OnLeave += (code) => Debug.Log("ROOM: ON LEAVE");
-		room.OnError += (message) => Debug.LogError(message);
-		room.OnStateChange += OnStateChangeHandler;
-		room.OnMessage += OnMessage;
+		RegisterRoomHandlers();
 	}
 
 	async void ReconnectRoom ()
@@ -161,18 +124,35 @@ public class ColyseusClient : MonoBehaviour {
 		}
 
 		room = await client.Reconnect<State>(roomId, sessionId);
+
 		Debug.Log("Reconnected into room successfully.");
+		RegisterRoomHandlers();
+	}
+
+	public void RegisterRoomHandlers()
+	{
 		m_SessionIdText.text = "sessionId: " + room.SessionId;
 
 		room.State.entities.OnAdd += OnEntityAdd;
 		room.State.entities.OnRemove += OnEntityRemove;
 		room.State.entities.OnChange += OnEntityMove;
+		room.State.TriggerAll();
 
+		PlayerPrefs.SetString("roomId", room.Id);
+		PlayerPrefs.SetString("sessionId", room.SessionId);
+		PlayerPrefs.Save();
+
+		room.OnLeave += (code) => Debug.Log("ROOM: ON LEAVE");
 		room.OnError += (message) => Debug.LogError(message);
-
 		room.OnStateChange += OnStateChangeHandler;
-		room.OnMessage += OnMessage;
+
+		room.OnMessage<TypeMessage>("type", (message) =>
+		{
+			Debug.Log("Received 'type' message!");
+			Debug.Log(message);
+		});
 	}
+
 
 	async void LeaveRoom()
 	{

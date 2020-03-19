@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -25,19 +25,14 @@ namespace Colyseus
 			OnClose += _OnClose;
 		}
 
-		public async Task Send(object[] data)
+		public async Task Send(byte[] data)
 		{
-			var serializationOutput = new MemoryStream();
-			MsgPack.Serialize(data, serializationOutput, SerializationOptions.SuppressTypeInformation);
-
-			byte[] packedData = serializationOutput.ToArray ();
-
-			if (!this.IsOpen) {
-				_enqueuedCalls.Enqueue(packedData);
+			if (!IsOpen) {
+				_enqueuedCalls.Enqueue(data);
 
 			} else {
 
-				await Send(packedData);
+				await base.Send(data);
 			}
 		}
 

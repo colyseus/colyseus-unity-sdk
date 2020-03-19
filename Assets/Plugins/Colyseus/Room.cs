@@ -1,7 +1,10 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using GameDevWare.Serialization;
+
+using UnityEngine;
 
 namespace Colyseus
 {
@@ -47,14 +50,13 @@ namespace Colyseus
 		public event ColyseusCloseEventHandler OnLeave;
 
 		/// <summary>
-		/// Occurs when server sends a message to this <see cref="Room"/>
-		/// </summary>
-		public event RoomOnMessageEventHandler OnMessage;
-
-		/// <summary>
 		/// Occurs after applying the patched state on this <see cref="Room"/>.
 		/// </summary>
 		public event RoomOnStateChangeEventHandler OnStateChange;
+
+		protected Dictionary<string, object> OnMessageHandlers = new Dictionary<string, object>();
+
+		private Schema.Decoder Decode = Schema.Decoder.GetInstance();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Room"/> class.
@@ -102,7 +104,7 @@ namespace Colyseus
 			if (Id != null) {
 				if (consented)
 				{
-					await Connection.Send(new object[] { Protocol.LEAVE_ROOM });
+					await Connection.Send(new byte[] { Protocol.LEAVE_ROOM });
 				}
 				else
 				{
@@ -120,7 +122,10 @@ namespace Colyseus
 		/// <param name="data">Data to be sent</param>
 		public async Task Send (object data)
 		{
-			await Connection.Send(new object[]{Protocol.ROOM_DATA, data});
+			//var serializationOutput = new MemoryStream();
+			//MsgPack.Serialize(data, serializationOutput, SerializationOptions.SuppressTypeInformation);
+
+			//await Connection.Send(new object[]{Protocol.ROOM_DATA, data});
 		}
 
 		public Listener<Action<PatchObject>> Listen(Action<PatchObject> callback)
@@ -141,9 +146,25 @@ namespace Colyseus
 			return ((FossilDeltaSerializer)serializer).State.Listen(segments, callback, immediate);
 		}
 
+		public void OnMessage<MessageType>(string type, Action<MessageType> handler)
+		{
+			OnMessageHandlers.Add(type, handler);
+		}
+
+		public void OnMessage<MessageType>(int type, Action<MessageType> handler)
+		{
+			OnMessageHandlers.Add("i" + type.ToString(), handler);
+		}
+
+		public void OnMessage<MessageType>(MessageType type, Action<MessageType> handler) where MessageType : Schema.Schema, new()
+		{
+			OnMessageHandlers.Add("s" + type.GetType(), handler);
+		}
+
 		protected async void ParseMessage (byte[] bytes)
 		{
 			byte code = bytes[0];
+			Debug.Log("BYTE =>" + code);
 
 			if (code == Protocol.JOIN_ROOM)
 			{
@@ -169,7 +190,7 @@ namespace Colyseus
 				OnJoin?.Invoke();
 
 				// Acknowledge JOIN_ROOM
-				await Connection.Send(new object[] { Protocol.JOIN_ROOM });
+				await Connection.Send(new byte[] { Protocol.JOIN_ROOM });
 			}
 			else if (code == Protocol.JOIN_ERROR)
 			{
@@ -184,7 +205,7 @@ namespace Colyseus
 				var message = (Schema.Schema) Activator.CreateInstance(messageType);
 				message.Decode(bytes, new Schema.Iterator { Offset = 2 });
 
-				OnMessage?.Invoke(message);
+				((Action<object>) OnMessageHandlers["s" + message.GetType()])?.Invoke(message);
 			}
 			else if (code == Protocol.LEAVE_ROOM)
 			{
@@ -193,19 +214,45 @@ namespace Colyseus
 			}
 			else if (code == Protocol.ROOM_STATE)
 			{
+				Debug.Log("ROOM_STATE");
 				SetState(bytes, 1);
 			}
 			else if (code == Protocol.ROOM_STATE_PATCH)
 			{
+				Debug.Log("ROOM_STATE_PATCH");
 				Patch(bytes, 1);
 			}
 			else if (code == Protocol.ROOM_DATA)
 			{
-				// TODO: de-serialize message with an offset, to avoid creating a new buffer
-				var message = MsgPack.Deserialize<object>(new MemoryStream(
-					ArrayUtils.SubArray(bytes, 1, bytes.Length-1)
-				));
-				OnMessage?.Invoke(message);
+				Action<object> handler = null;
+				object type;
+
+				Schema.Iterator it = new Schema.Iterator { Offset = 1 };
+
+				if (Decode.NumberCheck(bytes, it))
+				{
+					type = Decode.DecodeNumber(bytes, it);
+					handler = (Action<object>) OnMessageHandlers["i" + type];
+
+				} else
+				{
+					type = Decode.DecodeString(bytes, it);
+					handler = (Action<object>) OnMessageHandlers[type.ToString()];
+				}
+
+				if (handler != null)
+				{
+					// TODO: de-serialize message with an offset, to avoid creating a new buffer
+					var message = MsgPack.Deserialize<object>(new MemoryStream(
+						ArrayUtils.SubArray(bytes, it.Offset, bytes.Length - 1)
+					));
+
+					handler.Invoke(message);
+				}
+				else
+				{
+					Debug.LogError("OnMessage not registered for: " + type);
+				}
 			}
 		}
 
@@ -213,6 +260,11 @@ namespace Colyseus
 		{
 			serializer.Patch(delta, offset);
 			OnStateChange?.Invoke(serializer.GetState(), false);
+		}
+
+		protected void DispatchMessage(string type, object message)
+		{
+
 		}
 	}
 }

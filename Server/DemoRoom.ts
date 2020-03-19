@@ -48,6 +48,21 @@ export class DemoRoom extends Room {
 
     this.setPatchRate(1000 / 20);
     this.setSimulationInterval((dt) => this.update(dt));
+
+    this.onMessage("*", (client, type, message) => {
+      console.log(`received message "${type}" from ${client.sessionId}:`, message);
+    });
+
+    this.onMessage("move_right", (client) => {
+      this.state.entities[client.sessionId].x += 0.01;
+
+      const message = new Message();
+      message.num = Math.floor(Math.random() * 100);
+      message.str = "sending to a single client";
+      client.send(message);
+
+      this.broadcast("hello", { hello: "hello world" });
+    });
   }
 
   async onAuth (client, options) {
@@ -67,6 +82,8 @@ export class DemoRoom extends Room {
   onJoin (client: Client, options: any, user: IUser) {
     console.log("client joined!", client.sessionId);
     this.state.entities[client.sessionId] = new Player();
+
+    client.send("type", { hello: true });
   }
 
   async onLeave (client: Client, consented: boolean) {
@@ -87,21 +104,6 @@ export class DemoRoom extends Room {
     }
   }
 
-  onMessage (client: Client, data: any) {
-    console.log(data, "received from", client.sessionId);
-
-    if (data === "move_right") {
-      this.state.entities[client.sessionId].x += 0.01;
-
-      const message = new Message();
-      message.num = Math.floor(Math.random() * 100);
-      message.str = "sending to a single client";
-      this.send(client, message);
-    }
-    console.log(this.state.entities[client.sessionId].x);
-
-    this.broadcast({ hello: "hello world" });
-  }
 
   update (dt?: number) {
     // console.log("num clients:", Object.keys(this.clients).length);
