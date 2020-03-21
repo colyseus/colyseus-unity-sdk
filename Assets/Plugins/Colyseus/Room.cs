@@ -148,17 +148,20 @@ namespace Colyseus
 
 		public void OnMessage<MessageType>(string type, Action<MessageType> handler)
 		{
-			OnMessageHandlers.Add(type, handler);
+			OnMessageHandlers.Add(type, (new Action<object>((obj) =>
+			{
+				handler.Invoke((MessageType)obj);
+			})));
 		}
 
 		public void OnMessage<MessageType>(int type, Action<MessageType> handler)
 		{
-			OnMessageHandlers.Add("i" + type.ToString(), handler);
+			OnMessageHandlers.Add("i" + type.ToString(), (new Action<object>((obj) => handler.Invoke((MessageType)obj))));
 		}
 
 		public void OnMessage<MessageType>(MessageType type, Action<MessageType> handler) where MessageType : Schema.Schema, new()
 		{
-			OnMessageHandlers.Add("s" + type.GetType(), handler);
+			OnMessageHandlers.Add("s" + type.GetType(), (new Action<object>((obj) => handler.Invoke((MessageType)obj))));
 		}
 
 		protected async void ParseMessage (byte[] bytes)
@@ -244,7 +247,7 @@ namespace Colyseus
 				{
 					// TODO: de-serialize message with an offset, to avoid creating a new buffer
 					var message = MsgPack.Deserialize<object>(new MemoryStream(
-						ArrayUtils.SubArray(bytes, it.Offset, bytes.Length - 1)
+						ArrayUtils.SubArray(bytes, it.Offset, bytes.Length - it.Offset)
 					));
 
 					handler.Invoke(message);
