@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@colyseus/social": "^0.10.0",
-    "colyseus": "^0.13.0-alpha.3",
+    "colyseus": "^0.13.0-alpha.10",
     "cors": "^2.8.5",
     "express": "^4.13.3",
     "express-jwt": "^5.3.1",

@@ -143,7 +143,7 @@ public class ColyseusClient : MonoBehaviour {
 		PlayerPrefs.Save();
 
 		room.OnLeave += (code) => Debug.Log("ROOM: ON LEAVE");
-		room.OnError += (message) => Debug.LogError(message);
+		room.OnError += (code, message) => Debug.LogError("ERROR, code =>" + code + ", message => " + message);
 		room.OnStateChange += OnStateChangeHandler;
 
 		room.OnMessage<TypeMessage>("type", (message) =>

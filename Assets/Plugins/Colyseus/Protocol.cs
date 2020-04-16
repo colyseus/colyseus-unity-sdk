@@ -20,8 +20,8 @@ namespace Colyseus
 		/// <summary>When JOIN request is accepted.</summary>
 		public static byte JOIN_ROOM = 10;
 
-		/// <summary>When JOIN request is not accepted.</summary>
-		public static byte JOIN_ERROR = 11;
+		/// <summary>When an error has happened in the server-side.</summary>
+		public static byte ERROR = 11;
 
 		/// <summary>When server explicitly removes <see cref="Client"/> from the <see cref="Room"/></summary>
 		public static byte LEAVE_ROOM = 12;

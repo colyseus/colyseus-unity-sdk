@@ -10,7 +10,7 @@ namespace Colyseus
 {
 	public delegate void ColyseusOpenEventHandler();
 	public delegate void ColyseusCloseEventHandler(NativeWebSocket.WebSocketCloseCode code);
-	public delegate void ColyseusErrorEventHandler(string message);
+	public delegate void ColyseusErrorEventHandler(int code, string message);
 
 	public interface IRoom
 	{
@@ -54,7 +54,7 @@ namespace Colyseus
 		/// </summary>
 		public event RoomOnStateChangeEventHandler OnStateChange;
 
-		protected Dictionary<string, object> OnMessageHandlers = new Dictionary<string, object>();
+		protected Dictionary<string, IMessageHandler> OnMessageHandlers = new Dictionary<string, IMessageHandler>();
 
 		private Schema.Decoder Decode = Schema.Decoder.GetInstance();
 
@@ -81,7 +81,11 @@ namespace Colyseus
 			Connection = connection;
 
 			Connection.OnClose += (code) => OnLeave?.Invoke(code);
-			Connection.OnError += (message) => OnError?.Invoke(message);
+
+			// TODO: expose WebSocket error code!
+			// Connection.OnError += (code, message) => OnError?.Invoke(code, message);
+
+			Connection.OnError += (message) => OnError?.Invoke(0, message);
 			Connection.OnMessage += (bytes) => ParseMessage(bytes);
 		}
 
@@ -128,40 +132,33 @@ namespace Colyseus
 			//await Connection.Send(new object[]{Protocol.ROOM_DATA, data});
 		}
 
-		public Listener<Action<PatchObject>> Listen(Action<PatchObject> callback)
-		{
-			if (string.IsNullOrEmpty(SerializerId))
-			{
-				throw new Exception("room.Listen() should be called after room.OnJoin");
-			}
-			return ((FossilDeltaSerializer)serializer).State.Listen(callback);
-		}
-
-		public Listener<Action<DataChange>> Listen(string segments, Action<DataChange> callback, bool immediate = false)
-		{
-			if (string.IsNullOrEmpty(SerializerId))
-			{
-				throw new Exception("room.Listen() should be called after room.OnJoin");
-			}
-			return ((FossilDeltaSerializer)serializer).State.Listen(segments, callback, immediate);
-		}
-
 		public void OnMessage<MessageType>(string type, Action<MessageType> handler)
 		{
-			OnMessageHandlers.Add(type, (new Action<object>((obj) =>
+			//OnMessageHandlers.Add(type, (new Action<object>((obj) =>
+			//{
+			//	handler.Invoke((MessageType)obj);
+			//})));
+
+			OnMessageHandlers.Add(type, new MessageHandler<MessageType>
 			{
-				handler.Invoke((MessageType)obj);
-			})));
+				Action = handler
+			});
 		}
 
 		public void OnMessage<MessageType>(int type, Action<MessageType> handler)
 		{
-			OnMessageHandlers.Add("i" + type.ToString(), (new Action<object>((obj) => handler.Invoke((MessageType)obj))));
+			OnMessageHandlers.Add("i" + type.ToString(), new MessageHandler<MessageType>
+			{
+				Action = handler
+			});
 		}
 
 		public void OnMessage<MessageType>(MessageType type, Action<MessageType> handler) where MessageType : Schema.Schema, new()
 		{
-			OnMessageHandlers.Add("s" + type.GetType(), (new Action<object>((obj) => handler.Invoke((MessageType)obj))));
+			OnMessageHandlers.Add("s" + type.GetType(), new MessageHandler<MessageType>
+			{
+				Action = handler
+			});
 		}
 
 		protected async void ParseMessage (byte[] bytes)
@@ -195,10 +192,12 @@ namespace Colyseus
 				// Acknowledge JOIN_ROOM
 				await Connection.Send(new byte[] { Protocol.JOIN_ROOM });
 			}
-			else if (code == Protocol.JOIN_ERROR)
+			else if (code == Protocol.ERROR)
 			{
-				var message = System.Text.Encoding.UTF8.GetString(bytes, 2, bytes[1]);
-				OnError?.Invoke(message);
+				Schema.Iterator it = new Schema.Iterator { Offset = 1 };
+				var errorCode = Decode.DecodeNumber(bytes, it);
+				var errorMessage = Decode.DecodeString(bytes, it);
+				OnError?.Invoke((int) errorCode, errorMessage);
 
 			}
 			else if (code == Protocol.ROOM_DATA_SCHEMA)
@@ -208,7 +207,7 @@ namespace Colyseus
 				var message = (Schema.Schema) Activator.CreateInstance(messageType);
 				message.Decode(bytes, new Schema.Iterator { Offset = 2 });
 
-				((Action<object>) OnMessageHandlers["s" + message.GetType()])?.Invoke(message);
+				(OnMessageHandlers["s" + message.GetType()])?.Invoke(message);
 			}
 			else if (code == Protocol.LEAVE_ROOM)
 			{
@@ -227,26 +226,26 @@ namespace Colyseus
 			}
 			else if (code == Protocol.ROOM_DATA)
 			{
-				Action<object> handler = null;
-				object type;
+				IMessageHandler handler;
+				dynamic type;
 
 				Schema.Iterator it = new Schema.Iterator { Offset = 1 };
 
 				if (Decode.NumberCheck(bytes, it))
 				{
 					type = Decode.DecodeNumber(bytes, it);
-					handler = (Action<object>) OnMessageHandlers["i" + type];
+					handler = OnMessageHandlers["i" + type];
 
 				} else
 				{
 					type = Decode.DecodeString(bytes, it);
-					handler = (Action<object>) OnMessageHandlers[type.ToString()];
+					handler = OnMessageHandlers[type.ToString()];
 				}
 
 				if (handler != null)
 				{
-					// TODO: de-serialize message with an offset, to avoid creating a new buffer
-					var message = MsgPack.Deserialize<object>(new MemoryStream(
+					var message = MsgPack.Deserialize(handler.Type, new MemoryStream(
+						// TODO: de-serialize message with an offset, to avoid creating a new buffer
 						ArrayUtils.SubArray(bytes, it.Offset, bytes.Length - it.Offset)
 					));
 

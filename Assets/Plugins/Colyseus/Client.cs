@@ -38,15 +38,6 @@ namespace Colyseus
 		public string error;
 	}
 
-	public class MatchMakeException : Exception
-	{
-		public int Code;
-		public MatchMakeException(string message, int code) : base(message)
-		{
-			Code = code;
-		}
-	}
-
 
 	/// <summary>
 	/// Colyseus.Client
@@ -177,10 +168,10 @@ namespace Colyseus
 
 			var tcs = new TaskCompletionSource<Room<T>>();
 
-			void OnError(string message)
+			void OnError(int code, string message)
 			{
 				room.OnError -= OnError;
-				tcs.SetException(new Exception(message));
+				tcs.SetException(new MatchMakeException(code, message));
 			};
 
 			void OnJoin()
@@ -249,7 +240,7 @@ namespace Colyseus
 			var response = JsonUtility.FromJson<MatchMakeResponse>(req.downloadHandler.text);
 			if (!string.IsNullOrEmpty(response.error))
 			{
-				throw new MatchMakeException(response.error, response.code);
+				throw new MatchMakeException(response.code, response.error);
 			}
 
 			return await ConsumeSeatReservation<T>(response, headers);
