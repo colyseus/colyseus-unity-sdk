@@ -36,6 +36,14 @@ class TypeMessage
 	public bool hello;
 }
 
+enum MessageType {
+	ONE = 0
+};
+class MessageByEnum
+{
+	public string str;
+}
+
 public class ColyseusClient : MonoBehaviour {
 
 	// UI Buttons are attached through Unity Inspector
@@ -146,11 +154,24 @@ public class ColyseusClient : MonoBehaviour {
 		room.OnError += (code, message) => Debug.LogError("ERROR, code =>" + code + ", message => " + message);
 		room.OnStateChange += OnStateChangeHandler;
 
+		//room.OnMessage((Message message) =>
+		//{
+		//	Debug.Log("Received Schema message:");
+		//	Debug.Log(message.num + ", " + message.str);
+		//});
+
+		room.OnMessage<MessageByEnum>((byte) MessageType.ONE, (message) =>
+		{
+			Debug.Log(">> Received message by enum/number => " + message.str);
+		});
+
 		room.OnMessage<TypeMessage>("type", (message) =>
 		{
 			Debug.Log("Received 'type' message!");
 			Debug.Log(message);
 		});
+
+		_ = room.Send((byte)MessageType.ONE, new MessageByEnum { str = "Sending message by enum/number" });
 	}
 
 
@@ -186,10 +207,9 @@ public class ColyseusClient : MonoBehaviour {
 	{
 		if (room != null)
 		{
-			room.Send("move_right");
-
-			// Sending typed data to the server
-			room.Send(new CustomData() {
+			room.Send("schema");
+			room.Send("move_right", new CustomData()
+			{
 				integer = 100,
 				str = "Hello world!"
 			});
@@ -197,23 +217,6 @@ public class ColyseusClient : MonoBehaviour {
 		else
 		{
 			Debug.Log("Room is not connected!");
-		}
-	}
-
-	void OnMessage (object msg)
-	{
-		if (msg is Message)
-		{
-			var message = (Message)msg;
-			Debug.Log("Received schema-encoded message:");
-			Debug.Log("message.num => " + message.num + ", message.str => " + message.str);
-		}
-		else
-		{
-			// msgpack-encoded message
-			var message = (IndexedDictionary<string, object>)msg;
-			Debug.Log("Received msgpack-encoded message:");
-			Debug.Log(message["hello"]);
 		}
 	}
 

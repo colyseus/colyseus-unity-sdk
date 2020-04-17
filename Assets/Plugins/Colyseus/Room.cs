@@ -121,31 +121,80 @@ namespace Colyseus
 		}
 
 		/// <summary>
-		/// Send data to this room.
+		/// Send a message by number type, without payload
 		/// </summary>
-		/// <param name="data">Data to be sent</param>
-		public async Task Send (object data)
+		/// <param name="type">Message type</param>
+		public async Task Send (byte type)
 		{
-			//var serializationOutput = new MemoryStream();
-			//MsgPack.Serialize(data, serializationOutput, SerializationOptions.SuppressTypeInformation);
+			await Connection.Send(new byte[] { Protocol.ROOM_DATA, type });
+		}
+		/// <summary>
+		/// Send a message by number type with payload
+		/// </summary>
+		/// <param name="type">Message type</param>
+		/// <param name="message">Message payload</param>
+		public async Task Send(byte type, object message)
+		{
+			var serializationOutput = new MemoryStream();
+			MsgPack.Serialize(message, serializationOutput, SerializationOptions.SuppressTypeInformation);
 
-			//await Connection.Send(new object[]{Protocol.ROOM_DATA, data});
+			byte[] initialBytes = { Protocol.ROOM_DATA, type };
+			byte[] encodedMessage = serializationOutput.ToArray();
+
+			byte[] bytes = new byte[initialBytes.Length + encodedMessage.Length];
+			Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
+			Buffer.BlockCopy(encodedMessage, 0, bytes, initialBytes.Length, encodedMessage.Length);
+
+			await Connection.Send(bytes);
+		}
+
+		/// <summary>
+		/// Send a message by string type, without payload
+		/// </summary>
+		/// <param name="type">Message type</param>
+		public async Task Send(string type)
+		{
+			byte[] encodedType = System.Text.Encoding.UTF8.GetBytes(type);
+			byte[] initialBytes = { Protocol.ROOM_DATA, (byte)(encodedType.Length | 0xa0) };
+
+			byte[] bytes = new byte[initialBytes.Length + encodedType.Length];
+			Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
+			Buffer.BlockCopy(encodedType, 0, bytes, initialBytes.Length, encodedType.Length);
+
+			await Connection.Send(bytes);
+		}
+
+		/// <summary>
+		/// Send a message by string type with payload
+		/// </summary>
+		/// <param name="type">Message type</param>
+		/// <param name="message">Message payload</param>
+		public async Task Send(string type, object message)
+		{
+			var serializationOutput = new MemoryStream();
+			MsgPack.Serialize(message, serializationOutput, SerializationOptions.SuppressTypeInformation);
+
+			byte[] encodedType = System.Text.Encoding.UTF8.GetBytes(type);
+			byte[] initialBytes = { Protocol.ROOM_DATA, (byte) (encodedType.Length | 0xa0) };
+			byte[] encodedMessage = serializationOutput.ToArray();
+
+			byte[] bytes = new byte[1 + encodedType.Length + encodedMessage.Length];
+			Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
+			Buffer.BlockCopy(encodedType, 0, bytes, initialBytes.Length, encodedType.Length);
+			Buffer.BlockCopy(encodedMessage, 0, bytes, initialBytes.Length + encodedType.Length, encodedMessage.Length);
+
+			await Connection.Send(bytes);
 		}
 
 		public void OnMessage<MessageType>(string type, Action<MessageType> handler)
 		{
-			//OnMessageHandlers.Add(type, (new Action<object>((obj) =>
-			//{
-			//	handler.Invoke((MessageType)obj);
-			//})));
-
 			OnMessageHandlers.Add(type, new MessageHandler<MessageType>
 			{
 				Action = handler
 			});
 		}
 
-		public void OnMessage<MessageType>(int type, Action<MessageType> handler)
+		public void OnMessage<MessageType>(byte type, Action<MessageType> handler)
 		{
 			OnMessageHandlers.Add("i" + type.ToString(), new MessageHandler<MessageType>
 			{
@@ -153,9 +202,9 @@ namespace Colyseus
 			});
 		}
 
-		public void OnMessage<MessageType>(MessageType type, Action<MessageType> handler) where MessageType : Schema.Schema, new()
+		public void OnMessage<MessageType>(Action<MessageType> handler) where MessageType : Schema.Schema, new()
 		{
-			OnMessageHandlers.Add("s" + type.GetType(), new MessageHandler<MessageType>
+			OnMessageHandlers.Add("s" + typeof(MessageType), new MessageHandler<MessageType>
 			{
 				Action = handler
 			});
@@ -207,7 +256,17 @@ namespace Colyseus
 				var message = (Schema.Schema) Activator.CreateInstance(messageType);
 				message.Decode(bytes, new Schema.Iterator { Offset = 2 });
 
-				(OnMessageHandlers["s" + message.GetType()])?.Invoke(message);
+				IMessageHandler handler = null;
+				OnMessageHandlers.TryGetValue("s" + message.GetType(), out handler);
+
+				if (handler != null)
+				{
+					handler.Invoke(message);
+				}
+				else
+				{
+					Debug.LogError("room.OnMessage not registered for Schema message: " + message.GetType());
+				}
 			}
 			else if (code == Protocol.LEAVE_ROOM)
 			{
@@ -226,7 +285,7 @@ namespace Colyseus
 			}
 			else if (code == Protocol.ROOM_DATA)
 			{
-				IMessageHandler handler;
+				IMessageHandler handler = null;
 				dynamic type;
 
 				Schema.Iterator it = new Schema.Iterator { Offset = 1 };
@@ -234,12 +293,12 @@ namespace Colyseus
 				if (Decode.NumberCheck(bytes, it))
 				{
 					type = Decode.DecodeNumber(bytes, it);
-					handler = OnMessageHandlers["i" + type];
+					OnMessageHandlers.TryGetValue("i" + type, out handler);
 
 				} else
 				{
 					type = Decode.DecodeString(bytes, it);
-					handler = OnMessageHandlers[type.ToString()];
+					OnMessageHandlers.TryGetValue(type.ToString(), out handler);
 				}
 
 				if (handler != null)
@@ -253,7 +312,7 @@ namespace Colyseus
 				}
 				else
 				{
-					Debug.LogError("OnMessage not registered for: " + type);
+					Debug.LogError("room.OnMessage not registered for: " + type);
 				}
 			}
 		}

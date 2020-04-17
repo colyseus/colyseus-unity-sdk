@@ -49,19 +49,25 @@ export class DemoRoom extends Room {
     this.setPatchRate(1000 / 20);
     this.setSimulationInterval((dt) => this.update(dt));
 
-    this.onMessage("*", (client, type, message) => {
-      console.log(`received message "${type}" from ${client.sessionId}:`, message);
+    this.onMessage(0, (client, message) => {
+      client.send(0, message);
     });
 
-    this.onMessage("move_right", (client) => {
-      this.state.entities[client.sessionId].x += 0.01;
-
+    this.onMessage("schema", (client) => {
       const message = new Message();
       message.num = Math.floor(Math.random() * 100);
       message.str = "sending to a single client";
       client.send(message);
+    })
+
+    this.onMessage("move_right", (client) => {
+      this.state.entities[client.sessionId].x += 0.01;
 
       this.broadcast("hello", { hello: "hello world" });
+    });
+
+    this.onMessage("*", (client, type, message) => {
+      console.log(`received message "${type}" from ${client.sessionId}:`, message);
     });
   }
 
