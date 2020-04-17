@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+// using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using GameDevWare.Serialization;
-
 using UnityEngine;
 
 namespace Colyseus
@@ -12,7 +12,7 @@ namespace Colyseus
 	public delegate void ColyseusCloseEventHandler(NativeWebSocket.WebSocketCloseCode code);
 	public delegate void ColyseusErrorEventHandler(int code, string message);
 
-	public interface IRoom
+    public interface IRoom
 	{
 		event ColyseusCloseEventHandler OnLeave;
 
@@ -20,7 +20,7 @@ namespace Colyseus
 		Task Leave(bool consented);
 	}
 
-	public class Room<T> : IRoom
+    public class Room<T> : IRoom
 	{
 		public delegate void RoomOnMessageEventHandler(object message);
 		public delegate void RoomOnStateChangeEventHandler(T state, bool isFirstState);
@@ -73,7 +73,7 @@ namespace Colyseus
 
 		public async Task Connect()
 		{
-			await Connection.Connect();
+            await Connection.Connect();
 		}
 
 		public void SetConnection (Connection connection)
@@ -87,7 +87,7 @@ namespace Colyseus
 
 			Connection.OnError += (message) => OnError?.Invoke(0, message);
 			Connection.OnMessage += (bytes) => ParseMessage(bytes);
-		}
+        }
 
 		public void SetState(byte[] encodedState, int offset)
 		{
@@ -323,9 +323,5 @@ namespace Colyseus
 			OnStateChange?.Invoke(serializer.GetState(), false);
 		}
 
-		protected void DispatchMessage(string type, object message)
-		{
-
-		}
 	}
 }

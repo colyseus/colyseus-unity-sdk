@@ -122,6 +122,7 @@ namespace Colyseus.Schema
     public event KeyValueEventHandler<T, int> OnAdd;
     public event KeyValueEventHandler<T, int> OnChange;
     public event KeyValueEventHandler<T, int> OnRemove;
+    private bool _hasSchemaChild = Schema.CheckSchemaChild(typeof(T));
 
     public ArraySchema()
     {
@@ -156,7 +157,7 @@ namespace Colyseus.Schema
 
     public bool HasSchemaChild
     {
-      get { return typeof(T).BaseType == typeof(Schema); }
+      get { return _hasSchemaChild; }
     }
 
     public int Count
@@ -232,6 +233,7 @@ namespace Colyseus.Schema
     public event KeyValueEventHandler<T, string> OnAdd;
     public event KeyValueEventHandler<T, string> OnChange;
     public event KeyValueEventHandler<T, string> OnRemove;
+    private bool _hasSchemaChild = Schema.CheckSchemaChild(typeof(T));
 
     public MapSchema()
     {
@@ -266,7 +268,7 @@ namespace Colyseus.Schema
 
     public bool HasSchemaChild
     {
-      get { return typeof(T).BaseType == typeof(Schema); }
+      get { return _hasSchemaChild; }
     }
 
     public T this[string key]
@@ -759,6 +761,22 @@ namespace Colyseus.Schema
       {
         return Activator.CreateInstance(type);
       }
+    }
+
+    public static bool CheckSchemaChild(System.Type toCheck) {
+      System.Type generic = typeof(Schema);
+
+      while (toCheck != null && toCheck != typeof(object)) {
+        var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
+
+        if (generic == cur) {
+          return true;
+        }
+
+        toCheck = toCheck.BaseType;
+      }
+
+      return false;
     }
   }
 
