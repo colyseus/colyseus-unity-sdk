@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using GameDevWare.Serialization;
+using UnityEngine;
 
 namespace Colyseus
 {
@@ -9,7 +11,7 @@ namespace Colyseus
 	public delegate void ColyseusCloseEventHandler(NativeWebSocket.WebSocketCloseCode code);
 	public delegate void ColyseusErrorEventHandler(string message);
 
-	public interface IRoom
+    public interface IRoom
 	{
 		event ColyseusCloseEventHandler OnLeave;
 
@@ -17,7 +19,7 @@ namespace Colyseus
 		Task Leave(bool consented);
 	}
 
-	public class Room<T> : IRoom
+    public class Room<T> : IRoom
 	{
 		public delegate void RoomOnMessageEventHandler(object message);
 		public delegate void RoomOnStateChangeEventHandler(T state, bool isFirstState);
@@ -30,6 +32,8 @@ namespace Colyseus
 
 		public string SerializerId;
 		protected ISerializer<T> serializer;
+
+        private bool ProcessingMessageQueue = false;
 
 		/// <summary>
 		/// Occurs when the <see cref="Client"/> successfully connects to the <see cref="Room"/>.
@@ -71,7 +75,8 @@ namespace Colyseus
 
 		public async Task Connect()
 		{
-			await Connection.Connect();
+            ProcessMessageQueue();
+            await Connection.Connect();
 		}
 
 		public void SetConnection (Connection connection)
@@ -81,7 +86,26 @@ namespace Colyseus
 			Connection.OnClose += (code) => OnLeave?.Invoke(code);
 			Connection.OnError += (message) => OnError?.Invoke(message);
 			Connection.OnMessage += (bytes) => ParseMessage(bytes);
-		}
+
+            // terminate processing of the message queue
+            Connection.OnClose += (code) => ConnectionTerminated();        
+        }
+
+        public async void ProcessMessageQueue()
+        {
+            ProcessingMessageQueue = true;
+            while (ProcessingMessageQueue)
+            {
+                Connection.DispatchMessageQueue();
+                // probably should be waiting until a new frame started or so
+                await Task.Delay(TimeSpan.FromSeconds(1.0f / 120.0f));
+            }
+        }
+
+        private void ConnectionTerminated()
+        {
+            ProcessingMessageQueue = false;
+        }
 
 		public void SetState(byte[] encodedState, int offset)
 		{
