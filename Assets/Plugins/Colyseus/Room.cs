@@ -286,7 +286,7 @@ namespace Colyseus
 			else if (code == Protocol.ROOM_DATA)
 			{
 				IMessageHandler handler = null;
-				dynamic type;
+				object type;
 
 				Schema.Iterator it = new Schema.Iterator { Offset = 1 };
 

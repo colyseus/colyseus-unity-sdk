@@ -154,11 +154,11 @@ public class ColyseusClient : MonoBehaviour {
 		room.OnError += (code, message) => Debug.LogError("ERROR, code =>" + code + ", message => " + message);
 		room.OnStateChange += OnStateChangeHandler;
 
-		//room.OnMessage((Message message) =>
-		//{
-		//	Debug.Log("Received Schema message:");
-		//	Debug.Log(message.num + ", " + message.str);
-		//});
+		room.OnMessage((Message message) =>
+		{
+			Debug.Log("Received Schema message:");
+			Debug.Log(message.num + ", " + message.str);
+		});
 
 		room.OnMessage<MessageByEnum>((byte) MessageType.ONE, (message) =>
 		{
