@@ -303,10 +303,10 @@ namespace Colyseus
 
 				if (handler != null)
 				{
-					var message = MsgPack.Deserialize(handler.Type, new MemoryStream(
+					var message = (bytes.Length > it.Offset) ? MsgPack.Deserialize(handler.Type, new MemoryStream(
 						// TODO: de-serialize message with an offset, to avoid creating a new buffer
 						ArrayUtils.SubArray(bytes, it.Offset, bytes.Length - it.Offset)
-					));
+					)) : null;
 
 					handler.Invoke(message);
 				}
