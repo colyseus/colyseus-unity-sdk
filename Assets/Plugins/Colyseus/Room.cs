@@ -303,10 +303,13 @@ namespace Colyseus
 
 				if (handler != null)
 				{
-					var message = (bytes.Length > it.Offset) ? MsgPack.Deserialize(handler.Type, new MemoryStream(
-						// TODO: de-serialize message with an offset, to avoid creating a new buffer
-						ArrayUtils.SubArray(bytes, it.Offset, bytes.Length - it.Offset)
-					)) : null;
+					//
+					// MsgPack deserialization can be optimized:
+					// https://github.com/deniszykov/msgpack-unity3d/issues/23
+					//
+					var message = (bytes.Length > it.Offset)
+						? MsgPack.Deserialize(handler.Type, new MemoryStream(bytes, it.Offset, bytes.Length - it.Offset, false))
+						: null;
 
 					handler.Invoke(message);
 				}
