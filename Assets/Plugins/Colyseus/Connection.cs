@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -12,7 +12,7 @@ namespace Colyseus
 	public class Connection : WebSocket
 	{
 		public bool IsOpen = false;
-		protected Queue<byte[]> _enqueuedCalls = new Queue<byte[]>();
+		protected bool ProcessingMessageQueue = false;
 
 		public Connection(string url, Dictionary<string, string> headers) : base(url, headers)
 		{
@@ -25,36 +25,34 @@ namespace Colyseus
 			OnClose += _OnClose;
 		}
 
-		public async Task Send(object[] data)
+#if UNITY_WEBGL && !UNITY_EDITOR
+#else
+		public async void ProcessMessageQueue()
 		{
-			var serializationOutput = new MemoryStream();
-			MsgPack.Serialize(data, serializationOutput, SerializationOptions.SuppressTypeInformation);
+			ProcessingMessageQueue = true;
+			while (ProcessingMessageQueue)
+			{
+				DispatchMessageQueue();
 
-			byte[] packedData = serializationOutput.ToArray ();
-
-			if (!this.IsOpen) {
-				_enqueuedCalls.Enqueue(packedData);
-
-			} else {
-
-				await Send(packedData);
+				// probably should be waiting until a new frame started or so
+				await Task.Delay(TimeSpan.FromSeconds(1.0f / 120.0f));
 			}
 		}
+#endif
 
-		protected async void _OnOpen ()
+		protected void _OnOpen ()
 		{
 			IsOpen = true;
 
-			// send enqueued commands while connection wasn't open
-			if (_enqueuedCalls.Count > 0) {
-				do {
-					await Send(_enqueuedCalls.Dequeue());
-				} while (_enqueuedCalls.Count > 0);
-			}
+#if UNITY_WEBGL && !UNITY_EDITOR
+#else
+			ProcessMessageQueue();
+#endif
 		}
 
 		protected void _OnClose (WebSocketCloseCode code)
 		{
+			ProcessingMessageQueue = false;
 			IsOpen = false;
 		}
 	}

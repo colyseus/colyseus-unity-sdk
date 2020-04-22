@@ -5,11 +5,12 @@ namespace Colyseus.Schema
 {
 	public class Decoder
 	{
-		/*   
+		/*
 	     * Singleton
 	     */
+		public static LittleEndianBitConverter bitConverter = new LittleEndianBitConverter();
 		protected static Decoder Instance = new Decoder();
-		protected static LittleEndianBitConverter bitConverter = new LittleEndianBitConverter();
+
 		public static Decoder GetInstance()
 		{
 			return Instance;
@@ -229,12 +230,12 @@ namespace Colyseus.Schema
 			int prefix = bytes[it.Offset++];
 
 			int length;
-			if (prefix < 0xc0) 
+			if (prefix < 0xc0)
 			{
 				// fixstr
 				length = prefix & 0x1f;
 			}
-			else if (prefix == 0xd9) 
+			else if (prefix == 0xd9)
 			{
 				length = (int) DecodeUint8(bytes, it);
 			}
@@ -245,7 +246,7 @@ namespace Colyseus.Schema
 			else if (prefix == 0xdb)
 			{
 				length = (int) DecodeUint32(bytes, it);
-			} 
+			}
 			else
 			{
 				length = 0;

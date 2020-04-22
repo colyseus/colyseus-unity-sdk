@@ -10,6 +10,11 @@ export class FossilDeltaTestRoom extends Room {
       bool: true,
       string: "string",
     });
+
+    this.onMessage("*", (client, type, message) => {
+      this.state.entities[client.sessionId].x += 1;
+      this.state.entities[client.sessionId].y -= 1;
+    })
   }
 
   onJoin (client: Client, options: any) {
@@ -19,11 +24,6 @@ export class FossilDeltaTestRoom extends Room {
 
   async onLeave (client: Client, consented: boolean) {
     delete this.state.entities[client.sessionId];
-  }
-
-  onMessage (client: Client, data: any) {
-    this.state.entities[client.sessionId].x += 1;
-    this.state.entities[client.sessionId].y -= 1;
   }
 
   onDispose() {
