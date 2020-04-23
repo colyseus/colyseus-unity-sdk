@@ -178,7 +178,7 @@ namespace Colyseus
 			byte[] initialBytes = { Protocol.ROOM_DATA, (byte) (encodedType.Length | 0xa0) };
 			byte[] encodedMessage = serializationOutput.ToArray();
 
-			byte[] bytes = new byte[1 + encodedType.Length + encodedMessage.Length];
+			byte[] bytes = new byte[encodedType.Length + encodedMessage.Length + initialBytes.Length];
 			Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
 			Buffer.BlockCopy(encodedType, 0, bytes, initialBytes.Length, encodedType.Length);
 			Buffer.BlockCopy(encodedMessage, 0, bytes, initialBytes.Length + encodedType.Length, encodedMessage.Length);
