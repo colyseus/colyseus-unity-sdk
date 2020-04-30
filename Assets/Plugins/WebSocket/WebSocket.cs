@@ -7,9 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using AOT;
-using System.Runtime.InteropServices;
-
 namespace NativeWebSocket
 {
     public delegate void WebSocketOpenEventHandler();
@@ -120,14 +117,6 @@ namespace NativeWebSocket
         public WebSocketInvalidStateException() { }
         public WebSocketInvalidStateException(string message) : base(message) { }
         public WebSocketInvalidStateException(string message, Exception inner) : base(message, inner) { }
-    }
-
-    public class WaitForBackgroundThread
-    {
-        public ConfiguredTaskAwaitable.ConfiguredTaskAwaiter GetAwaiter()
-        {
-            return Task.Run(() => { }).ConfigureAwait(false).GetAwaiter();
-        }
     }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -326,7 +315,7 @@ namespace NativeWebSocket
                 await m_Socket.ConnectAsync(uri, m_CancellationToken);
                 OnOpen?.Invoke();
 
-                await Receive();
+                OnClose?.Invoke(await Receive());
             }
             catch (Exception ex)
             {
@@ -488,60 +477,65 @@ namespace NativeWebSocket
             }
         }
 
-        public async Task Receive()
+        public async Task<WebSocketCloseCode> Receive()
         {
-            await new WaitForBackgroundThread();
-
-            ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[8192]);
-            try
+            return await Task.Run(async () =>
             {
-                while (m_Socket.State == System.Net.WebSockets.WebSocketState.Open)
+                WebSocketCloseCode closeCode = WebSocketCloseCode.Normal;
+
+                ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[8192]);
+                try
                 {
-                    WebSocketReceiveResult result = null;
-
-                    using (var ms = new MemoryStream())
+                    while (m_Socket.State == System.Net.WebSockets.WebSocketState.Open)
                     {
-                        do
-                        {
-                            result = await m_Socket.ReceiveAsync(buffer, m_CancellationToken);
-                            ms.Write(buffer.Array, buffer.Offset, result.Count);
-                        }
-                        while (!result.EndOfMessage);
+                        WebSocketReceiveResult result = null;
 
-                        ms.Seek(0, SeekOrigin.Begin);
+                        using (var ms = new MemoryStream())
+                        {
+                            do
+                            {
+                                result = await m_Socket.ReceiveAsync(buffer, m_CancellationToken);
+                                ms.Write(buffer.Array, buffer.Offset, result.Count);
+                            }
+                            while (!result.EndOfMessage);
 
-                        if (result.MessageType == WebSocketMessageType.Text)
-                        {
-                            m_MessageListMutex.WaitOne();
-                            m_MessageList.Add(ms.ToArray());
-                            m_MessageListMutex.ReleaseMutex();
+                            ms.Seek(0, SeekOrigin.Begin);
 
-                            //using (var reader = new StreamReader(ms, Encoding.UTF8))
-                            //{
-                            //	string message = reader.ReadToEnd();
-                            //	OnMessage?.Invoke(this, new MessageEventArgs(message));
-                            //}
-                        }
-                        else if (result.MessageType == WebSocketMessageType.Binary)
-                        {
-                            m_MessageListMutex.WaitOne();
-                            m_MessageList.Add(ms.ToArray());
-                            m_MessageListMutex.ReleaseMutex();
-                        }
-                        else if (result.MessageType == WebSocketMessageType.Close)
-                        {
-                            await Close();
-                            OnClose?.Invoke(WebSocketHelpers.ParseCloseCodeEnum((int)result.CloseStatus));
-                            break;
+                            if (result.MessageType == WebSocketMessageType.Text)
+                            {
+                                m_MessageListMutex.WaitOne();
+                                m_MessageList.Add(ms.ToArray());
+                                m_MessageListMutex.ReleaseMutex();
+
+                                //using (var reader = new StreamReader(ms, Encoding.UTF8))
+                                //{
+                                //	string message = reader.ReadToEnd();
+                                //	OnMessage?.Invoke(this, new MessageEventArgs(message));
+                                //}
+                            }
+                            else if (result.MessageType == WebSocketMessageType.Binary)
+                            {
+                                m_MessageListMutex.WaitOne();
+                                m_MessageList.Add(ms.ToArray());
+                                m_MessageListMutex.ReleaseMutex();
+                            }
+                            else if (result.MessageType == WebSocketMessageType.Close)
+                            {
+                                await Close();
+                                closeCode = WebSocketHelpers.ParseCloseCodeEnum((int)result.CloseStatus);
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            catch (Exception)
-            {
-                m_TokenSource.Cancel();
-                OnClose?.Invoke(WebSocketCloseCode.Abnormal);
-            }
+                catch (Exception)
+                {
+                    m_TokenSource.Cancel();
+                    closeCode = WebSocketCloseCode.Abnormal;
+                }
+
+                return closeCode;
+            });
         }
 
         public async Task Close()
