@@ -155,7 +155,7 @@ namespace Colyseus
 		public async Task Send(string type)
 		{
 			byte[] encodedType = System.Text.Encoding.UTF8.GetBytes(type);
-			byte[] initialBytes = { Protocol.ROOM_DATA, (byte)(encodedType.Length | 0xa0) };
+			byte[] initialBytes = ArrayUtils.getInitialBytesFromEncodedType(encodedType);
 
 			byte[] bytes = new byte[initialBytes.Length + encodedType.Length];
 			Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
@@ -175,7 +175,7 @@ namespace Colyseus
 			MsgPack.Serialize(message, serializationOutput, SerializationOptions.SuppressTypeInformation);
 
 			byte[] encodedType = System.Text.Encoding.UTF8.GetBytes(type);
-			byte[] initialBytes = { Protocol.ROOM_DATA, (byte) (encodedType.Length | 0xa0) };
+			byte[] initialBytes = ArrayUtils.getInitialBytesFromEncodedType(encodedType);
 			byte[] encodedMessage = serializationOutput.ToArray();
 
 			byte[] bytes = new byte[encodedType.Length + encodedMessage.Length + initialBytes.Length];
