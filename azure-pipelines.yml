@@ -2,11 +2,8 @@
 # https://aka.ms/yaml
 
 trigger:
-  batch: true
-  branches:
-    include:
-    - master
-    - release/*
+  - master
+  - release/*
 
 stages:
 - stage: build
