@@ -56,6 +56,7 @@ namespace Colyseus
 
 		protected Dictionary<string, IMessageHandler> OnMessageHandlers = new Dictionary<string, IMessageHandler>();
 
+		private Schema.Encoder Encode = Schema.Encoder.GetInstance();
 		private Schema.Decoder Decode = Schema.Decoder.GetInstance();
 
 		/// <summary>
@@ -155,7 +156,7 @@ namespace Colyseus
 		public async Task Send(string type)
 		{
 			byte[] encodedType = System.Text.Encoding.UTF8.GetBytes(type);
-			byte[] initialBytes = ArrayUtils.getInitialBytesFromEncodedType(encodedType);
+			byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType);
 
 			byte[] bytes = new byte[initialBytes.Length + encodedType.Length];
 			Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
@@ -175,7 +176,7 @@ namespace Colyseus
 			MsgPack.Serialize(message, serializationOutput, SerializationOptions.SuppressTypeInformation);
 
 			byte[] encodedType = System.Text.Encoding.UTF8.GetBytes(type);
-			byte[] initialBytes = ArrayUtils.getInitialBytesFromEncodedType(encodedType);
+			byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType);
 			byte[] encodedMessage = serializationOutput.ToArray();
 
 			byte[] bytes = new byte[encodedType.Length + encodedMessage.Length + initialBytes.Length];
