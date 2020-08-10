@@ -7,6 +7,7 @@ namespace Colyseus
 	{
 		protected T state;
 		protected Schema.Iterator it = new Schema.Iterator();
+		protected Schema.ReferenceCounter refs = new Schema.ReferenceCounter();
 
 		public SchemaSerializer()
 		{
@@ -30,11 +31,11 @@ namespace Colyseus
 			(state as Schema.Schema).Decode(data, it);
 		}
 
-	    public void Teardown ()
+		public void Teardown()
 		{
 		}
 
-    	public void Handshake (byte[] bytes, int offset)
+		public void Handshake(byte[] bytes, int offset)
 		{
 			Type targetType = typeof(T);
 
@@ -49,7 +50,7 @@ namespace Colyseus
 
 			reflection.Decode(bytes, it);
 
-			for (var i=0; i<reflection.types.Count; i++)
+			for (var i = 0; i < reflection.types.Count; i++)
 			{
 				Type schemaType = Array.Find(namespaceSchemaTypes, t => CompareTypes(t, reflection.types[i]));
 
@@ -68,7 +69,7 @@ namespace Colyseus
 			int typedFieldCount = 0;
 
 			string fieldNames = "";
-			for (var i=0;i< fields.Length;i++)
+			for (var i = 0; i < fields.Length; i++)
 			{
 				fieldNames += fields[i].Name + ", ";
 			}
@@ -79,14 +80,15 @@ namespace Colyseus
 
 				if (typeAttributes.Length == 1)
 				{
-					Schema.Type typedField = (Schema.Type) typeAttributes[0];
+					Schema.Type typedField = (Schema.Type)typeAttributes[0];
 					Schema.ReflectionField reflectionField = reflectionType.fields[typedField.Index];
 
 					if (
 						reflectionField == null ||
 						reflectionField.type.IndexOf(typedField.FieldType) != 0 ||
 						reflectionField.name != field.Name
-					) {
+					)
+					{
 						return false;
 					}
 

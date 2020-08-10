@@ -96,7 +96,7 @@ namespace Colyseus.Schema
 			else if (prefix == 0xcb)
 			{
 				// float 64
-				return (float) DecodeFloat64(bytes, it);
+				return (float)DecodeFloat64(bytes, it);
 
 			}
 			else if (prefix == 0xcc)
@@ -237,15 +237,15 @@ namespace Colyseus.Schema
 			}
 			else if (prefix == 0xd9)
 			{
-				length = (int) DecodeUint8(bytes, it);
+				length = (int)DecodeUint8(bytes, it);
 			}
 			else if (prefix == 0xda)
 			{
-				length = (int) DecodeUint16(bytes, it);
+				length = (int)DecodeUint16(bytes, it);
 			}
 			else if (prefix == 0xdb)
 			{
-				length = (int) DecodeUint32(bytes, it);
+				length = (int)DecodeUint32(bytes, it);
 			}
 			else
 			{
