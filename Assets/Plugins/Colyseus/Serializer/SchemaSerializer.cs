@@ -7,7 +7,7 @@ namespace Colyseus
 	{
 		protected T state;
 		protected Schema.Iterator it = new Schema.Iterator();
-		protected Schema.ReferenceCounter refs = new Schema.ReferenceCounter();
+		protected Schema.ReferenceTracker refs = new Schema.ReferenceTracker();
 
 		public SchemaSerializer()
 		{

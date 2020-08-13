@@ -1,13 +1,13 @@
-//
+// 
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
-//
-// GENERATED USING @colyseus/schema 0.4.61
-//
+// 
+// GENERATED USING @colyseus/schema 1.0.0-alpha.30
+// 
 
 using Colyseus.Schema;
 
-namespace SchemaTest.Backwards {
+namespace SchemaTest.BackwardsForwards {
 	public class PlayerV1 : Schema {
 		[Type(0, "number")]
 		public float x = 0;

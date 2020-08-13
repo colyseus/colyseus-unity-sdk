@@ -2,7 +2,7 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 0.4.32
+// GENERATED USING @colyseus/schema 1.0.0-alpha.30
 // 
 
 using Colyseus.Schema;
@@ -19,6 +19,6 @@ namespace SchemaTest.InheritedTypes {
 		public Bot bot = new Bot();
 
 		[Type(3, "ref", typeof(Entity))]
-		public Entity any;
+		public Entity any = new Entity();
 	}
 }

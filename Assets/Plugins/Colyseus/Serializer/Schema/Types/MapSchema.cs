@@ -1,0 +1,224 @@
+using System;
+using System.Collections;
+using System.Collections.Specialized;
+using System.Collections.Generic;
+
+namespace Colyseus.Schema
+{
+	public class MapSchema<T> : ISchemaCollection, IRef
+	{
+		public OrderedDictionary Items = new OrderedDictionary();
+		public event KeyValueEventHandler<T, string> OnAdd;
+		public event KeyValueEventHandler<T, string> OnChange;
+		public event KeyValueEventHandler<T, string> OnRemove;
+		private bool _hasSchemaChild = Schema.CheckSchemaChild(typeof(T));
+
+		protected Dictionary<int, string> indexes = new Dictionary<int, string>();
+
+		public int __refId { get; set; }
+		public IRef __parent { get; set; }
+
+		public MapSchema()
+		{
+			Items = new OrderedDictionary();
+		}
+
+		public MapSchema(OrderedDictionary items = null)
+		{
+			Items = items ?? new OrderedDictionary();
+		}
+
+		public void SetIndex(int index, int dynamicIndex)
+		{
+			// TODO:
+		}
+
+		public void SetByIndex(int index, object dynamicIndex, object value)
+		{
+			indexes.Add(index, (string)dynamicIndex);
+			Items.Add(dynamicIndex, (T)value);
+		}
+
+		public int GetIndex(int index)
+		{
+			// TODO:
+			return index;
+		}
+
+		public object GetByIndex(int index)
+		{
+			return Items[index];
+		}
+
+		public void DeleteByIndex(int index)
+		{
+			// TODO:
+		}
+
+		public ISchemaCollection Clone()
+		{
+			var clone = new MapSchema<T>(Items)
+			{
+				OnAdd = OnAdd,
+				OnChange = OnChange,
+				OnRemove = OnRemove
+			};
+			return clone;
+		}
+
+		public System.Type GetChildType()
+		{
+			return typeof(T);
+		}
+
+		public bool ContainsKey(object key)
+		{
+			return Items.Contains(key);
+		}
+
+		public bool HasSchemaChild
+		{
+			get { return _hasSchemaChild; }
+		}
+
+		public string ChildPrimitiveType { get; set; }
+
+		public T this[string key]
+		{
+			get
+			{
+				T value;
+				TryGetValue(key, out value);
+				return value;
+			}
+			set { Items[key] = value; }
+		}
+
+		public object this[object key]
+		{
+			get
+			{
+				T value;
+				TryGetValue(key as string, out value);
+				return value;
+			}
+			set { Items[(string)key] = (HasSchemaChild) ? (T)value : (T)Convert.ChangeType(value, typeof(T)); }
+		}
+
+		public IDictionary GetItems()
+		{
+			return Items;
+		}
+
+		public void Add(KeyValuePair<string, T> item)
+		{
+			Items[item.Key] = item.Value;
+		}
+
+		public void Clear()
+		{
+			Items.Clear();
+		}
+
+		public bool Contains(KeyValuePair<string, T> item)
+		{
+			return Items.Contains(item.Key);
+		}
+
+		public bool Remove(KeyValuePair<string, T> item)
+		{
+			T value;
+			if (TryGetValue(item.Key, out value) && Equals(value, item.Value))
+			{
+				Remove(item.Key);
+				return true;
+			}
+			return false;
+		}
+
+		public int Count
+		{
+			get { return Items.Count; }
+		}
+
+		public bool ContainsKey(string key)
+		{
+			return Items.Contains(key);
+		}
+
+		public void Add(string key, T value)
+		{
+			Items.Add(key, value);
+		}
+
+		public bool Remove(string key)
+		{
+			var result = Items.Contains(key);
+			if (result)
+			{
+				Items.Remove(key);
+			}
+			return result;
+		}
+
+		public bool TryGetValue(string key, out T value)
+		{
+			object foundValue;
+			if ((foundValue = Items[key]) != null || Items.Contains(key))
+			{
+				// Either found with a non-null value, or contained value is null.
+				value = (T)foundValue;
+				return true;
+			}
+			value = default(T);
+			return false;
+		}
+
+		public ICollection Keys
+		{
+			get { return Items.Keys; }
+		}
+
+		public ICollection Values
+		{
+			get { return Items.Values; }
+		}
+
+		public void SetItems(object items)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void ForEach(Action<string, T> action)
+		{
+			foreach (DictionaryEntry item in Items)
+			{
+				action((string)item.Key, (T)item.Value);
+			}
+		}
+
+		public void TriggerAll()
+		{
+			if (OnAdd == null) { return; }
+			foreach (DictionaryEntry item in Items)
+			{
+				OnAdd.Invoke((T)item.Value, (string)item.Key);
+			}
+		}
+
+		public void InvokeOnAdd(object item, object index)
+		{
+			OnAdd?.Invoke((T)item, (string)index);
+		}
+
+		public void InvokeOnChange(object item, object index)
+		{
+			OnChange?.Invoke((T)item, (string)index);
+		}
+
+		public void InvokeOnRemove(object item, object index)
+		{
+			OnRemove?.Invoke((T)item, (string)index);
+		}
+	}
+}

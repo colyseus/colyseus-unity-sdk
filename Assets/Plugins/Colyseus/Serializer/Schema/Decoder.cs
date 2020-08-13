@@ -258,17 +258,9 @@ namespace Colyseus.Schema
 			return str;
 		}
 
-		/*
-	     * Bool checks
-	     */
-		public bool NilCheck(byte[] bytes, Iterator it)
+		public bool SwitchStructureCheck(byte[] bytes, Iterator it)
 		{
-			return bytes[it.Offset] == (byte)SPEC.NIL;
-		}
-
-		public bool IndexChangeCheck(byte[] bytes, Iterator it)
-		{
-			return bytes[it.Offset] == (byte)SPEC.INDEX_CHANGE;
+			return bytes[it.Offset] == (byte)SPEC.SWITCH_TO_STRUCTURE;
 		}
 
 		public bool NumberCheck(byte[] bytes, Iterator it)
