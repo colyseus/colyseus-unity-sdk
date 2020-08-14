@@ -73,7 +73,9 @@ public class SchemaDeserializerTest
 		state.arrayOfNumbers.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfNumbers => " + key);
 		state.arrayOfStrings.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfStrings => " + key);
 		state.arrayOfInt32.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfInt32 => " + key);
-		state.Decode(bytes);
+
+		var refs = new Colyseus.Schema.ReferenceTracker();
+		state.Decode(bytes, null, refs);
 
 		Debug.Log("Decoded 1st time!");
 
@@ -105,7 +107,7 @@ public class SchemaDeserializerTest
 		state.arrayOfInt32.OnRemove += (value, key) => Debug.Log("onRemove, arrayOfInt32 => " + key);
 
 		byte[] popBytes = { 255, 1, 64, 1, 255, 2, 64, 3, 64, 2, 64, 1, 255, 4, 64, 2, 64, 1, 255, 3, 64, 2, 64, 1 };
-		state.Decode(popBytes);
+		state.Decode(popBytes, null, refs);
 		Debug.Log("Decoded 2nd time!");
 
 		Assert.AreEqual(1, state.arrayOfSchemas.Count);
@@ -119,7 +121,7 @@ public class SchemaDeserializerTest
 	public void MapSchemaTypesTest()
 	{
 		var state = new SchemaTest.MapSchemaTypes.MapSchemaTypes();
-		byte[] bytes = { 0, 3, 163, 111, 110, 101, 0, 100, 1, 204, 200, 193, 163, 116, 119, 111, 0, 205, 44, 1, 1, 205, 144, 1, 193, 165, 116, 104, 114, 101, 101, 0, 205, 244, 1, 1, 205, 88, 2, 193, 1, 3, 163, 111, 110, 101, 1, 163, 116, 119, 111, 2, 165, 116, 104, 114, 101, 101, 205, 192, 13, 2, 3, 163, 111, 110, 101, 163, 79, 110, 101, 163, 116, 119, 111, 163, 84, 119, 111, 165, 116, 104, 114, 101, 101, 165, 84, 104, 114, 101, 101, 3, 3, 163, 111, 110, 101, 192, 13, 0, 0, 163, 116, 119, 111, 24, 252, 255, 255, 165, 116, 104, 114, 101, 101, 208, 7, 0, 0 };
+		byte[] bytes = { 128, 1, 129, 2, 130, 3, 131, 4, 255, 1, 128, 0, 163, 111, 110, 101, 5, 128, 1, 163, 116, 119, 111, 6, 128, 2, 165, 116, 104, 114, 101, 101, 7, 255, 2, 128, 0, 163, 111, 110, 101, 1, 128, 1, 163, 116, 119, 111, 2, 128, 2, 165, 116, 104, 114, 101, 101, 205, 192, 13, 255, 3, 128, 0, 163, 111, 110, 101, 163, 79, 110, 101, 128, 1, 163, 116, 119, 111, 163, 84, 119, 111, 128, 2, 165, 116, 104, 114, 101, 101, 165, 84, 104, 114, 101, 101, 255, 4, 128, 0, 163, 111, 110, 101, 192, 13, 0, 0, 128, 1, 163, 116, 119, 111, 24, 252, 255, 255, 128, 2, 165, 116, 104, 114, 101, 101, 208, 7, 0, 0, 255, 5, 128, 100, 129, 204, 200, 255, 6, 128, 205, 44, 1, 129, 205, 144, 1, 255, 7, 128, 205, 244, 1, 129, 205, 88, 2 };
 
 		state.mapOfSchemas.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfSchemas => " + key);
 		state.mapOfNumbers.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfNumbers => " + key);
@@ -131,7 +133,8 @@ public class SchemaDeserializerTest
 		state.mapOfStrings.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfStrings => " + key);
 		state.mapOfInt32.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfInt32 => " + key);
 
-		state.Decode(bytes);
+		var refs = new Colyseus.Schema.ReferenceTracker();
+		state.Decode(bytes, null, refs);
 
 		Assert.AreEqual(state.mapOfSchemas.Count, 3);
 		Assert.AreEqual(state.mapOfSchemas["one"].x, 100);
@@ -156,8 +159,8 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(state.mapOfInt32["two"], -1000);
 		Assert.AreEqual(state.mapOfInt32["three"], 2000);
 
-		byte[] deleteBytes = { 1, 2, 192, 1, 192, 2, 0, 2, 192, 1, 192, 2, 2, 2, 192, 1, 192, 2, 3, 2, 192, 1, 192, 2 };
-		state.Decode(deleteBytes);
+		byte[] deleteBytes = { 255, 2, 64, 1, 64, 2, 255, 1, 64, 1, 64, 2, 255, 3, 64, 1, 64, 2, 255, 4, 64, 1, 64, 2 };
+		state.Decode(deleteBytes, null, refs);
 
 		Assert.AreEqual(state.mapOfSchemas.Count, 1);
 		Assert.AreEqual(state.mapOfNumbers.Count, 1);

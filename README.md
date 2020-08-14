@@ -27,6 +27,10 @@
 | Master Branch Build Status | [![Build Status](https://dev.azure.com/colyseus/colyseus-unity3d/_apis/build/status/colyseus.colyseus-unity3d?branchName=master)](https://dev.azure.com/colyseus/colyseus-unity3d/_build/latest?definitionId=2&branchName=master) |
 
 
+## Unit tests
+
+Open Window → General → Test Runner.
+
 ## Releasing a new version
 
 How to create a release:

@@ -14,7 +14,7 @@ namespace Colyseus.Schema
 
 		public void Add(int refId, IRef _ref)
 		{
-			Debug.Log("Add ref id => " + refId);
+			//Debug.Log("Add ref id => " + refId);
 
 			if (!refs.ContainsKey(refId))
 			{

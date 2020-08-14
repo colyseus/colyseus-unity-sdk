@@ -13,6 +13,8 @@ namespace Colyseus.Schema
 		public event KeyValueEventHandler<T, int> OnRemove;
 		private bool _hasSchemaChild = Schema.CheckSchemaChild(typeof(T));
 
+		protected Dictionary<int, int> Indexes = new Dictionary<int, int>();
+
 		public int __refId { get; set; }
 		public  IRef __parent { get; set; }
 
@@ -26,9 +28,12 @@ namespace Colyseus.Schema
 			Items = items ?? new Dictionary<int, T>();
 		}
 
-		public void SetIndex(int index, int dynamicIndex)
+		public void SetIndex(int index, dynamic dynamicIndex)
 		{
-			// TODO:
+			if (!Indexes.ContainsKey(index))
+			{
+				Indexes.Add(index, dynamicIndex);
+			}
 		}
 
 		public void SetByIndex(int index, object dynamicIndex, object value)
@@ -36,10 +41,13 @@ namespace Colyseus.Schema
 			Items.Add((int)dynamicIndex, (T)value);
 		}
 
-		public int GetIndex(int index)
+		public dynamic GetIndex(int index)
 		{
-			// TODO:
-			return index;
+			int dynamicIndex;
+
+			Indexes.TryGetValue(index, out dynamicIndex);
+
+			return dynamicIndex;
 		}
 
 		public object GetByIndex(int index)
@@ -74,6 +82,11 @@ namespace Colyseus.Schema
 		public System.Type GetChildType()
 		{
 			return typeof(T);
+		}
+
+		public dynamic GetTypeDefaultValue()
+		{
+			return default(T);
 		}
 
 		public bool ContainsKey(object key)
@@ -140,6 +153,13 @@ namespace Colyseus.Schema
 			{
 				OnAdd.Invoke((T)Items[i], (int)i);
 			}
+		}
+
+		public void MoveEventHandlers(ISchemaCollection previousInstance)
+		{
+			OnAdd = ((ArraySchema<T>)previousInstance).OnAdd;
+			OnChange = ((ArraySchema<T>)previousInstance).OnChange;
+			OnRemove = ((ArraySchema<T>)previousInstance).OnRemove;
 		}
 
 		public void InvokeOnAdd(object item, object index)

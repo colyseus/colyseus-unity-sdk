@@ -85,8 +85,8 @@ namespace Colyseus.Schema
 		public byte Op;
 		public string Field;
 		public object DynamicIndex;
-		public object Value;
-		public object PreviousValue;
+		public dynamic Value;
+		public dynamic PreviousValue;
 	}
 
 	public delegate void OnChangeEventHandler(List<DataChange> changes);
@@ -95,6 +95,7 @@ namespace Colyseus.Schema
 
 	public interface ISchemaCollection
 	{
+		void MoveEventHandlers(ISchemaCollection previousInstance);
 		void InvokeOnAdd(object item, object index);
 		void InvokeOnChange(object item, object index);
 		void InvokeOnRemove(object item, object index);
@@ -105,6 +106,7 @@ namespace Colyseus.Schema
 		void Clear();
 
 		System.Type GetChildType();
+		dynamic GetTypeDefaultValue();
 		bool ContainsKey(object key);
 
 		bool HasSchemaChild { get; }
@@ -113,7 +115,8 @@ namespace Colyseus.Schema
 		int Count { get; }
 		object this[object key] { get; set; }
 
-		void SetIndex(int index, int dynamicIndex);
+		void SetIndex(int index, dynamic dynamicIndex);
+		dynamic GetIndex(int index);
 		void SetByIndex(int index, object dynamicIndex, object value);
 
 		ISchemaCollection Clone();
@@ -126,7 +129,6 @@ namespace Colyseus.Schema
 
 		object GetByIndex(int index);
 		void DeleteByIndex(int index);
-		int GetIndex(int index);
 	}
 
 	public class Schema : IRef
@@ -211,8 +213,8 @@ namespace Colyseus.Schema
 					//
 					if (_ref == null) { throw new Exception("refId not found: " + refId); }
 
-					Debug.Log("SWITCH_TO_STRUCTURE => " + refId);
-					Debug.Log(_ref.GetType().ToString());
+					//Debug.Log("SWITCH_TO_STRUCTURE => " + refId);
+					//Debug.Log(_ref.GetType().ToString());
 
 					// create empty list of changes for this refId.
 					changes = new List<DataChange>();
@@ -277,9 +279,11 @@ namespace Colyseus.Schema
 						dynamicIndex = (decode.NumberCheck(bytes, it))
 							? Convert.ToInt32(decode.DecodeNumber(bytes, it))
 							: (object) decode.DecodeString(bytes, it);
+
+						((ISchemaCollection)_ref).SetIndex(fieldIndex, dynamicIndex);
 					} else
 					{
-						dynamicIndex = _ref.GetIndex(fieldIndex);
+						dynamicIndex = ((ISchemaCollection)_ref).GetIndex(fieldIndex);
 					}
 				}
 				else
@@ -352,9 +356,8 @@ namespace Colyseus.Schema
 
 							if (previousValue != null)
 							{
-								// TODO: can't copy delegates over
-								//value.onChange = previousValue.onChange;
-								//value.onRemove = previousValue.onRemove;
+								((Schema)value).OnChange = ((Schema)previousValue).OnChange;
+								((Schema)value).OnRemove = ((Schema)previousValue).OnRemove;
 
 								if (
 									((IRef)previousValue).__refId > 0 &&
@@ -394,9 +397,7 @@ namespace Colyseus.Schema
 
 					if (previousValue != null)
 					{
-						// TODO: can't copy delegates over
-						//value.onChange = previousValue.onChange;
-						//value.onRemove = previousValue.onRemove;
+						((ISchemaCollection)value).MoveEventHandlers(((ISchemaCollection)previousValue));
 
 						if (
 							((IRef)previousValue).__refId > 0 &&
@@ -446,8 +447,6 @@ namespace Colyseus.Schema
 					}
 					else if (_ref is ISchemaCollection)
 					{
-						Debug.Log("SetByIndex: " + fieldIndex + ", " + dynamicIndex);
-						Debug.Log(value.GetType().ToString());
 						((ISchemaCollection)_ref).SetByIndex(fieldIndex, dynamicIndex, value);
 					}
 				}
@@ -517,9 +516,11 @@ namespace Colyseus.Schema
 
 					if (!isSchema)
 					{
-						if (change.Op == (byte)OPERATION.ADD && change.PreviousValue == null)
+						ISchemaCollection container = ((ISchemaCollection)_ref);
+						
+						if (change.Op == (byte)OPERATION.ADD && change.PreviousValue == container.GetTypeDefaultValue())
 						{
-							((ISchemaCollection)_ref).InvokeOnAdd(change.Value, change.DynamicIndex);
+							container.InvokeOnAdd(change.Value, change.DynamicIndex);
 
 						}
 						else if (change.Op == (byte)OPERATION.DELETE)
@@ -528,19 +529,19 @@ namespace Colyseus.Schema
 							// FIXME: `previousValue` should always be avaiiable.
 							// ADD + DELETE operations are still encoding DELETE operation.
 							//
-							if (change.PreviousValue != null)
+							if (change.PreviousValue != container.GetTypeDefaultValue())
 							{
-								((ISchemaCollection)_ref).InvokeOnRemove(change.PreviousValue, change.DynamicIndex ?? change.Field);
+								container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex ?? change.Field);
 							}
 
 						}
 						else if (change.Op == (byte)OPERATION.DELETE_AND_ADD)
 						{
-							if (change.PreviousValue != null)
+							if (change.PreviousValue != container.GetTypeDefaultValue())
 							{
-								((ISchemaCollection)_ref).InvokeOnRemove(change.PreviousValue, change.DynamicIndex);
+								container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex);
 							}
-							((ISchemaCollection)_ref).InvokeOnAdd(change.Value, change.DynamicIndex);
+							container.InvokeOnAdd(change.Value, change.DynamicIndex);
 
 						}
 						else if (
@@ -548,7 +549,7 @@ namespace Colyseus.Schema
 							change.Value != change.PreviousValue
 						)
 						{
-							((ISchemaCollection)_ref).InvokeOnChange(change.Value, change.DynamicIndex);
+							container.InvokeOnChange(change.Value, change.DynamicIndex);
 						}
 					}
 
@@ -602,11 +603,6 @@ namespace Colyseus.Schema
 			string fieldName;
 			fieldsByIndex.TryGetValue(index, out fieldName);
 			this[fieldName] = null;
-		}
-
-		public int GetIndex(int index)
-		{
-			return index;
 		}
 
 		public static bool CheckSchemaChild(System.Type toCheck)

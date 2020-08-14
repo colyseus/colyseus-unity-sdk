@@ -13,7 +13,7 @@ namespace Colyseus.Schema
 		public event KeyValueEventHandler<T, string> OnRemove;
 		private bool _hasSchemaChild = Schema.CheckSchemaChild(typeof(T));
 
-		protected Dictionary<int, string> indexes = new Dictionary<int, string>();
+		protected Dictionary<int, string> Indexes = new Dictionary<int, string>();
 
 		public int __refId { get; set; }
 		public IRef __parent { get; set; }
@@ -28,31 +28,49 @@ namespace Colyseus.Schema
 			Items = items ?? new OrderedDictionary();
 		}
 
-		public void SetIndex(int index, int dynamicIndex)
+		public void SetIndex(int index, dynamic dynamicIndex)
 		{
-			// TODO:
+			if (!Indexes.ContainsKey(index))
+			{
+				Indexes.Add(index, dynamicIndex);
+			}
 		}
 
 		public void SetByIndex(int index, object dynamicIndex, object value)
 		{
-			indexes.Add(index, (string)dynamicIndex);
-			Items.Add(dynamicIndex, (T)value);
+			if (!Indexes.ContainsKey(index))
+			{
+				Indexes.Add(index, (string)dynamicIndex);
+			}
+
+			Items[dynamicIndex] = (T)value;
 		}
 
-		public int GetIndex(int index)
+		public dynamic GetIndex(int index)
 		{
-			// TODO:
-			return index;
+			string dynamicIndex;
+
+			Indexes.TryGetValue(index, out dynamicIndex);
+
+			return dynamicIndex;
 		}
 
 		public object GetByIndex(int index)
 		{
-			return Items[index];
+			string dynamicIndex = GetIndex(index);
+			return (dynamicIndex != null && Items.Contains(dynamicIndex))
+				? Items[dynamicIndex]
+				: GetTypeDefaultValue();
 		}
 
 		public void DeleteByIndex(int index)
 		{
-			// TODO:
+			string dynamicIndex = GetIndex(index);
+			if (Items.Contains(dynamicIndex))
+			{
+				Items.Remove(dynamicIndex);
+				Indexes.Remove(index);
+			}
 		}
 
 		public ISchemaCollection Clone()
@@ -69,6 +87,11 @@ namespace Colyseus.Schema
 		public System.Type GetChildType()
 		{
 			return typeof(T);
+		}
+
+		public dynamic GetTypeDefaultValue()
+		{
+			return default(T);
 		}
 
 		public bool ContainsKey(object key)
@@ -204,6 +227,13 @@ namespace Colyseus.Schema
 			{
 				OnAdd.Invoke((T)item.Value, (string)item.Key);
 			}
+		}
+
+		public void MoveEventHandlers(ISchemaCollection previousInstance)
+		{
+			OnAdd = ((MapSchema<T>)previousInstance).OnAdd;
+			OnChange = ((MapSchema<T>)previousInstance).OnChange;
+			OnRemove = ((MapSchema<T>)previousInstance).OnRemove;
 		}
 
 		public void InvokeOnAdd(object item, object index)
