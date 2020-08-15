@@ -38,24 +38,11 @@ namespace Colyseus.Schema
 		public System.Type ChildType;
 		public string ChildPrimitiveType;
 
-		public Type(int index, string type, System.Type childType = null)
+		public Type(int index, string type, System.Type childType = null, string childPrimitiveType = null)
 		{
 			Index = index; // GetType().GetFields() doesn't guarantee order of fields, need to manually track them here!
 			FieldType = type;
 			ChildType = childType;
-		}
-
-		public Type(int index, System.Type childType, string childPrimitiveType = null)
-		{
-			Index = index; // GetType().GetFields() doesn't guarantee order of fields, need to manually track them here!
-			ChildType = childType;
-			ChildPrimitiveType = childPrimitiveType;
-		}
-
-		public Type(int index, string type, string childPrimitiveType)
-		{
-			Index = index; // GetType().GetFields() doesn't guarantee order of fields, need to manually track them here!
-			FieldType = type;
 			ChildPrimitiveType = childPrimitiveType;
 		}
 	}

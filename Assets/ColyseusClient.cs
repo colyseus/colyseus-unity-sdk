@@ -143,7 +143,7 @@ public class ColyseusClient : MonoBehaviour {
 
 		room.State.entities.OnAdd += OnEntityAdd;
 		room.State.entities.OnRemove += OnEntityRemove;
-		room.State.entities.OnChange += OnEntityMove;
+		//room.State.entities.OnChange += OnEntityMove;
 		room.State.TriggerAll();
 
 		PlayerPrefs.SetString("roomId", room.Id);
@@ -234,8 +234,14 @@ public class ColyseusClient : MonoBehaviour {
 
 		cube.transform.position = new Vector3(entity.x, entity.y, 0);
 
-		// add "player" to map of players
+		// Add "player" to map of players
 		entities.Add(entity, cube);
+
+		// On entity update...
+		entity.OnChange += (List<Colyseus.Schema.DataChange> changes) =>
+		{
+			cube.transform.Translate(new Vector3(entity.x, entity.y, 0));
+		};
 	}
 
 	void OnEntityRemove(Entity entity, string key)
@@ -245,17 +251,6 @@ public class ColyseusClient : MonoBehaviour {
 		Destroy(cube);
 
 		entities.Remove(entity);
-	}
-
-
-	void OnEntityMove(Entity entity, string key)
-	{
-		GameObject cube;
-		entities.TryGetValue (entity, out cube);
-
-		Debug.Log(entity);
-
-		cube.transform.Translate (new Vector3 (entity.x, entity.y, 0));
 	}
 
 	void OnApplicationQuit()
