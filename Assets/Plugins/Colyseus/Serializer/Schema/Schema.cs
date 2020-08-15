@@ -183,6 +183,12 @@ namespace Colyseus.Schema
 			}
 		}
 
+		public Dictionary<string, System.Type> GetFieldChildTypes()
+		{
+			// This is required for "garbage collection" inside ReferenceTracker.
+			return fieldChildTypes;
+		}
+
 		public void Decode(byte[] bytes, Iterator it = null, ReferenceTracker refs = null)
 		{
 			var decode = Decoder.GetInstance();

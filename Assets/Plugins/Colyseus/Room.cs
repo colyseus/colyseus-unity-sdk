@@ -20,7 +20,9 @@ namespace Colyseus
 		Task Leave(bool consented);
 	}
 
-    public class Room<T> : IRoom
+	public class FossilDeltaState : IndexedDictionary<string, object> {/*public FossilDelta() : base()*/}
+
+	public class Room<T> : IRoom
 	{
 		public delegate void RoomOnMessageEventHandler(object message);
 		public delegate void RoomOnStateChangeEventHandler(T state, bool isFirstState);
@@ -214,7 +216,6 @@ namespace Colyseus
 		protected async void ParseMessage (byte[] bytes)
 		{
 			byte code = bytes[0];
-			Debug.Log("BYTE =>" + code);
 
 			if (code == Protocol.JOIN_ROOM)
 			{
@@ -230,6 +231,9 @@ namespace Colyseus
 				} else if (SerializerId == "fossil-delta")
 				{
 					serializer = (ISerializer<T>) new FossilDeltaSerializer();
+				} else
+				{
+					serializer = (ISerializer<T>) new NoneSerializer();
 				}
 
 				if (bytes.Length > offset)
@@ -326,6 +330,6 @@ namespace Colyseus
 			serializer.Patch(delta, offset);
 			OnStateChange?.Invoke(serializer.GetState(), false);
 		}
-
 	}
+
 }

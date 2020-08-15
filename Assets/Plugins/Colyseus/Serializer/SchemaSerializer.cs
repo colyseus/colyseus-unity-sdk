@@ -33,8 +33,8 @@ namespace Colyseus
 
 		public void Teardown()
 		{
-			// TODO: remove all refs.
-			refs.GarbageCollection();
+			// Clear all stored references.
+			refs.Clear();
 		}
 
 		public void Handshake(byte[] bytes, int offset)

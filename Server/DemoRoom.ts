@@ -3,26 +3,20 @@ import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 import { verifyToken, User, IUser } from "@colyseus/social";
 
 class Entity extends Schema {
-  @type("number")
-  x: number = 0;
-
-  @type("number")
-  y: number = 0;
+  @type("number") x: number = 0;
+  @type("number") y: number = 0;
 }
 
 class Player extends Entity {
-  @type("boolean")
-  connected: boolean = true;
+  @type("boolean") connected: boolean = true;
 }
 
 class Enemy extends Entity {
-  @type("number")
-  power: number = Math.random() * 10;
+  @type("number") power: number = Math.random() * 10;
 }
 
 class State extends Schema {
-  @type({ map: Entity })
-  entities = new MapSchema<Entity>();
+  @type({ map: Entity }) entities = new MapSchema<Entity>();
 }
 
 /**

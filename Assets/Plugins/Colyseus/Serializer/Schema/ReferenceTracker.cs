@@ -7,19 +7,25 @@ namespace Colyseus.Schema
 	public class ReferenceTracker
 	{
 		protected Dictionary<int, IRef> refs = new Dictionary<int, IRef>();
+		protected Dictionary<int, int> refCounts = new Dictionary<int, int>();
+		protected List<int> deletedRefs = new List<int>();
 
-		public ReferenceTracker()
-		{
-		}
+		public ReferenceTracker() {}
 
 		public void Add(int refId, IRef _ref)
 		{
-			//Debug.Log("Add ref id => " + refId);
+			int previousCount;
 
 			if (!refs.ContainsKey(refId))
 			{
-				refs.Add(refId, _ref);
+				refs[refId] = _ref;
+				previousCount = 0;
+			} else
+			{
+				previousCount = refCounts[refId];
 			}
+
+			refCounts[refId] = previousCount + 1;
 		}
 
 		public IRef Get(int refId)
@@ -38,45 +44,50 @@ namespace Colyseus.Schema
 
 		public void Remove(int refId)
 		{
-			refs.Remove(refId);
+			refCounts[refId] = refCounts[refId] - 1;
+
+			if (!deletedRefs.Contains(refId))
+			{
+				deletedRefs.Add(refId);
+			}
 		}
 
 		public void GarbageCollection()
 		{
-	//		this.deletedRefs.forEach((refId) => {
-	//		if (this.refCounts[refId] <= 0)
-	//		{
-	//			const ref = this.refs.get(refId);
+			foreach (int refId in deletedRefs)
+			{
+				Debug.Log("Deleted ref => " + refId);
+				if (refCounts[refId] <= 0)
+				{
+					var _ref = refs[refId];
+					if (_ref is Schema)
+					{
+						foreach (KeyValuePair<string, System.Type> field in ((Schema)_ref).GetFieldChildTypes())
+						{
+							var fieldValue = ((Schema)_ref)[field.Key];
+							if (fieldValue is IRef)
+							{
+								Remove(((IRef)fieldValue).__refId);
+							}
+						}
+					} else if (_ref is ISchemaCollection && ((ISchemaCollection)_ref).HasSchemaChild)
+					{
+						foreach (KeyValuePair<string, IRef> item in ((ISchemaCollection)_ref).GetItems())
+						{
+							Remove(item.Value.__refId);
+						}
+					}
+					refs.Remove(refId);
+					refCounts.Remove(refId);
+				}
+			}
+		}
 
-	//			//
-	//			// Ensure child schema instances have their references removed as well.
-	//			//
-	//			if (ref instanceof Schema) {
-	//			for (const fieldName in ref['_definition'].schema) {
-	//				if (
-	//					typeof(ref['_definition'].schema[fieldName]) !== "string" &&
-	//				   ref[fieldName] &&
-	//				   ref[fieldName]['$changes']
- //                       ) {
-	//					this.removeRef(ref[fieldName]['$changes'].refId);
-	//				}
-	//			}
-
-	//		} else
-	//		{
-	//			const definition: SchemaDefinition = ref['$changes'].parent._definition;
-	//			const type = definition.schema[definition.fieldsByIndex[ref['$changes'].parentIndex]];
-
-	//			if (typeof(Object.values(type)[0]) === "function") {
-	//				Array.from(ref.values())
-	//					.forEach((child) => this.removeRef(child['$changes'].refId));
-	//			}
-	//		}
-
-	//		this.refs.delete(refId);
-	//		delete this.refCounts[refId];
-	//	}
-	//});
+		public void Clear()
+		{
+			refs.Clear();
+			refCounts.Clear();
+			deletedRefs.Clear();
 		}
 	}
 }

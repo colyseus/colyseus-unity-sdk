@@ -1,5 +1,3 @@
-using System;
-using GameDevWare.Serialization;
 
 namespace Colyseus
 {

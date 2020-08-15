@@ -30,19 +30,12 @@ namespace Colyseus.Schema
 
 		public void SetIndex(int index, dynamic dynamicIndex)
 		{
-			if (!Indexes.ContainsKey(index))
-			{
-				Indexes.Add(index, dynamicIndex);
-			}
+			Indexes[index] = dynamicIndex;
 		}
 
 		public void SetByIndex(int index, object dynamicIndex, object value)
 		{
-			if (!Indexes.ContainsKey(index))
-			{
-				Indexes.Add(index, (string)dynamicIndex);
-			}
-
+			Indexes[index] = (string)dynamicIndex;
 			Items[dynamicIndex] = (T)value;
 		}
 
