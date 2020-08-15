@@ -7,19 +7,19 @@ namespace Colyseus.Schema
 	{
 		protected static Context instance = new Context();
 		protected List<System.Type> types = new List<System.Type>();
-		protected Dictionary<int, System.Type> typeIds = new Dictionary<int, System.Type>();
+		protected Dictionary<float, System.Type> typeIds = new Dictionary<float, System.Type>();
 
 		public static Context GetInstance()
 		{
 			return instance;
 		}
 
-		public void SetTypeId(System.Type type, int typeid)
+		public void SetTypeId(System.Type type, float typeid)
 		{
 			typeIds[typeid] = type;
 		}
 
-		public System.Type Get(int typeid)
+		public System.Type Get(float typeid)
 		{
 			return typeIds[typeid];
 		}

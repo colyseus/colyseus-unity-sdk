@@ -170,7 +170,7 @@ namespace Colyseus.Schema
 		}
 
 		/* allow to retrieve property values by its string name */
-		public object this[string propertyName]
+		public dynamic this[string propertyName]
 		{
 			get
 			{
@@ -245,9 +245,10 @@ namespace Colyseus.Schema
 				{
 					fieldIndex = _byte % ((operation == 0) ? 255 : operation); // FIXME: JS allows (0 || 255)
 					((Schema)_ref).fieldsByIndex.TryGetValue(fieldIndex, out fieldName);
-					fieldType = ((Schema)_ref).fieldTypes[fieldName];
 
-					((Schema)_ref).fieldChildTypes.TryGetValue(fieldName, out childType);
+					// fieldType = ((Schema)_ref).fieldTypes[fieldName];
+					((Schema)_ref).fieldTypes.TryGetValue(fieldName ?? "", out fieldType);
+					((Schema)_ref).fieldChildTypes.TryGetValue(fieldName ?? "", out childType);
 				}
 				else
 				{
@@ -263,7 +264,6 @@ namespace Colyseus.Schema
 					{
 						fieldType = ((ISchemaCollection)_ref).ChildPrimitiveType;
 					}
-					
 				}
 
 				object value = null;
@@ -286,7 +286,7 @@ namespace Colyseus.Schema
 						dynamicIndex = ((ISchemaCollection)_ref).GetIndex(fieldIndex);
 					}
 				}
-				else
+				else if (fieldName != null) // FIXME: duplicate check
 				{
 					previousValue = ((Schema)_ref)[fieldName];
 				}

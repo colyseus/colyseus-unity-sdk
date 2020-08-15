@@ -9,13 +9,13 @@ namespace Colyseus.Schema
 		public string type;
 
 		[Type(2, "number")]
-		public int referencedType;
+		public float referencedType;
 	}
 
 	public class ReflectionType : Schema
 	{
 		[Type(0, "number")]
-		public int id;
+		public float id;
 
 		[Type(1, "array", typeof(ArraySchema<ReflectionField>))]
 		public ArraySchema<ReflectionField> fields = new ArraySchema<ReflectionField>();
@@ -27,6 +27,6 @@ namespace Colyseus.Schema
 		public ArraySchema<ReflectionType> types = new ArraySchema<ReflectionType>();
 
 		[Type(1, "number")]
-		public int rootType;
+		public float rootType;
 	}
 }

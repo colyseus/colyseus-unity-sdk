@@ -17,7 +17,7 @@ namespace Colyseus
 		public void SetState(byte[] data, int offset = 0)
 		{
 			it.Offset = offset;
-			(state as Schema.Schema).Decode(data, it);
+			(state as Schema.Schema).Decode(data, it, refs);
 		}
 
 		public T GetState()
@@ -28,11 +28,13 @@ namespace Colyseus
 		public void Patch(byte[] data, int offset = 0)
 		{
 			it.Offset = offset;
-			(state as Schema.Schema).Decode(data, it);
+			(state as Schema.Schema).Decode(data, it, refs);
 		}
 
 		public void Teardown()
 		{
+			// TODO: remove all refs.
+			refs.GarbageCollection();
 		}
 
 		public void Handshake(byte[] bytes, int offset)
