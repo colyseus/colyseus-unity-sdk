@@ -81,6 +81,8 @@ namespace Colyseus.Schema
 					refCounts.Remove(refId);
 				}
 			}
+
+			deletedRefs.Clear();
 		}
 
 		public void Clear()

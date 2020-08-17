@@ -211,7 +211,7 @@ namespace Colyseus.Schema
 
 					// create empty list of changes for this refId.
 					changes = new List<DataChange>();
-					allChanges.Add(refId, changes);
+					allChanges[refId] = changes;
 
 					continue;
 				}

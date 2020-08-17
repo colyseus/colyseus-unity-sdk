@@ -49,9 +49,18 @@ namespace Colyseus.Schema
 
 		public object GetByIndex(int index)
 		{
-			// TODO:
+			//
+			// FIXME: GetByIndex should be O(1)
+			//
+			var keys = new List<int>(Items.Keys);
+
+			int dynamicIndex = (index < keys.Count)
+				? keys[index]
+				: -1;
+
 			T value;
-			Items.TryGetValue(index, out value);
+			Items.TryGetValue(dynamicIndex, out value);
+
 			return value;
 		}
 
@@ -105,23 +114,13 @@ namespace Colyseus.Schema
 
 		public T this[int index]
 		{
-			get
-			{
-				T value;
-				Items.TryGetValue(index, out value);
-				return value;
-			}
+			get { return (T) GetByIndex(index); }
 			set { Items[index] = value; }
 		}
 
 		public object this[object key]
 		{
-			get
-			{
-				T value;
-				Items.TryGetValue((int)key, out value);
-				return value;
-			}
+			get { return this[(int)key]; }
 			set { Items[(int)key] = (HasSchemaChild) ? (T)value : (T)Convert.ChangeType(value, typeof(T)); }
 		}
 

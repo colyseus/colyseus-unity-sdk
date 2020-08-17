@@ -259,4 +259,20 @@ public class SchemaDeserializerTest
 		*/
 	}
 
+	[Test]
+	public void FilteredTypesTest()
+	{
+		var client1 = new SchemaTest.FilteredTypes.State();
+		client1.Decode(new byte[] { 255, 0, 130, 1, 128, 2, 128, 2, 255, 1, 128, 0, 0, 4, 255, 2, 128, 163, 111, 110, 101, 255, 2, 128, 163, 111, 110, 101, 255, 4, 128, 163, 111, 110, 101 });
+		Assert.AreEqual("one", client1.playerOne.name);
+		Assert.AreEqual("one", client1.players[0].name);
+		Assert.AreEqual(null, client1.playerTwo.name);
+
+		var client2 = new SchemaTest.FilteredTypes.State();
+		client2.Decode(new byte[] { 255, 0, 130, 1, 129, 3, 129, 3, 255, 1, 128, 1, 1, 5, 255, 3, 128, 163, 116, 119, 111, 255, 3, 128, 163, 116, 119, 111, 255, 5, 128, 163, 116, 119, 111 });
+		Assert.AreEqual("two", client2.playerTwo.name);
+		Assert.AreEqual("two", client2.players[0].name);
+		Assert.AreEqual(null, client2.playerOne.name);
+	}
+
 }
