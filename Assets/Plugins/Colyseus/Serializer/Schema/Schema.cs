@@ -206,9 +206,6 @@ namespace Colyseus.Schema
 					//
 					if (_ref == null) { throw new Exception("refId not found: " + refId); }
 
-					//Debug.Log("SWITCH_TO_STRUCTURE => " + refId);
-					//Debug.Log(_ref.GetType().ToString());
-
 					// create empty list of changes for this refId.
 					changes = new List<DataChange>();
 					allChanges[refId] = changes;
@@ -269,9 +266,10 @@ namespace Colyseus.Schema
 
 					if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
 					{
-						dynamicIndex = (decode.NumberCheck(bytes, it))
-							? Convert.ToInt32(decode.DecodeNumber(bytes, it))
-							: (object) decode.DecodeString(bytes, it);
+						// MapSchema dynamic index.
+						dynamicIndex = (((ISchemaCollection)_ref).GetItems() is OrderedDictionary)
+							? (object)decode.DecodeString(bytes, it)
+							: fieldIndex;
 
 						((ISchemaCollection)_ref).SetIndex(fieldIndex, dynamicIndex);
 					} else
