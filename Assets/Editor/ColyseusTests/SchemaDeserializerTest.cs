@@ -275,4 +275,45 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(null, client2.playerOne.name);
 	}
 
+	[Test]
+	public void InstanceSharingTypes()
+	{
+		var refs = new Colyseus.Schema.ReferenceTracker();
+		var client = new SchemaTest.InstanceSharing.State();
+
+		client.Decode(new byte[] { 130, 1, 131, 2, 128, 3, 129, 3, 255, 1, 255, 2, 255, 3, 128, 4, 255, 3, 128, 4, 255, 4, 128, 10, 129, 10, 255, 4, 128, 10, 129, 10 }, null, refs);
+		Assert.AreEqual(client.player1, client.player2);
+		Assert.AreEqual(client.player1.position, client.player2.position);
+		Assert.AreEqual(refs.refCounts[client.player1.__refId], 2);
+		Assert.AreEqual(5, refs.refs.Count);
+
+		client.Decode(new byte[] { 130, 1, 131, 2, 64, 65 }, null, refs);
+		Assert.AreEqual(null, client.player2);
+		Assert.AreEqual(null, client.player2);
+		Assert.AreEqual(3, refs.refs.Count);
+
+		client.Decode(new byte[] { 255, 1, 128, 0, 5, 128, 1, 5, 128, 2, 5, 128, 3, 6, 255, 5, 128, 7, 255, 6, 128, 8, 255, 7, 128, 10, 129, 10, 255, 8, 128, 10, 129, 10 }, null, refs);
+		Assert.AreEqual(client.arrayOfPlayers[0], client.arrayOfPlayers[1]);
+		Assert.AreEqual(client.arrayOfPlayers[1], client.arrayOfPlayers[2]);
+		Assert.AreNotEqual(client.arrayOfPlayers[2], client.arrayOfPlayers[3]);
+		Assert.AreEqual(7, refs.refs.Count);
+
+		client.Decode(new byte[] { 255, 1, 64, 3, 64, 2, 64, 1 }, null, refs);
+		Assert.AreEqual(1, client.arrayOfPlayers.Count);
+		Assert.AreEqual(5, refs.refs.Count);
+		var previousArraySchemaRefId = client.arrayOfPlayers.__refId;
+
+		// Replacing ArraySchema
+		client.Decode(new byte[] { 130, 9, 255, 9, 128, 0, 10, 255, 10, 128, 11, 255, 11, 128, 10, 129, 20 }, null, refs);
+		Assert.AreEqual(false, refs.refs.ContainsKey(previousArraySchemaRefId));
+		Assert.AreEqual(1, client.arrayOfPlayers.Count);
+		Assert.AreEqual(5, refs.refs.Count);
+
+		// Clearing ArraySchema
+		client.Decode(new byte[] { 255, 9, 10 }, null, refs);
+		Assert.AreEqual(0, client.arrayOfPlayers.Count);
+		Assert.AreEqual(3, refs.refs.Count);
+
+	}
+
 }

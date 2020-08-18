@@ -112,12 +112,7 @@ namespace Colyseus.Schema
 
 		public object this[object key]
 		{
-			get
-			{
-				T value;
-				TryGetValue(key as string, out value);
-				return value;
-			}
+			get { return this[(string)key]; }
 			set { Items[(string)key] = (HasSchemaChild) ? (T)value : (T)Convert.ChangeType(value, typeof(T)); }
 		}
 
@@ -131,8 +126,17 @@ namespace Colyseus.Schema
 			Items[item.Key] = item.Value;
 		}
 
-		public void Clear()
+		public void Clear(ReferenceTracker refs = null)
 		{
+			if (refs != null && HasSchemaChild)
+			{
+				foreach (IRef item in Items.Values)
+				{
+					refs.Remove(item.__refId);
+				}
+			}
+
+			Indexes.Clear();
 			Items.Clear();
 		}
 

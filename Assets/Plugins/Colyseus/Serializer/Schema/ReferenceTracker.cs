@@ -1,14 +1,15 @@
 using System;
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Colyseus.Schema
 {
 	public class ReferenceTracker
 	{
-		protected Dictionary<int, IRef> refs = new Dictionary<int, IRef>();
-		protected Dictionary<int, int> refCounts = new Dictionary<int, int>();
-		protected List<int> deletedRefs = new List<int>();
+		public Dictionary<int, IRef> refs = new Dictionary<int, IRef>();
+		public Dictionary<int, int> refCounts = new Dictionary<int, int>();
+		public List<int> deletedRefs = new List<int>();
 
 		public ReferenceTracker() {}
 
@@ -42,21 +43,27 @@ namespace Colyseus.Schema
 			return refs.ContainsKey(refId);
 		}
 
-		public void Remove(int refId)
+		public bool Remove(int refId)
 		{
 			refCounts[refId] = refCounts[refId] - 1;
 
 			if (!deletedRefs.Contains(refId))
 			{
 				deletedRefs.Add(refId);
+				return true;
+			} else
+			{
+				return false;
 			}
 		}
 
 		public void GarbageCollection()
 		{
-			foreach (int refId in deletedRefs)
+			int totalDeletedRefs = deletedRefs.Count;
+			for (int i = 0; i < totalDeletedRefs; i++)
 			{
-				Debug.Log("Deleted ref => " + refId);
+				int refId = deletedRefs[i];
+
 				if (refCounts[refId] <= 0)
 				{
 					var _ref = refs[refId];
@@ -65,16 +72,23 @@ namespace Colyseus.Schema
 						foreach (KeyValuePair<string, System.Type> field in ((Schema)_ref).GetFieldChildTypes())
 						{
 							var fieldValue = ((Schema)_ref)[field.Key];
-							if (fieldValue is IRef)
+							if (
+								fieldValue is IRef &&
+								Remove(((IRef)fieldValue).__refId))
 							{
-								Remove(((IRef)fieldValue).__refId);
+								totalDeletedRefs++;
 							}
 						}
-					} else if (_ref is ISchemaCollection && ((ISchemaCollection)_ref).HasSchemaChild)
+					}
+					else if (_ref is ISchemaCollection && ((ISchemaCollection)_ref).HasSchemaChild)
 					{
-						foreach (KeyValuePair<string, IRef> item in ((ISchemaCollection)_ref).GetItems())
+						IDictionary items = ((ISchemaCollection)_ref).GetItems();
+						foreach (IRef item in items.Values)
 						{
-							Remove(item.Value.__refId);
+							if (Remove(item.__refId))
+							{
+								totalDeletedRefs++;
+							}
 						}
 					}
 					refs.Remove(refId);

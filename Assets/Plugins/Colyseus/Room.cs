@@ -20,8 +20,6 @@ namespace Colyseus
 		Task Leave(bool consented);
 	}
 
-	public class FossilDeltaState : IndexedDictionary<string, object> {/*public FossilDelta() : base()*/}
-
 	public class Room<T> : IRoom
 	{
 		public delegate void RoomOnMessageEventHandler(object message);
@@ -226,14 +224,34 @@ namespace Colyseus
 
 				if (SerializerId == "schema")
 				{
-					serializer = new SchemaSerializer<T>();
+					try
+					{
+						serializer = new SchemaSerializer<T>();
+					}
+					catch (Exception e)
+					{
+						DisplaySerializerErrorHelp(e, "Consider using the \"schema-codegen\" and providing the same room state for matchmaking instead of \"" + typeof(T).Name + "\"");
+					}
 
 				} else if (SerializerId == "fossil-delta")
 				{
-					serializer = (ISerializer<T>) new FossilDeltaSerializer();
+					try
+					{
+						serializer = (ISerializer<T>)new FossilDeltaSerializer();
+					} catch (Exception e)
+					{
+						DisplaySerializerErrorHelp(e, "Consider using \"IndexedDictionary<string, object>\" instead of \"" + typeof(T).Name + "\" for matchmaking.");
+					}
 				} else
 				{
-					serializer = (ISerializer<T>) new NoneSerializer();
+					try
+					{
+						serializer = (ISerializer<T>)new NoneSerializer();
+					}
+					catch (Exception e)
+					{
+						DisplaySerializerErrorHelp(e, "Consider setting state in the server-side using \"this.setState(new " + typeof(T).Name + "())\"");
+					}
 				}
 
 				if (bytes.Length > offset)
@@ -270,7 +288,7 @@ namespace Colyseus
 				}
 				else
 				{
-					Debug.LogError("room.OnMessage not registered for Schema message: " + message.GetType());
+					Debug.LogWarning("room.OnMessage not registered for Schema of type: '" + message.GetType() + "'");
 				}
 			}
 			else if (code == Protocol.LEAVE_ROOM)
@@ -320,7 +338,7 @@ namespace Colyseus
 				}
 				else
 				{
-					Debug.LogError("room.OnMessage not registered for: " + type);
+					Debug.LogWarning("room.OnMessage not registered for: '" + type + "'");
 				}
 			}
 		}
@@ -329,6 +347,12 @@ namespace Colyseus
 		{
 			serializer.Patch(delta, offset);
 			OnStateChange?.Invoke(serializer.GetState(), false);
+		}
+
+		protected void DisplaySerializerErrorHelp(Exception e, string helpMessage)
+		{
+			Debug.LogWarning("The serializer from the server is: '" + SerializerId + "'. " + helpMessage);
+			throw e;
 		}
 	}
 

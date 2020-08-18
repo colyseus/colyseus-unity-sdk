@@ -1,6 +1,9 @@
 import { Room, Client, generateId } from "colyseus";
-import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
+import { Schema, MapSchema, ArraySchema, Context } from "@colyseus/schema";
 import { verifyToken, User, IUser } from "@colyseus/social";
+
+// Create a context for this room's state data.
+const type = Context.create();
 
 class Entity extends Schema {
   @type("number") x: number = 0;
@@ -30,7 +33,7 @@ class Message extends Schema {
 export class DemoRoom extends Room {
 
   onCreate (options: any) {
-    console.log("DemoRoom created!", options);
+    console.log("DemoRoom created.", options);
 
     this.setState(new State());
     this.populateEnemies();
@@ -110,7 +113,7 @@ export class DemoRoom extends Room {
   }
 
   onDispose () {
-    console.log("disposing DemoRoom...");
+    console.log("DemoRoom disposed.");
   }
 
 }

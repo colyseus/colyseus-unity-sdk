@@ -1,8 +1,9 @@
 import { Room, Client, generateId } from "colyseus";
 
-export class FossilDeltaTestRoom extends Room {
+export class FossilDeltaRoom extends Room {
 
   onCreate (options: any) {
+    console.log("FossilDeltaRoom created.");
     this.setState({
       array: [],
       entities: {},
@@ -27,7 +28,7 @@ export class FossilDeltaTestRoom extends Room {
   }
 
   onDispose() {
-    console.log("DISPOSE! FossilDeltaTestRoom");
+    console.log("FossilDeltaRoom disposed.");
   }
 
 }

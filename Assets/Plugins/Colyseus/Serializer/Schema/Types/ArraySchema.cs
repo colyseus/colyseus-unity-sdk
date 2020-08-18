@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Specialized;
 using System.Collections.Generic;
 
 namespace Colyseus.Schema
@@ -70,8 +69,18 @@ namespace Colyseus.Schema
 			Items.Remove(index);
 		}
 
-		public void Clear()
+		public void Clear(ReferenceTracker refs = null)
 		{
+			if (refs != null && HasSchemaChild)
+			{
+				foreach (IRef item in Items.Values)
+				{
+					refs.Remove(item.__refId);
+				}
+			}
+
+			Indexes.Clear();
+			Items.Clear();
 		}
 
 		public ISchemaCollection Clone()

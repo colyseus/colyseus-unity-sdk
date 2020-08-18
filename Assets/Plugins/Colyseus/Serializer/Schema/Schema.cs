@@ -90,7 +90,7 @@ namespace Colyseus.Schema
 		IDictionary GetItems();
 		void SetItems(object items);
 		void TriggerAll();
-		void Clear();
+		void Clear(ReferenceTracker refs);
 
 		System.Type GetChildType();
 		dynamic GetTypeDefaultValue();
@@ -130,6 +130,8 @@ namespace Colyseus.Schema
 
 		public int __refId { get; set; }
 		public IRef __parent { get; set; }
+
+		private ReferenceTracker refs;
 
 		public Schema()
 		{
@@ -183,13 +185,15 @@ namespace Colyseus.Schema
 			if (it == null) { it = new Iterator(); }
 			if (refs == null) { refs = new ReferenceTracker(); }
 
+			this.refs = refs;
+
 			var totalBytes = bytes.Length;
 
 			int refId = 0;
 			IRef _ref = this;
 			var changes = new List<DataChange>();
 
-			var allChanges = new Dictionary<int, List<DataChange>>();
+			var allChanges = new OrderedDictionary(); // Dictionary<int, List<DataChange>>
 			refs.Add(refId, this);
 
 			while (it.Offset < totalBytes)
@@ -208,7 +212,7 @@ namespace Colyseus.Schema
 
 					// create empty list of changes for this refId.
 					changes = new List<DataChange>();
-					allChanges[refId] = changes;
+					allChanges[(object)refId] = changes;
 
 					continue;
 				}
@@ -221,7 +225,8 @@ namespace Colyseus.Schema
 
 				if (operation == (byte)OPERATION.CLEAR)
 				{
-					((ISchemaCollection)_ref).Clear();
+					((ISchemaCollection)_ref).Clear(refs);
+					continue;
 				}
 
 				int fieldIndex;
@@ -419,7 +424,10 @@ namespace Colyseus.Schema
 						}
 					}
 
-					refs.Add(refId, (IRef)value);
+					if (valueRef != previousValue)
+					{
+						refs.Add(refId, (IRef)value);
+					}
 				}
 
 				bool hasChange = (previousValue != value);
@@ -455,53 +463,76 @@ namespace Colyseus.Schema
 				}
 			}
 
-			TriggerChanges(allChanges, refs);
+			TriggerChanges(allChanges);
 
 			refs.GarbageCollection();
 		}
 
 		public void TriggerAll()
 		{
-			// TODO: implement this.
-
-			//const changes: DataChange[] = [];
-			//const schema = this._definition.schema;
-
-   //     for (let field in schema)
-			//{
-			//	if (this[field] !== undefined)
-			//	{
-			//		changes.push({
-			//		op: OPERATION.REPLACE,
-   //                 field,
-   //                 value: this[field],
-   //                 previousValue: undefined
-	
-			//	});
-			//	}
-			//}
-
-			//try
-			//{
-			//	const allChanges = new Map<number, DataChange[]>();
-			//	allChanges.set(this.$changes.refId, changes);
-			//	this._triggerChanges(allChanges);
-
-			//}
-			//catch (e)
-			//{
-			//	Schema.onError(e);
-			//}
+			var allChanges = new OrderedDictionary();
+			TriggerAllFillChanges(this, ref allChanges);
+			TriggerChanges(allChanges);
 		}
 
-		protected void TriggerChanges(Dictionary<int, List<DataChange>> allChanges, ReferenceTracker refs)
+		protected void TriggerAllFillChanges(IRef currentRef, ref OrderedDictionary allChanges)
 		{
-			foreach (KeyValuePair<int, List<DataChange>> changes in allChanges)
+			// skip recursive structures...
+			if (allChanges.Contains(currentRef.__refId)) { return; }
+
+			var changes = new List<DataChange>();
+			allChanges[(object)currentRef.__refId] = changes;
+
+			if (currentRef is Schema)
 			{
-				IRef _ref = refs.Get(changes.Key);
+				foreach (var fieldName in ((Schema)currentRef).fieldsByIndex.Values)
+				{
+					var value = ((Schema)currentRef)[fieldName];
+					changes.Add(new DataChange
+					{
+						Field = fieldName,
+						Op = (byte)OPERATION.ADD,
+						Value = value
+					});
+
+					if (value is IRef)
+					{
+						TriggerAllFillChanges(value, ref allChanges);
+					}
+				}
+			} else
+			{
+				if (((ISchemaCollection)currentRef).HasSchemaChild)
+				{
+					var items = ((ISchemaCollection)currentRef).GetItems();
+					foreach (object key in items.Keys)
+					{
+						var child = items[key];
+
+						changes.Add(new DataChange
+						{
+							Field = null,
+							DynamicIndex = key,
+							Op = (byte)OPERATION.ADD,
+							Value = child
+						});
+
+						TriggerAllFillChanges((IRef)child, ref allChanges);
+					}
+				}
+			}
+		}
+
+		protected void TriggerChanges(OrderedDictionary allChanges)
+		{
+			foreach (object key in allChanges.Keys)
+			{
+				List<DataChange> changes = (List<DataChange>)allChanges[key];
+
+				IRef _ref = refs.Get((int)key);
 				bool isSchema = _ref is Schema;
 
-				foreach (DataChange change in changes.Value)
+				foreach (DataChange change in changes)
 				{
 					//const listener = ref['$listeners'] && ref['$listeners'][change.field];
 
@@ -558,7 +589,7 @@ namespace Colyseus.Schema
 
 				if (isSchema)
 				{
-					((Schema)_ref).OnChange?.Invoke(changes.Value);
+					((Schema)_ref).OnChange?.Invoke(changes);
 				}
 			}
 		}
