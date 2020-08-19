@@ -64,6 +64,9 @@ public class ColyseusClient : MonoBehaviour {
 	protected Client client;
 	protected Room<State> room;
 
+	protected Room<IndexedDictionary<string, object>> roomFossilDelta;
+	protected Room<object> roomNoneSerializer;
+
 	protected IndexedDictionary<Entity, GameObject> entities = new IndexedDictionary<Entity, GameObject>();
 
 	// Use this for initialization
@@ -106,6 +109,8 @@ public class ColyseusClient : MonoBehaviour {
 	public async void CreateRoom()
 	{
 		room = await client.Create<State>(roomName, new Dictionary<string, object>() { });
+		//roomNoneSerializer = await client.Create("no_state", new Dictionary<string, object>() { });
+		//roomFossilDelta = await client.Create<IndexedDictionary<string, object>>("fossildelta", new Dictionary<string, object>() { });
 		RegisterRoomHandlers();
 	}
 
@@ -117,7 +122,7 @@ public class ColyseusClient : MonoBehaviour {
 
 	public async void JoinRoom ()
 	{
-		room = await client.Join<State>(roomName, new Dictionary<string, object>() {});
+		room = await client.Join<State>(roomName, new Dictionary<string, object>() { });
 		RegisterRoomHandlers();
 	}
 
@@ -143,7 +148,6 @@ public class ColyseusClient : MonoBehaviour {
 
 		room.State.entities.OnAdd += OnEntityAdd;
 		room.State.entities.OnRemove += OnEntityRemove;
-		//room.State.entities.OnChange += OnEntityMove;
 		room.State.TriggerAll();
 
 		PlayerPrefs.SetString("roomId", room.Id);
