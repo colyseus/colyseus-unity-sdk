@@ -365,10 +365,7 @@ namespace Colyseus.Schema
 							}
 						}
 
-						if (value != previousValue)
-						{
-							refs.Add(refId, (IRef)value);
-						}
+						refs.Add(refId, (IRef)value, (value != previousValue));
 					}
 				}
 				else if (childType == null)
@@ -420,10 +417,7 @@ namespace Colyseus.Schema
 						}
 					}
 
-					if (valueRef != previousValue)
-					{
-						refs.Add(refId, (IRef)value);
-					}
+					refs.Add(refId, (IRef)value, (valueRef != previousValue));
 				}
 
 				bool hasChange = (previousValue != value);

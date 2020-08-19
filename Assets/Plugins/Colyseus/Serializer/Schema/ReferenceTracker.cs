@@ -13,7 +13,7 @@ namespace Colyseus.Schema
 
 		public ReferenceTracker() {}
 
-		public void Add(int refId, IRef _ref)
+		public void Add(int refId, IRef _ref, bool incrementCount = true)
 		{
 			int previousCount;
 
@@ -26,7 +26,10 @@ namespace Colyseus.Schema
 				previousCount = refCounts[refId];
 			}
 
-			refCounts[refId] = previousCount + 1;
+			if (incrementCount)
+			{
+				refCounts[refId] = previousCount + 1;
+			}
 		}
 
 		public IRef Get(int refId)
