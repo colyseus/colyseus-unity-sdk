@@ -402,25 +402,21 @@ namespace Colyseus.Schema
 						{
 							refs.Remove(((IRef)previousValue).__refId);
 
-							////
-							//// TODO: Trigger onRemove if structure has been replaced.
-							////
-							//const deletes: DataChange[] = [];
-							//const entries: IterableIterator <[any, any] > = previousValue.entries();
-							//let iter: IteratorResult <[any, any] >;
-							//while ((iter = entries.next()) && !iter.done)
-							//{
-							//	const [key, value] = iter.value;
-							//	deletes.push({
-							//	op: OPERATION.DELETE,
-       //                         field: key,
-       //                         // dynamicIndex,
-       //                         value: undefined,
-       //                         previousValue: value,
-       //                     });
-							//}
+							var deletes = new List<DataChange>();
+							var items = ((ISchemaCollection)previousValue).GetItems();
 
-							//allChanges.set(previousValue['$changes'].refId, deletes);
+							foreach (var key in items.Keys)
+							{
+								deletes.Add(new DataChange()
+								{
+									DynamicIndex = key,
+									Op = (byte)OPERATION.DELETE,
+									Value = null,
+									PreviousValue = items[key]
+								});
+							}
+
+							allChanges[(object)((IRef)previousValue).__refId] = deletes;
 						}
 					}
 
