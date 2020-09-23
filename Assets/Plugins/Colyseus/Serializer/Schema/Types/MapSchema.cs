@@ -16,7 +16,6 @@ namespace Colyseus.Schema
 		protected Dictionary<int, string> Indexes = new Dictionary<int, string>();
 
 		public int __refId { get; set; }
-		public IRef __parent { get; set; }
 
 		public MapSchema()
 		{
@@ -28,9 +27,9 @@ namespace Colyseus.Schema
 			Items = items ?? new OrderedDictionary();
 		}
 
-		public void SetIndex(int index, dynamic dynamicIndex)
+		public void SetIndex(int index, object dynamicIndex)
 		{
-			Indexes[index] = dynamicIndex;
+			Indexes[index] = (string) dynamicIndex;
 		}
 
 		public void SetByIndex(int index, object dynamicIndex, object value)
@@ -39,7 +38,7 @@ namespace Colyseus.Schema
 			Items[dynamicIndex] = (T)value;
 		}
 
-		public dynamic GetIndex(int index)
+		public object GetIndex(int index)
 		{
 			string dynamicIndex;
 
@@ -50,7 +49,7 @@ namespace Colyseus.Schema
 
 		public object GetByIndex(int index)
 		{
-			string dynamicIndex = GetIndex(index);
+			string dynamicIndex = (string) GetIndex(index);
 			return (dynamicIndex != null && Items.Contains(dynamicIndex))
 				? Items[dynamicIndex]
 				: GetTypeDefaultValue();
@@ -58,7 +57,7 @@ namespace Colyseus.Schema
 
 		public void DeleteByIndex(int index)
 		{
-			string dynamicIndex = GetIndex(index);
+			string dynamicIndex = (string) GetIndex(index);
 			if (Items.Contains(dynamicIndex))
 			{
 				Items.Remove(dynamicIndex);
@@ -82,7 +81,7 @@ namespace Colyseus.Schema
 			return typeof(T);
 		}
 
-		public dynamic GetTypeDefaultValue()
+		public object GetTypeDefaultValue()
 		{
 			return default(T);
 		}

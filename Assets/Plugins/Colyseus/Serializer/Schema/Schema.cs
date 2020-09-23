@@ -72,8 +72,8 @@ namespace Colyseus.Schema
 		public byte Op;
 		public string Field;
 		public object DynamicIndex;
-		public dynamic Value;
-		public dynamic PreviousValue;
+		public object Value;
+		public object PreviousValue;
 	}
 
 	public delegate void OnChangeEventHandler(List<DataChange> changes);
@@ -93,7 +93,7 @@ namespace Colyseus.Schema
 		void Clear(ReferenceTracker refs);
 
 		System.Type GetChildType();
-		dynamic GetTypeDefaultValue();
+		object GetTypeDefaultValue();
 		bool ContainsKey(object key);
 
 		bool HasSchemaChild { get; }
@@ -102,8 +102,8 @@ namespace Colyseus.Schema
 		int Count { get; }
 		object this[object key] { get; set; }
 
-		void SetIndex(int index, dynamic dynamicIndex);
-		dynamic GetIndex(int index);
+		void SetIndex(int index, object dynamicIndex);
+		object GetIndex(int index);
 		void SetByIndex(int index, object dynamicIndex, object value);
 
 		ISchemaCollection Clone();
@@ -112,7 +112,6 @@ namespace Colyseus.Schema
 	public interface IRef
 	{
 		int __refId { get; set; }
-		IRef __parent { get; set; }
 
 		object GetByIndex(int index);
 		void DeleteByIndex(int index);
@@ -129,7 +128,6 @@ namespace Colyseus.Schema
 		public event OnRemoveEventHandler OnRemove;
 
 		public int __refId { get; set; }
-		public IRef __parent { get; set; }
 
 		private ReferenceTracker refs;
 
@@ -159,7 +157,7 @@ namespace Colyseus.Schema
 		}
 
 		/* allow to retrieve property values by its string name */
-		public dynamic this[string propertyName]
+		public object this[string propertyName]
 		{
 			get
 			{
@@ -427,7 +425,6 @@ namespace Colyseus.Schema
 					if (value is IRef)
 					{
 						((IRef)value).__refId = refId;
-						((IRef)value).__parent = _ref;
 					}
 
 					if (_ref is Schema)
@@ -453,16 +450,22 @@ namespace Colyseus.Schema
 				}
 			}
 
-			TriggerChanges(allChanges);
+			TriggerChanges(ref allChanges);
 
 			refs.GarbageCollection();
 		}
 
 		public void TriggerAll()
 		{
+			//
+			// first state not received from the server yet.
+			// nothing to trigger.
+			//
+			if (refs == null) { return;  }
+
 			var allChanges = new OrderedDictionary();
 			TriggerAllFillChanges(this, ref allChanges);
-			TriggerChanges(allChanges);
+			TriggerChanges(ref allChanges);
 		}
 
 		protected void TriggerAllFillChanges(IRef currentRef, ref OrderedDictionary allChanges)
@@ -487,7 +490,7 @@ namespace Colyseus.Schema
 
 					if (value is IRef)
 					{
-						TriggerAllFillChanges(value, ref allChanges);
+						TriggerAllFillChanges((IRef)value, ref allChanges);
 					}
 				}
 			} else
@@ -513,13 +516,13 @@ namespace Colyseus.Schema
 			}
 		}
 
-		protected void TriggerChanges(OrderedDictionary allChanges)
+		protected void TriggerChanges(ref OrderedDictionary allChanges)
 		{
-			foreach (object key in allChanges.Keys)
+			foreach (object refId in allChanges.Keys)
 			{
-				List<DataChange> changes = (List<DataChange>)allChanges[key];
+				List<DataChange> changes = (List<DataChange>)allChanges[refId];
 
-				IRef _ref = refs.Get((int)key);
+				IRef _ref = refs.Get((int)refId);
 				bool isSchema = _ref is Schema;
 
 				foreach (DataChange change in changes)

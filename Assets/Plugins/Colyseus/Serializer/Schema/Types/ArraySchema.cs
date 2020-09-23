@@ -15,7 +15,6 @@ namespace Colyseus.Schema
 		protected Dictionary<int, int> Indexes = new Dictionary<int, int>();
 
 		public int __refId { get; set; }
-		public  IRef __parent { get; set; }
 
 		public ArraySchema()
 		{
@@ -27,9 +26,9 @@ namespace Colyseus.Schema
 			Items = items ?? new Dictionary<int, T>();
 		}
 
-		public void SetIndex(int index, dynamic dynamicIndex)
+		public void SetIndex(int index, object dynamicIndex)
 		{
-			Indexes[index] = dynamicIndex;
+			Indexes[index] = (int)dynamicIndex;
 		}
 
 		public void SetByIndex(int index, object dynamicIndex, object value)
@@ -37,7 +36,7 @@ namespace Colyseus.Schema
 			Items[(int)dynamicIndex] = (T)value;
 		}
 
-		public dynamic GetIndex(int index)
+		public object GetIndex(int index)
 		{
 			int dynamicIndex;
 
@@ -99,7 +98,7 @@ namespace Colyseus.Schema
 			return typeof(T);
 		}
 
-		public dynamic GetTypeDefaultValue()
+		public object GetTypeDefaultValue()
 		{
 			return default(T);
 		}
