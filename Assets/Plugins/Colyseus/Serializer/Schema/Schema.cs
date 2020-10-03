@@ -232,7 +232,6 @@ namespace Colyseus.Schema
 				string fieldType = null;
 
 				System.Type childType = null;
-				string childPrimitiveType = null;
 
 				if (isSchema)
 				{
@@ -383,6 +382,7 @@ namespace Colyseus.Schema
 					value = valueRef.Clone();
 
 					// keep reference to nested childPrimitiveType.
+					string childPrimitiveType;
 					((Schema)_ref).fieldChildPrimitiveTypes.TryGetValue(fieldName, out childPrimitiveType);
 					((ISchemaCollection)value).ChildPrimitiveType = childPrimitiveType;
 
