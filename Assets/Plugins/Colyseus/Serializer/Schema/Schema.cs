@@ -495,21 +495,21 @@ namespace Colyseus.Schema
 				}
 			} else
 			{
-				if (((ISchemaCollection)currentRef).HasSchemaChild)
+				var items = ((ISchemaCollection)currentRef).GetItems();
+				foreach (object key in items.Keys)
 				{
-					var items = ((ISchemaCollection)currentRef).GetItems();
-					foreach (object key in items.Keys)
+					var child = items[key];
+
+					changes.Add(new DataChange
 					{
-						var child = items[key];
+						Field = (string) key,
+						DynamicIndex = key,
+						Op = (byte)OPERATION.ADD,
+						Value = child
+					});
 
-						changes.Add(new DataChange
-						{
-							Field = null,
-							DynamicIndex = key,
-							Op = (byte)OPERATION.ADD,
-							Value = child
-						});
-
+					if (child is IRef)
+					{
 						TriggerAllFillChanges((IRef)child, ref allChanges);
 					}
 				}
@@ -532,7 +532,7 @@ namespace Colyseus.Schema
 					if (!isSchema)
 					{
 						ISchemaCollection container = ((ISchemaCollection)_ref);
-						
+
 						if (change.Op == (byte)OPERATION.ADD && change.PreviousValue == container.GetTypeDefaultValue())
 						{
 							container.InvokeOnAdd(change.Value, change.DynamicIndex);
