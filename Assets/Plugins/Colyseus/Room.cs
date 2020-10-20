@@ -274,10 +274,13 @@ namespace Colyseus
 			}
 			else if (code == Protocol.ROOM_DATA_SCHEMA)
 			{
-				Type messageType = Schema.Context.GetInstance().Get(bytes[1]);
+				Schema.Iterator it = new Schema.Iterator { Offset = 1 };
+				var typeId = Decode.DecodeNumber(bytes, it);
 
+				Type messageType = Schema.Context.GetInstance().Get(typeId);
 				var message = (Schema.Schema) Activator.CreateInstance(messageType);
-				message.Decode(bytes, new Schema.Iterator { Offset = 2 });
+
+				message.Decode(bytes, it);
 
 				IMessageHandler handler = null;
 				OnMessageHandlers.TryGetValue("s" + message.GetType(), out handler);
