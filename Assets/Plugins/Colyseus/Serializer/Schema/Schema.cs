@@ -80,9 +80,8 @@ namespace Colyseus.Schema
 	public delegate void KeyValueEventHandler<T, K>(T value, K key);
 	public delegate void OnRemoveEventHandler();
 
-	public interface ISchemaCollection
+	public interface ISchemaCollection : IRef
 	{
-		void MoveEventHandlers(ISchemaCollection previousInstance);
 		void InvokeOnAdd(object item, object index);
 		void InvokeOnChange(object item, object index);
 		void InvokeOnRemove(object item, object index);
@@ -115,6 +114,8 @@ namespace Colyseus.Schema
 
 		object GetByIndex(int index);
 		void DeleteByIndex(int index);
+
+		void MoveEventHandlers(IRef previousInstance);
 	}
 
 	public class Schema : IRef
@@ -174,6 +175,21 @@ namespace Colyseus.Schema
 		{
 			// This is required for "garbage collection" inside ReferenceTracker.
 			return fieldChildTypes;
+		}
+
+		public void MoveEventHandlers(IRef previousInstance)
+		{
+			OnChange = ((Schema)previousInstance).OnChange;
+			OnRemove = ((Schema)previousInstance).OnRemove;
+
+			foreach (var item in ((Schema)previousInstance).fieldsByIndex)
+			{
+				var child = GetByIndex(item.Key);
+				if (child is IRef)
+				{
+					((IRef)child).MoveEventHandlers((IRef)previousInstance.GetByIndex(item.Key));
+				}
+			}
 		}
 
 		public void Decode(byte[] bytes, Iterator it = null, ReferenceTracker refs = null)
@@ -349,8 +365,7 @@ namespace Colyseus.Schema
 
 							if (previousValue != null)
 							{
-								((Schema)value).OnChange = ((Schema)previousValue).OnChange;
-								((Schema)value).OnRemove = ((Schema)previousValue).OnRemove;
+								((Schema)value).MoveEventHandlers((Schema)previousValue);
 
 								if (
 									((IRef)previousValue).__refId > 0 &&

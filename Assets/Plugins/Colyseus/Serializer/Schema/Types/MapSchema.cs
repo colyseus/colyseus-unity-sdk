@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Colyseus.Schema
 {
-	public class MapSchema<T> : ISchemaCollection, IRef
+	public class MapSchema<T> : ISchemaCollection
 	{
 		public OrderedDictionary Items = new OrderedDictionary();
 		public event KeyValueEventHandler<T, string> OnAdd;
@@ -225,7 +225,7 @@ namespace Colyseus.Schema
 			}
 		}
 
-		public void MoveEventHandlers(ISchemaCollection previousInstance)
+		public void MoveEventHandlers(IRef previousInstance)
 		{
 			OnAdd = ((MapSchema<T>)previousInstance).OnAdd;
 			OnChange = ((MapSchema<T>)previousInstance).OnChange;

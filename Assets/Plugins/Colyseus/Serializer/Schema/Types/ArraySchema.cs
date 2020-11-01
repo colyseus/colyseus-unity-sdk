@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Colyseus.Schema
 {
-	public class ArraySchema<T> : ISchemaCollection, IRef
+	public class ArraySchema<T> : ISchemaCollection
 	{
 		public Dictionary<int, T> Items;
 		public event KeyValueEventHandler<T, int> OnAdd;
@@ -159,7 +159,7 @@ namespace Colyseus.Schema
 			}
 		}
 
-		public void MoveEventHandlers(ISchemaCollection previousInstance)
+		public void MoveEventHandlers(IRef previousInstance)
 		{
 			OnAdd = ((ArraySchema<T>)previousInstance).OnAdd;
 			OnChange = ((ArraySchema<T>)previousInstance).OnChange;
