@@ -199,16 +199,17 @@ namespace Colyseus.Schema
 			if (it == null) { it = new Iterator(); }
 			if (refs == null) { refs = new ReferenceTracker(); }
 
-			this.refs = refs;
-
 			var totalBytes = bytes.Length;
 
 			int refId = 0;
 			IRef _ref = this;
-			var changes = new List<DataChange>();
 
+			this.refs = refs;
+			refs.Add(refId, _ref);
+
+			var changes = new List<DataChange>();
 			var allChanges = new OrderedDictionary(); // Dictionary<int, List<DataChange>>
-			refs.Add(refId, this);
+			allChanges.Add(refId, changes);
 
 			while (it.Offset < totalBytes)
 			{
