@@ -197,6 +197,23 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
+	public void MapSchemaMoveNullifyTypeTest()
+	{
+		var state = new SchemaTest.MapSchemaMoveNullifyType.State();
+		byte[] bytes = { 129, 1, 64, 255, 1, 128, 0, 161, 48, 0 };
+
+		var refs = new Colyseus.Schema.ReferenceTracker();
+		state.Decode(bytes, null, refs);
+
+		Assert.DoesNotThrow(() =>
+		{
+			// FIXME: this test only passes because empty 
+			byte[] moveAndNullifyBytes = { 128, 1, 65 };
+			state.Decode(moveAndNullifyBytes, null, refs);
+		});
+	}
+
+	[Test]
 	public void InheritedTypesTest()
 	{
 		var serializer = new Colyseus.SchemaSerializer<SchemaTest.InheritedTypes.InheritedTypes>();
