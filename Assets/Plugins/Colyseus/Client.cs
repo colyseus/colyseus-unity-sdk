@@ -132,7 +132,8 @@ namespace Colyseus
 		{
 			var uriBuilder = new UriBuilder(Endpoint.Uri);
 			uriBuilder.Path += "matchmake/" + roomName;
-			uriBuilder.Scheme = uriBuilder.Scheme.Replace("ws", "http"); // FIXME: replacing "ws" with "http" is too hacky!
+			
+			Regex.Replace(uriBuilder.Scheme, @"^(ws:\/\/)","http://");
 
 			var req = new UnityWebRequest();
 			req.method = "GET";
@@ -207,7 +208,7 @@ namespace Colyseus
 
 			var uriBuilder = new UriBuilder(Endpoint.Uri);
 			uriBuilder.Path += "matchmake/" + method + "/" + roomName;
-			uriBuilder.Scheme = uriBuilder.Scheme.Replace("ws", "http"); // FIXME: replacing "ws" with "http" is too hacky!
+			Regex.Replace(uriBuilder.Scheme, @"^(ws:\/\/)","https://");
 
 			var req = new UnityWebRequest();
 			req.method = "POST";

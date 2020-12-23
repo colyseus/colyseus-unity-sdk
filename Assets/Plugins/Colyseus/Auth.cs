@@ -251,9 +251,9 @@ namespace Colyseus
 			var req = new UnityWebRequest();
 			req.method = method;
 
-			// FIXME: replacing "ws" with "http" is too hacky!
-			uriBuilder.Scheme = uriBuilder.Scheme.Replace("ws", "http");
-
+			
+			Regex.Replace(uriBuilder.Scheme, @"^(ws:\/\/)","http://");
+			
 			req.url = uriBuilder.Uri.ToString();
 
 			// Send JSON on request body
