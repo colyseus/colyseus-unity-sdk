@@ -252,7 +252,7 @@ namespace Colyseus
 			req.method = method;
 
 			
-			Regex.Replace(uriBuilder.Scheme, @"^(ws:\/\/)","http://");
+            uriBuilder.Scheme = Regex.Replace(uriBuilder.Scheme, @"^ws", "http");
 			
 			req.url = uriBuilder.Uri.ToString();
 
