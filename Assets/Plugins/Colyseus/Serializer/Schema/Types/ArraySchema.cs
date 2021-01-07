@@ -38,34 +38,31 @@ namespace Colyseus.Schema
 
 		public object GetIndex(int index)
 		{
-			int dynamicIndex;
-
-			Indexes.TryGetValue(index, out dynamicIndex);
-
-			return dynamicIndex;
+			return (Indexes.ContainsKey(index))
+				? Indexes[index]
+				: -1;
 		}
 
 		public object GetByIndex(int index)
 		{
-			//
-			// FIXME: GetByIndex should be O(1)
-			//
-			var keys = new List<int>(Items.Keys);
+			int dynamicIndex = (int) GetIndex(index);
 
-			int dynamicIndex = (index < keys.Count)
-				? keys[index]
-				: -1;
+			if (dynamicIndex != -1)
+			{
+				T value;
+				Items.TryGetValue(dynamicIndex, out value);
+				return value;
 
-			T value;
-			Items.TryGetValue(dynamicIndex, out value);
-
-			return value;
+			} else
+			{
+				return null;
+			}
 		}
 
 		public void DeleteByIndex(int index)
 		{
-			// TODO:
-			Items.Remove(index);
+			Items.Remove((int)GetIndex(index));
+			Indexes.Remove(index);
 		}
 
 		public void Clear(ReferenceTracker refs = null)
@@ -122,7 +119,7 @@ namespace Colyseus.Schema
 
 		public T this[int index]
 		{
-			get { return (T) GetByIndex(index); }
+			get { return (T) GetByVirtualIndex(index); }
 			set { Items[index] = value; }
 		}
 
@@ -179,6 +176,23 @@ namespace Colyseus.Schema
 		public void InvokeOnRemove(object item, object index)
 		{
 			OnRemove?.Invoke((T)item, (int)index);
+		}
+
+		protected T GetByVirtualIndex (int index)
+		{
+			//
+			// FIXME: should be O(1)
+			//
+			var keys = new List<int>(Items.Keys);
+
+			int dynamicIndex = (index < keys.Count)
+				? keys[index]
+				: -1;
+
+			T value;
+			Items.TryGetValue(dynamicIndex, out value);
+
+			return value;
 		}
 	}
 }
