@@ -232,7 +232,7 @@ namespace Colyseus
 			req.downloadHandler = new DownloadHandlerBuffer();
 			await req.SendWebRequest();
 
-			if (req.isNetworkError || req.isHttpError)
+			if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
 			{
 				throw new Exception(req.error);
 			}
