@@ -607,7 +607,7 @@ namespace Colyseus.Schema
 		{
 			System.Type type = defaultType;
 
-			if (bytes[it.Offset] == (byte)SPEC.TYPE_ID)
+			if (it.Offset < bytes.Length && bytes[it.Offset] == (byte)SPEC.TYPE_ID)
 			{
 				it.Offset++;
 				int typeId = Convert.ToInt32(Decoder.GetInstance().DecodeNumber(bytes, it));
