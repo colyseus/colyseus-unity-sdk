@@ -58,7 +58,14 @@ namespace Colyseus.Schema
 		public void DeleteByIndex(int index)
 		{
 			string dynamicIndex = (string) GetIndex(index);
-			if (Items.Contains(dynamicIndex))
+			if (
+				//
+				// FIXME:
+				// The schema encoder should not encode a DELETE operation when using ADD + DELETE in the same key. (in the same patch)
+				//
+				dynamicIndex != null &&
+				Items.Contains(dynamicIndex)
+			)
 			{
 				Items.Remove(dynamicIndex);
 				Indexes.Remove(index);
