@@ -3,7 +3,6 @@ import express from "express";
 import cors from "cors";
 
 import { Server, LobbyRoom } from "colyseus";
-import socialRoutes from "@colyseus/social/express";
 
 import { DemoRoom } from "./rooms/DemoRoom";
 import { FossilDeltaRoom } from "./rooms/FossilDeltaRoom";
@@ -29,8 +28,6 @@ gameServer.define("demo", DemoRoom);
 gameServer.define("lobby", LobbyRoom);
 gameServer.define("fossildelta", FossilDeltaRoom);
 gameServer.define("no_state", RoomWithoutState);
-
-app.use("/", socialRoutes);
 
 app.get("/something", function (req, res) {
   console.log("something!", process.pid);

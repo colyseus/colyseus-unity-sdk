@@ -96,14 +96,6 @@ public class ColyseusClient : MonoBehaviour {
 		 * Connect into Colyeus Server
 		 */
 		client = ColyseusManager.Instance.CreateClient(endpoint);
-
-		await client.Auth.Login();
-
-		var friends = await client.Auth.GetFriends();
-
-		// Update username
-		client.Auth.Username = "Jake";
-		await client.Auth.Save();
 	}
 
 	public async void CreateRoom()

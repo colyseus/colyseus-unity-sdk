@@ -13,7 +13,6 @@
     "node": ">= 8.x"
   },
   "dependencies": {
-    "@colyseus/social": "^0.10.0",
     "colyseus": "^0.14.1",
     "cors": "^2.8.5",
     "express": "^4.13.3",
