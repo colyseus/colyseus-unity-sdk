@@ -1,6 +1,5 @@
 import { Room, Client, generateId } from "colyseus";
 import { Schema, MapSchema, ArraySchema, Context } from "@colyseus/schema";
-import { verifyToken, User, IUser } from "@colyseus/social";
 
 // Create a context for this room's state data.
 const type = Context.create();
@@ -68,11 +67,6 @@ export class DemoRoom extends Room {
     });
   }
 
-  async onAuth (client, options) {
-    console.log("onAuth(), options!", options);
-    return await User.findById(verifyToken(options.token)._id);
-  }
-
   populateEnemies () {
     for (let i=0; i<=3; i++) {
       const enemy = new Enemy();
@@ -82,7 +76,7 @@ export class DemoRoom extends Room {
     }
   }
 
-  onJoin (client: Client, options: any, user: IUser) {
+  onJoin (client: Client, options: any) {
     console.log("client joined!", client.sessionId);
     this.state.entities[client.sessionId] = new Player();
 
