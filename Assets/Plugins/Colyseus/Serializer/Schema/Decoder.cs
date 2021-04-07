@@ -154,12 +154,12 @@ namespace Colyseus.Schema
 			return float.NaN;
 		}
 
-		public int DecodeInt8(byte[] bytes, Iterator it)
+		public sbyte DecodeInt8(byte[] bytes, Iterator it)
 		{
-			return ((int)DecodeUint8(bytes, it)) << 24 >> 24;
+			return Convert.ToSByte((DecodeUint8(bytes, it)) << 24 >> 24);
 		}
 
-		public uint DecodeUint8(byte[] bytes, Iterator it)
+		public byte DecodeUint8(byte[] bytes, Iterator it)
 		{
 			return bytes[it.Offset++];
 		}
