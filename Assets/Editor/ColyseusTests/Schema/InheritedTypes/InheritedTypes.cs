@@ -2,13 +2,13 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 1.0.0-alpha.44
+// GENERATED USING @colyseus/schema 1.0.18
 // 
 
 using Colyseus.Schema;
 
 namespace SchemaTest.InheritedTypes {
-	public class InheritedTypes : Schema {
+	public partial class InheritedTypes : Schema {
 		[Type(0, "ref", typeof(Entity))]
 		public Entity entity = new Entity();
 

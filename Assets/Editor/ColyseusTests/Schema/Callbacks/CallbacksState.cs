@@ -7,12 +7,9 @@
 
 using Colyseus.Schema;
 
-namespace SchemaTest.InheritedTypes {
-	public partial class Entity : Schema {
-		[Type(0, "number")]
-		public float x = default(float);
-
-		[Type(1, "number")]
-		public float y = default(float);
+namespace SchemaTest.Callbacks {
+	public partial class CallbacksState : Schema {
+		[Type(0, "ref", typeof(Container))]
+		public Container container = new Container();
 	}
 }

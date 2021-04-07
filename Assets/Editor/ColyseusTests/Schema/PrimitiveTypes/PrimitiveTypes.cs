@@ -2,18 +2,18 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 1.0.0-alpha.44
+// GENERATED USING @colyseus/schema 1.0.18
 // 
 
 using Colyseus.Schema;
 
 namespace SchemaTest.PrimitiveTypes {
-	public class PrimitiveTypes : Schema {
+	public partial class PrimitiveTypes : Schema {
 		[Type(0, "int8")]
-		public int int8 = default(int);
+		public sbyte int8 = default(sbyte);
 
 		[Type(1, "uint8")]
-		public uint uint8 = default(uint);
+		public byte uint8 = default(byte);
 
 		[Type(2, "int16")]
 		public short int16 = default(short);

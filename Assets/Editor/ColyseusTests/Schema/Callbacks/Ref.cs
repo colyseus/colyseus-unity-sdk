@@ -7,12 +7,9 @@
 
 using Colyseus.Schema;
 
-namespace SchemaTest.ChildSchemaTypes {
-	public partial class IAmAChild : Schema {
+namespace SchemaTest.Callbacks {
+	public partial class Ref : Schema {
 		[Type(0, "number")]
-		public float x = default(float);
-
-		[Type(1, "number")]
-		public float y = default(float);
+		public float num = default(float);
 	}
 }
