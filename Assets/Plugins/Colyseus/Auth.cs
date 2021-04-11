@@ -284,7 +284,6 @@ namespace Colyseus
 				throw new Exception(req.error);
 			}
 #endif
-
 			var json = req.downloadHandler.text;
 
 			// Workaround for decoding a UserDataCollection

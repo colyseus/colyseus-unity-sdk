@@ -245,7 +245,6 @@ namespace Colyseus
 				throw new Exception(req.error);
 			}
 #endif
-
 			var response = JsonUtility.FromJson<MatchMakeResponse>(req.downloadHandler.text);
 			if (!string.IsNullOrEmpty(response.error))
 			{
