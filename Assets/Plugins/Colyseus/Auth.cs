@@ -271,10 +271,19 @@ namespace Colyseus
 			req.downloadHandler = new DownloadHandlerBuffer();
 			await req.SendWebRequest();
 
+#if UNITY_2020_2_OR_NEWER
+			if (req.result == UnityWebRequest.Result.ConnectionError ||
+			req.result == UnityWebRequest.Result.ProtocolError ||
+			req.result == UnityWebRequest.Result.DataProcessingError)
+			{
+				throw new Exception(req.error);
+			}
+#else
 			if (req.isNetworkError || req.isHttpError)
 			{
 				throw new Exception(req.error);
 			}
+#endif
 
 			var json = req.downloadHandler.text;
 
