@@ -1,0 +1,13 @@
+﻿using Colyseus.Schema;
+
+namespace Colyseus
+{
+    /// <summary>
+    /// The base Networked Entity
+    /// <para>Inherits from <see cref="Schema"/></para>
+    /// </summary>
+    public class ColyseusNetworkedEntity : Schema.Schema
+    {
+
+    }
+}
