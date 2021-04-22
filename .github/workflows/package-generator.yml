@@ -1,0 +1,59 @@
+name: Create Unity Package
+
+on:
+  push:
+    branches: release/*
+   
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Extract branch name
+      shell: bash
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/release/})"
+      id: extract_branch
+    - name: Checkout Code
+      uses: actions/checkout@v2
+    - name: Gather files
+      run: |
+        echo "ColyseusArena-Plugin/Assets/Colyseus.meta" > metaList
+        find ColyseusArena-Plugin/Assets/Colyseus/ -name \*.meta >> metaList
+    - name: Create Directory
+      run: mkdir Release
+    - name: Generate Unity Package
+      id: build-package
+      uses: pCYSl5EDgo/create-unitypackage@master
+      with:
+        package-path: 'Colyseus_Plugin.unitypackage'
+        include-files: metaList
+    - name: Upload Package
+      uses: actions/upload-artifact@master
+      with:
+        path: ./Colyseus_Plugin.unitypackage
+        name: Colyseus_Plugin
+    - name: Changelog
+      uses: scottbrenner/generate-changelog-action@master
+      id: Changelog
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.extract_branch.outputs.branch }}
+        release_name: ${{ steps.extract_branch.outputs.branch }}
+        body: |
+            # Changes
+            ${{ steps.Changelog.outputs.changelog }}
+        draft: false
+        prerelease: true
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        asset_path: ./Colyseus_Plugin.unitypackage
+        asset_name: Colyseus_Plugin.unitypackage
+        asset_content_type: application/x-gzip
