@@ -2,13 +2,13 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 1.0.0-alpha.44
+// GENERATED USING @colyseus/schema 1.0.23
 // 
 
 using Colyseus.Schema;
 
 namespace SchemaTest.ArraySchemaTypes {
-	public class ArraySchemaTypes : Schema {
+	public partial class ArraySchemaTypes : Schema {
 		[Type(0, "array", typeof(ArraySchema<IAmAChild>))]
 		public ArraySchema<IAmAChild> arrayOfSchemas = new ArraySchema<IAmAChild>();
 

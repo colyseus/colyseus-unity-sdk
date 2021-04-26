@@ -7,9 +7,9 @@
 
 using Colyseus.Schema;
 
-namespace SchemaTest.FilteredTypes {
-	public partial class Player : Schema {
-		[Type(0, "string")]
-		public string name = default(string);
+namespace SchemaTest.Callbacks {
+	public partial class CallbacksState : Schema {
+		[Type(0, "ref", typeof(Container))]
+		public Container container = new Container();
 	}
 }

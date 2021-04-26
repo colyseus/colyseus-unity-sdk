@@ -2,13 +2,13 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 1.0.0-alpha.44
+// GENERATED USING @colyseus/schema 1.0.23
 // 
 
 using Colyseus.Schema;
 
 namespace SchemaTest.FilteredTypes {
-	public class State : Schema {
+	public partial class State : Schema {
 		[Type(0, "ref", typeof(Player))]
 		public Player playerOne = new Player();
 

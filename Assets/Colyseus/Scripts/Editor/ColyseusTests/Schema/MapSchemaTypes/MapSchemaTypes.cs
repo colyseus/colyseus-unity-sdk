@@ -2,13 +2,13 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 1.0.0-alpha.44
+// GENERATED USING @colyseus/schema 1.0.23
 // 
 
 using Colyseus.Schema;
 
 namespace SchemaTest.MapSchemaTypes {
-	public class MapSchemaTypes : Schema {
+	public partial class MapSchemaTypes : Schema {
 		[Type(0, "map", typeof(MapSchema<IAmAChild>))]
 		public MapSchema<IAmAChild> mapOfSchemas = new MapSchema<IAmAChild>();
 
