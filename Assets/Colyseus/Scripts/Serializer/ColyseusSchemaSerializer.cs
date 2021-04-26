@@ -87,7 +87,7 @@ namespace Colyseus
             }
         }
 
-        private static bool CompareTypes(System.Type schemaType, CSAReflectionType reflectionType)
+        private static bool CompareTypes(System.Type schemaType, ReflectionType reflectionType)
         {
             FieldInfo[] fields = schemaType.GetFields();
             int typedFieldCount = 0;
@@ -105,7 +105,7 @@ namespace Colyseus
                 if (typeAttributes.Length == 1)
                 {
                     Type typedField = (Type) typeAttributes[0];
-                    CSAReflectionField reflectionField = reflectionType.fields[typedField.Index];
+                    ReflectionField reflectionField = reflectionType.fields[typedField.Index];
 
                     if (
                         reflectionField == null ||
