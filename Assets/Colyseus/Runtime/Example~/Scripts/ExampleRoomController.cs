@@ -377,7 +377,7 @@ public class ExampleRoomController
 
         _room.OnMessage<ExampleNetworkedUser>("onJoin", currentNetworkedUser =>
         {
-            Debug.Log($"Received 'ExampleNetworkedUser' after join/creation call {currentNetworkedUser.id}!");
+            Debug.Log($"Received 'ExampleNetworkedUser' after join/creation call {currentNetworkedUser.sessionId}!");
             Debug.Log(Json.SerializeToString(currentNetworkedUser));
 
             _currentNetworkedUser = currentNetworkedUser;
@@ -564,7 +564,7 @@ public class ExampleRoomController
     /// <param name="key">The user key</param>
     private void OnUserAdd(string key, ExampleNetworkedUser user)
     {
-        LSLog.LogImportant($"user [{user.__refId} | {user.id} | key {key}] Joined");
+        LSLog.LogImportant($"user [{user.__refId} | {user.sessionId} | key {key}] Joined");
 
         // Add "player" to map of players
         _users.Add(key, user);
@@ -590,7 +590,7 @@ public class ExampleRoomController
     /// <param name="key">The user key.</param>
     private void OnUserRemove(string key, ExampleNetworkedUser user)
     {
-        LSLog.LogImportant($"user [{user.__refId} | {user.id} | key {key}] Left");
+        LSLog.LogImportant($"user [{user.__refId} | {user.sessionId} | key {key}] Left");
 
         _users.Remove(key);
     }

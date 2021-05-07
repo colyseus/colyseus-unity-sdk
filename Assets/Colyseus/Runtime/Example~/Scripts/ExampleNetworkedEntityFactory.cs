@@ -113,8 +113,8 @@ public class ExampleNetworkedEntityFactory
                 }
             }
 
-            _ = room.Send("createEntity",
-                new EntityCreationMessage() { creationId = creationId, attributes = attributes });
+            // send "createEntity" message for the server.
+            _ = room.Send("createEntity", new { creationId = creationId, attributes = attributes });
         }
         catch (System.Exception err)
         {

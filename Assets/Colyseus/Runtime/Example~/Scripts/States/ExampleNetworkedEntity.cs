@@ -1,12 +1,13 @@
+// 
+// THIS FILE HAS BEEN GENERATED AUTOMATICALLY
+// DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
+// 
+// GENERATED USING @colyseus/schema 1.0.22
+// 
+
 using Colyseus.Schema;
-using Colyseus;
-using System.Collections.Generic;
 
-[System.Serializable]
-public partial class ExampleNetworkedEntity : ColyseusNetworkedEntity
-{
-	//public string updateHash;
-
+public partial class ExampleNetworkedEntity : Schema {
 	[Type(0, "string")]
 	public string id = default(string);
 
@@ -17,13 +18,13 @@ public partial class ExampleNetworkedEntity : ColyseusNetworkedEntity
 	public string creationId = default(string);
 
 	[Type(3, "number")]
-	public double xPos = default(double);
+	public float xPos = default(float);
 
 	[Type(4, "number")]
-	public double yPos = default(double);
+	public float yPos = default(float);
 
 	[Type(5, "number")]
-	public double zPos = default(double);
+	public float zPos = default(float);
 
 	[Type(6, "number")]
 	public float xRot = default(float);
@@ -47,25 +48,18 @@ public partial class ExampleNetworkedEntity : ColyseusNetworkedEntity
 	public float zScale = default(float);
 
 	[Type(13, "number")]
-	public double timestamp = default(double);
+	public float timestamp = default(float);
 
 	[Type(14, "number")]
-	public double xVel = default(double);
+	public float xVel = default(float);
 
 	[Type(15, "number")]
-	public double yVel = default(double);
+	public float yVel = default(float);
 
 	[Type(16, "number")]
-	public double zVel = default(double);
-	
-	[Type(17, "map", typeof(MapSchema<string>),"string")]
-	public MapSchema<string> attributes = new MapSchema<string>();
-}
+	public float zVel = default(float);
 
-[System.Serializable]
-class EntityCreationMessage
-{
-	public string creationId;
-	public Dictionary<string, object> attributes;
+	[Type(17, "map", typeof(MapSchema<string>), "string")]
+	public MapSchema<string> attributes = new MapSchema<string>();
 }
 

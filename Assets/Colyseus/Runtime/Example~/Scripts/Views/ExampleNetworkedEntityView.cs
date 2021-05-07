@@ -131,7 +131,7 @@ using UnityEngine;
             try
             {
                 state = entity;
-                IsMine = ExampleManager.Instance.CurrentUser != null && string.Equals(ExampleManager.Instance.CurrentUser.id, state.ownerId);
+                IsMine = ExampleManager.Instance.CurrentUser != null && string.Equals(ExampleManager.Instance.CurrentUser.sessionId, state.ownerId);
                 state.attributes.OnChange += Attributes_OnChange;
                 state.OnChange += Entity_State_OnChange;
 
