@@ -1,0 +1,33 @@
+{
+	"name": "io.colyseus.sdk",
+	"version": "0.14.5",
+	"displayName": "Colyseus SDK",
+	"description": "Colyseus Multiplayer SDK for Unity",
+	"unity": "2019.1",
+	"license": "MIT",
+	"category": "Networking",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/colyseus/colyseus-unity3d.git"
+	},
+	"author": {
+		"name": "Colyseus",
+		"email": "contact@lucidsight.com",
+		"url": "https://colyseus.io/"
+	},
+	"keywords": [
+		"colyseus",
+		"multiplayer",
+		"networking",
+		"authoritative",
+		"netcode"
+	],
+	"dependencies": {},
+	"samples": [
+		{
+			"displayName": "Example",
+			"description": "Colyseus Example",
+			"path": "Runtime/Example~"
+		}
+	]
+}
