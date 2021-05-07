@@ -1,8 +1,8 @@
 import { Room, Client, generateId } from "colyseus";
-import { ColyseusRoomState, ColyseusNetworkedEntity, ColyseusNetworkedUser } from "./schema/ColyseusRoomState";
+import { ExampleRoomState, ExampleNetworkedEntity, ExampleNetworkedUser } from "./schema/ExampleRoomState";
 const logger = require("../helpers/logger");
 
-export class MyRoom extends Room<ColyseusRoomState> {
+export class MyRoom extends Room<ExampleRoomState> {
 
     clientEntities = new Map<string, string[]>();
     serverTime: number = 0;
@@ -22,7 +22,7 @@ export class MyRoom extends Room<ColyseusRoomState> {
         //
         // Set state schema
         //
-        this.setState(new ColyseusRoomState());
+        this.setState(new ExampleRoomState());
 
         // 
         // The patch-rate is the frequency which state mutations are sent to all clients. (in milliseconds)
@@ -118,7 +118,7 @@ export class MyRoom extends Room<ColyseusRoomState> {
         this.onMessage("createEntity", (client: Client, creationMessage: any) => {
             // Generate new UID for the entity
             let entityViewID = generateId();
-            let newEntity = new ColyseusNetworkedEntity().assign({
+            let newEntity = new ExampleNetworkedEntity().assign({
                 id: entityViewID,
                 ownerId: client.sessionId,
                 timestamp: this.serverTime
@@ -168,7 +168,7 @@ export class MyRoom extends Room<ColyseusRoomState> {
     onJoin(client: Client, options: any) {
         logger.info(`Client joined!- ${client.sessionId} ***`);
 
-        let newNetworkedUser = new ColyseusNetworkedUser().assign({
+        let newNetworkedUser = new ExampleNetworkedUser().assign({
             sessionId: client.sessionId,
         });
 

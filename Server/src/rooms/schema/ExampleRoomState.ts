@@ -1,6 +1,6 @@
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
-export class ColyseusNetworkedEntity extends Schema {
+export class ExampleNetworkedEntity extends Schema {
     @type("string") id: string;
     @type("string") ownerId: string;
     @type("string") creationId: string = "";
@@ -21,15 +21,15 @@ export class ColyseusNetworkedEntity extends Schema {
     @type({map: "string"}) attributes = new MapSchema<string>();
 }
 
-export class ColyseusNetworkedUser extends Schema {
+export class ExampleNetworkedUser extends Schema {
     @type("string") sessionId: string;
     @type("boolean") connected: boolean;
     @type("number") timestamp: number;
     @type({map: "string"}) attributes = new MapSchema<string>();
 }
 
-export class ColyseusRoomState extends Schema {
-    @type({ map: ColyseusNetworkedEntity }) networkedEntities = new MapSchema<ColyseusNetworkedEntity>();
-    @type({ map: ColyseusNetworkedUser }) networkedUsers = new MapSchema<ColyseusNetworkedUser>();
+export class ExampleRoomState extends Schema {
+    @type({ map: ExampleNetworkedEntity }) networkedEntities = new MapSchema<ExampleNetworkedEntity>();
+    @type({ map: ExampleNetworkedUser }) networkedUsers = new MapSchema<ExampleNetworkedUser>();
     @type({ map: "string" }) attributes = new MapSchema<string>();
 }
