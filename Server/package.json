@@ -9,6 +9,7 @@
     "loadtest": "colyseus-loadtest loadtest/example.ts --room my_room --numClients 2",
     "build": "npm run clean && tsc && node node_modules/copyfiles/copyfiles package.json ./lib && node node_modules/copyfiles/copyfiles arena.env ./lib",
     "clean": "node node_modules/rimraf/bin lib",
+    "schema-codegen": "schema-codegen src/rooms/schema/* --csharp --output ../Assets/Colyseus/Runtime/Example/Scripts/States/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

@@ -42,7 +42,7 @@ export class MyRoom extends Room<ColyseusRoomState> {
         this.onMessage("entityUpdate", (client: Client, entityUpdateArray: any) => {
             if (this.state.networkedEntities.has(`${entityUpdateArray[0]}`) === false) return;
 
-            this.onEntityUpdate(client.id, entityUpdateArray);
+            this.onEntityUpdate(client.sessionId, entityUpdateArray);
         });
 
         //
@@ -52,7 +52,7 @@ export class MyRoom extends Room<ColyseusRoomState> {
             //Confirm Sending Client is Owner 
             if (this.state.networkedEntities.has(`${RFCMessage.entityId}`) === false) return;
 
-            RFCMessage.clientId = client.id;
+            RFCMessage.clientId = client.sessionId;
 
             // Broadcast the "remoteFunctionCall" to all clients except the one the message originated from
             this.broadcast("onRFC", RFCMessage, RFCMessage.target == 0 ? {} : { except: client });
@@ -120,7 +120,7 @@ export class MyRoom extends Room<ColyseusRoomState> {
             let entityViewID = generateId();
             let newEntity = new ColyseusNetworkedEntity().assign({
                 id: entityViewID,
-                ownerId: client.id,
+                ownerId: client.sessionId,
                 timestamp: this.serverTime
             });
 
@@ -149,10 +149,10 @@ export class MyRoom extends Room<ColyseusRoomState> {
             this.state.networkedEntities.set(entityViewID, newEntity);
 
             // Add the entity to the client entities collection
-            if (this.clientEntities.has(client.id)) {
-                this.clientEntities.get(client.id).push(entityViewID);
+            if (this.clientEntities.has(client.sessionId)) {
+                this.clientEntities.get(client.sessionId).push(entityViewID);
             } else {
-                this.clientEntities.set(client.id, [entityViewID]);
+                this.clientEntities.set(client.sessionId, [entityViewID]);
             }
         });
 
@@ -169,7 +169,6 @@ export class MyRoom extends Room<ColyseusRoomState> {
         logger.info(`Client joined!- ${client.sessionId} ***`);
 
         let newNetworkedUser = new ColyseusNetworkedUser().assign({
-            id: client.id,
             sessionId: client.sessionId,
         });
 
@@ -234,7 +233,7 @@ export class MyRoom extends Room<ColyseusRoomState> {
         }
 
         logger.silly(`*** User Leave - ${client.sessionId} ***`);
-        // this.clientEntities is keyed by client.id
+        // this.clientEntities is keyed by client.sessionId
         // this.state.networkedUsers is keyed by client.sessionid
 
         try {
@@ -244,28 +243,28 @@ export class MyRoom extends Room<ColyseusRoomState> {
 
             logger.info("let's wait for reconnection for client: " + client.sessionId);
             const newClient = await this.allowReconnection(client, 10);
-            logger.info("reconnected! client: " + newClient.id);
+            logger.info("reconnected! client: " + newClient.sessionId);
 
         } catch (e) {
-            logger.info("disconnected! client: " + client.id);
-            logger.silly(`*** Removing Networked User and Entity ${client.id} ***`);
+            logger.info("disconnected! client: " + client.sessionId);
+            logger.silly(`*** Removing Networked User and Entity ${client.sessionId} ***`);
 
             // remove user
             this.state.networkedUsers.delete(client.sessionId);
 
             // remove entities
-            if (this.clientEntities.has(client.id)) {
-                let allClientEntities = this.clientEntities.get(client.id);
+            if (this.clientEntities.has(client.sessionId)) {
+                let allClientEntities = this.clientEntities.get(client.sessionId);
                 allClientEntities.forEach(element => {
 
                     this.state.networkedEntities.delete(element);
                 });
 
                 // remove the client from clientEntities
-                this.clientEntities.delete(client.id);
+                this.clientEntities.delete(client.sessionId);
             }
             else {
-                logger.error(`Can't remove entities for ${client.id} - No entry in Client Entities!`);
+                logger.error(`Can't remove entities for ${client.sessionId} - No entry in Client Entities!`);
             }
         }
     }
