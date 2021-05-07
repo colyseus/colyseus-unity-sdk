@@ -19,35 +19,15 @@
 </div>
 
 
-| Description | Status |
-| ------| -------|
-| Master Branch Build Status | [![Build Status](https://dev.azure.com/colyseus/colyseus-unity3d/_apis/build/status/colyseus.colyseus-unity3d?branchName=master)](https://dev.azure.com/colyseus/colyseus-unity3d/_build/latest?definitionId=2&branchName=master) |
+## Colyseus SDK Develompent
 
-
-## Unit tests
+### Unit tests
 
 Open Window → General → Test Runner.
 
-## Releasing a new version
+### Releasing a new version
 
-How to create a release:
-
-### 1. Create release branch (release/RELEASE_VERSION)
-
-Example branch name: `release/0.11.0`
-
-RELEASE_VERSION will be used for multiple things:
-- It will tag the commit with this string
-- It will name the release with this string
-- It will add this string as a suffix to attachments of the release (example: plugins-0.11.0.zip
-
-### 2. Check Github releases for new draft (can take a while)
-
-- Check the build status here: https://dev.azure.com/colyseus/colyseus-unity3d/_build
-- Check the deploy status here: https://dev.azure.com/colyseus/colyseus-unity3d/_release
-- Change the release notes if necessary
-
-### 3. Publish Release
+Update the version number under `Assets/Colyseus/package.json` and push to `master` branch.
 
 ## License
 

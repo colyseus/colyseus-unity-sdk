@@ -1,27 +1,40 @@
 {
-  "name": "colyseus-unity3d",
   "private": true,
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/colyseus/colyseus-unity3d.git"
-  },
+  "name": "my-app",
+  "version": "1.0.0",
+  "description": "npm init template for bootstrapping an empty Colyseus project",
+  "main": "lib/index.js",
   "scripts": {
-    "schema-codegen": "schema-codegen rooms/DemoRoom.ts --csharp --output ../Assets/",
-    "start": "ts-node-dev --respawn --transpile-only index.ts"
+    "start": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "loadtest": "colyseus-loadtest loadtest/example.ts --room my_room --numClients 2",
+    "build": "npm run clean && tsc && node node_modules/copyfiles/copyfiles package.json ./lib && node node_modules/copyfiles/copyfiles arena.env ./lib",
+    "clean": "node node_modules/rimraf/bin lib",
+    "schema-codegen": "schema-codegen src/rooms/schema/* --csharp --output ../Assets/Colyseus/Runtime/Example/Scripts/States/",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "engines": {
-    "node": ">= 8.x"
+  "author": "",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/colyseus/create-colyseus/issues"
+  },
+  "homepage": "https://github.com/colyseus/create-colyseus#readme",
+  "devDependencies": {
+    "@colyseus/loadtest": "^0.14.0",
+    "@types/cors": "^2.8.6",
+    "@types/express": "^4.17.1",
+    "copyfiles": "^2.4.1",
+    "rimraf": "^2.7.1",
+    "ts-node": "^8.1.0",
+    "ts-node-dev": "^1.0.0-pre.63",
+    "typescript": "^3.4.5"
   },
   "dependencies": {
-    "colyseus": "^0.14.13",
+    "@colyseus/arena": "^0.14.9",
+    "@colyseus/monitor": "^0.14.0",
+    "@colyseus/social": "^0.10.9",
+    "colyseus": "^0.14.0",
     "cors": "^2.8.5",
-    "express": "^4.13.3",
-    "express-jwt": "^5.3.1",
-    "typescript": "^3.3.4000"
-  },
-  "devDependencies": {
-    "@types/express": "^4.16.1",
-    "@types/node": "^11.12.0",
-    "ts-node-dev": "^1.1.6"
+    "express": "^4.16.4",
+    "winston": "^3.3.3"
   }
 }
