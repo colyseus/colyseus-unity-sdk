@@ -82,15 +82,15 @@ public class LobbyController : MonoBehaviour
         string desiredRoomName = selectRoomMenu.RoomCreationName;
         if (!string.IsNullOrEmpty(desiredRoomName))
         {
-	        LoadGallery(() => { ExampleManager.Instance.CreateNewRoom(desiredRoomName); });
+            LoadGallery(() => { ExampleManager.Instance.CreateNewRoom(desiredRoomName); });
         }
     }
 
     public void JoinOrCreateRoom()
     {
-	    connectingCover.SetActive(true);
-		LoadGallery(() => { ExampleManager.Instance.JoinOrCreateRoom(); });
-	}
+        connectingCover.SetActive(true);
+        LoadGallery(() => { ExampleManager.Instance.JoinOrCreateRoom(); });
+    }
 
     public void JoinRoom(string id)
     {

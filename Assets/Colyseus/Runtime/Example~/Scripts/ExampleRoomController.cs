@@ -252,7 +252,7 @@ public class ExampleRoomController
     /// <param name="client"></param>
     public void SetClient(ColyseusClient client)
     {
-	    _client = client;
+        _client = client;
     }
 
     /// <summary>
@@ -306,10 +306,10 @@ public class ExampleRoomController
     /// </summary>
     public async Task JoinOrCreateRoom(Action<bool> onComplete = null)
     {
-	    LSLog.LogImportant($"Join Or Create Room - Name = {roomName}.... ");
-		try
+        LSLog.LogImportant($"Join Or Create Room - Name = {roomName}.... ");
+        try
         {
-	        // Populate an options dictionary with custom options provided elsewhere
+            // Populate an options dictionary with custom options provided elsewhere
             Dictionary<string, object> options = new Dictionary<string, object>();
             foreach (KeyValuePair<string, object> option in roomOptionsDictionary)
             {
@@ -321,15 +321,15 @@ public class ExampleRoomController
         catch (Exception ex)
         {
             LSLog.LogError($"Room Controller Error - {ex.Message + ex.StackTrace}");
-			onComplete?.Invoke(false);
+            onComplete?.Invoke(false);
             return;
         }
 
-		onComplete?.Invoke(true);
-		LSLog.LogImportant($"Joined / Created Room: {_room.Id}");
-		_lastRoomId = _room.Id;
-		RegisterRoomHandlers();
-	}
+        onComplete?.Invoke(true);
+        LSLog.LogImportant($"Joined / Created Room: {_room.Id}");
+        _lastRoomId = _room.Id;
+        RegisterRoomHandlers();
+    }
 
     public async Task LeaveAllRooms(bool consented, Action onLeave = null)
     {

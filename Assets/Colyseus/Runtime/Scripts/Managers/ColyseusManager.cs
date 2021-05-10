@@ -138,10 +138,10 @@ namespace Colyseus
             return client;
         }
 
-		/// <summary>
-		/// Create a new <see cref="ColyseusClient"/> along with any other client initialization you may need to perform
-		/// </summary>
-		public virtual void InitializeClient()
+        /// <summary>
+        /// /// Create a new <see cref="ColyseusClient"/> along with any other client initialization you may need to perform
+        /// /// </summary>
+        public virtual void InitializeClient()
         {
             CreateClient(_colyseusSettings.WebSocketEndpoint);
         }
