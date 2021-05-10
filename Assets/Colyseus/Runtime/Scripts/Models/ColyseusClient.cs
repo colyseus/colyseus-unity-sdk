@@ -265,7 +265,9 @@ namespace Colyseus
 
             onAddRoom?.Invoke(room);
 
-            return await tcs.Task;
+            await room.Connect();
+
+			return await tcs.Task;
         }
 
         /// <summary>

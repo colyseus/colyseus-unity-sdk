@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -229,7 +229,7 @@ public class ExampleRoomController
     {
         _colyseusSettings = settings;
 
-        ColyseusClient.onAddRoom += OnAddRoom;
+        ColyseusClient.onAddRoom += AddRoom;
     }
 
     public void SetRoomOptions(Dictionary<string, object> options)
@@ -252,16 +252,7 @@ public class ExampleRoomController
     /// <param name="client"></param>
     public void SetClient(ColyseusClient client)
     {
-        _client = client;
-    }
-
-    /// <summary>
-    ///     Handler for the <see cref="ColyseusClient.onAddRoom" /> event.
-    /// </summary>
-    /// <param name="roomToAdd"></param>
-    private void OnAddRoom(IColyseusRoom roomToAdd)
-    {
-        _ = AddRoom(roomToAdd);
+	    _client = client;
     }
 
     /// <summary>
@@ -270,11 +261,10 @@ public class ExampleRoomController
     /// </summary>
     /// <param name="roomToAdd"></param>
     /// <returns></returns>
-    public async Task AddRoom(IColyseusRoom roomToAdd)
+    public void AddRoom(IColyseusRoom roomToAdd)
     {
         roomToAdd.OnLeave += code => rooms.Remove(roomToAdd);
         rooms.Add(roomToAdd);
-        await roomToAdd.Connect();
     }
 
     /// <summary>
