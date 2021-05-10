@@ -66,7 +66,7 @@ public class LobbyController : MonoBehaviour
 
         ExampleManager.Instance.OverrideSettings(clonedSettings);
 
-        ExampleManager.Instance.BeginServerConnection();
+        ExampleManager.Instance.InitializeClient();
 
         ExampleManager.Instance.UserName = desiredUserName;
 
