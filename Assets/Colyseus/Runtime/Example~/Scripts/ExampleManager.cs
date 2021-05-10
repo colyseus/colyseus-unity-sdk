@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Colyseus;
 using LucidSightTools;
@@ -156,6 +156,11 @@ public class ExampleManager : ColyseusManager<ExampleManager>
     public async void CreateNewRoom(string roomID)
     {
         await _roomController.CreateSpecificRoom(client, _roomController.roomName, roomID);
+    }
+
+    public async void JoinOrCreateRoom()
+    {
+	    await _roomController.JoinOrCreateRoom();
     }
 
     public async void LeaveAllRooms(Action onLeave)
