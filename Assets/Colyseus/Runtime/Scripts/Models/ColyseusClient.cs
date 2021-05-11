@@ -265,7 +265,9 @@ namespace Colyseus
 
             onAddRoom?.Invoke(room);
 
-            await room.Connect();
+#pragma warning disable 4014
+            room.Connect();
+#pragma warning restore 4014
 
             return await tcs.Task;
         }
