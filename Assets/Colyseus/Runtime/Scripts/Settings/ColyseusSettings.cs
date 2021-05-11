@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Win32.SafeHandles;
 using UnityEngine;
 
 namespace Colyseus
@@ -8,24 +7,24 @@ namespace Colyseus
     /// <summary>
     ///     <see cref="ScriptableObject" /> containing relevant Colyseus settings
     /// </summary>
-    [CreateAssetMenu(fileName = "Data", menuName = "Colyseus/Generate ColyseusSettings Scriptable Object", order = 1)]
+    [CreateAssetMenu(fileName = "MyServerSettings", menuName = "Colyseus/Generate ColyseusSettings Scriptable Object", order = 1)]
     [Serializable]
     public class ColyseusSettings : ScriptableObject
     {
  /// <summary>
         ///     The server address
         /// </summary>
-        public string colyseusServerAddress = "csdev.api-colyseus.com";
+        public string colyseusServerAddress = "localhost";
 
         /// <summary>
         ///     The port to connect to
         /// </summary>
-        public string colyseusServerPort = "80";
+        public string colyseusServerPort = "2567";
 
         /// <summary>
         ///     If true, we use secure protocols (wss, https) otherwise we use ws, http (based on <see cref="useWss"/>)
         /// </summary>
-        public bool useSecureProtocol = true;
+        public bool useSecureProtocol = false;
 
         /// <summary>
         /// Internal wrapper class for a <see cref="UnityEngine.Networking.UnityWebRequest"/> Request header since Unity cant serialize arrays
