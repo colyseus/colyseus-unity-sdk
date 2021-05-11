@@ -22,7 +22,7 @@ public class ServerSettingsEditor : Editor
         port = serializedObject.FindProperty("colyseusServerPort");
         secureProto= serializedObject.FindProperty("useSecureProtocol");
         requestHeaders = serializedObject.FindProperty("_requestHeaders");
-        GUIContent content = EditorGUIUtility.IconContent("ColyseusSettings");
+        GUIContent content = EditorGUIUtility.IconContent("Packages/io.colyseus.sdk/Runtime/Editor Default Resources/Icons/ColyseusSettings");
         if (content != null)
         {
             colyseusIcon = content.image;
