@@ -139,9 +139,9 @@ namespace Colyseus
         }
 
         /// <summary>
-        /// Connect to the Colyseus server.
-        /// </summary>
-        protected virtual void ConnectToServer()
+        /// /// Create a new <see cref="ColyseusClient"/> along with any other client initialization you may need to perform
+        /// /// </summary>
+        public virtual void InitializeClient()
         {
             CreateClient(_colyseusSettings.WebSocketEndpoint);
         }

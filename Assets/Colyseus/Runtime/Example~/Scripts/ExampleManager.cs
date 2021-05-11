@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Colyseus;
 using LucidSightTools;
@@ -13,8 +13,6 @@ public class ExampleManager : ColyseusManager<ExampleManager>
 
     [SerializeField]
     private ExampleRoomController _roomController;
-
-    public bool autoJoinRoom = true;
 
     /// <summary>
     ///     Returns a reference to the current networked user.
@@ -95,11 +93,6 @@ public class ExampleManager : ColyseusManager<ExampleManager>
         
     }
 
-    public void BeginServerConnection()
-    {
-        ConnectToServer();
-    }
-
     public void Initialize(string roomName, Dictionary<string, object> roomOptions)
     {
         if (isInitialized)
@@ -120,15 +113,11 @@ public class ExampleManager : ColyseusManager<ExampleManager>
     /// <summary>
     ///     Connect to the Colyseus server and either join or create a room.
     /// </summary>
-    protected override void ConnectToServer()
+    public override void InitializeClient()
     {
-        base.ConnectToServer();
+        base.InitializeClient();
 
         _roomController.SetClient(client);
-        if (autoJoinRoom)
-        {
-            _roomController.JoinOrCreateRoom();
-        }
     }
 
     /// <summary>
@@ -156,6 +145,11 @@ public class ExampleManager : ColyseusManager<ExampleManager>
     public async void CreateNewRoom(string roomID)
     {
         await _roomController.CreateSpecificRoom(client, _roomController.roomName, roomID);
+    }
+
+    public async void JoinOrCreateRoom()
+    {
+	    await _roomController.JoinOrCreateRoom();
     }
 
     public async void LeaveAllRooms(Action onLeave)
