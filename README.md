@@ -19,7 +19,7 @@
 </div>
 
 
-## Colyseus SDK Develompent
+## Colyseus SDK Development
 
 ### Unit tests
 
@@ -28,6 +28,10 @@ Open Window → General → Test Runner.
 ### Releasing a new version
 
 Update the version number under `Assets/Colyseus/package.json` and push to `master` branch.
+
+### Updating Asset Store Documentation
+
+Markdown files can be converted into PDF any number of ways, most recently used was [Markdown to PDF](https://www.markdowntopdf.com/). The goal for this is specifically to appease the Unity team's approval process. The documentation was a lightly edited version of our [Getting Started - Unity3D](https://github.com/colyseus/docs/blob/master/docs/getting-started/unity3d-client.md) documentation, with hyperlinks fixed and an additional "go to the docs page" link added to the top of the file. Both the PDF and the MD files should be placed under `Assets/Colyseus/Documentation~/`
 
 ## License
 
