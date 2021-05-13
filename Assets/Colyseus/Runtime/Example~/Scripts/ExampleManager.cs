@@ -110,10 +110,10 @@ public class ExampleManager : ColyseusManager<ExampleManager>
             _roomController.Entities, _roomController.EntityViews);
     }
 
-	/// <summary>
-	/// /// Create a new <see cref="ColyseusClient"/> along with any other client initialization you may need to perform
-	/// /// </summary>
-	public override void InitializeClient()
+    /// <summary>
+    /// /// Create a new <see cref="ColyseusClient"/> along with any other client initialization you may need to perform
+    /// /// </summary>
+    public override void InitializeClient()
     {
         base.InitializeClient();
 
@@ -149,14 +149,14 @@ public class ExampleManager : ColyseusManager<ExampleManager>
 
     public void CreateNewRoom(string roomID, Dictionary<string, object> roomOptions)
     {
-	    _roomController.SetRoomOptions(roomOptions);
+        _roomController.SetRoomOptions(roomOptions);
 
-	    CreateNewRoom(roomID);
+        CreateNewRoom(roomID);
     }
 
-	public async void JoinOrCreateRoom()
+    public async void JoinOrCreateRoom()
     {
-	    await _roomController.JoinOrCreateRoom();
+        await _roomController.JoinOrCreateRoom();
     }
 
     public async void LeaveAllRooms(Action onLeave)
