@@ -111,8 +111,8 @@ public class ExampleManager : ColyseusManager<ExampleManager>
     }
 
     /// <summary>
-    ///     Connect to the Colyseus server and either join or create a room.
-    /// </summary>
+    /// /// Create a new <see cref="ColyseusClient"/> along with any other client initialization you may need to perform
+    /// /// </summary>
     public override void InitializeClient()
     {
         base.InitializeClient();
@@ -147,9 +147,16 @@ public class ExampleManager : ColyseusManager<ExampleManager>
         await _roomController.CreateSpecificRoom(client, _roomController.roomName, roomID);
     }
 
+    public void CreateNewRoom(string roomID, Dictionary<string, object> roomOptions)
+    {
+        _roomController.SetRoomOptions(roomOptions);
+
+        CreateNewRoom(roomID);
+    }
+
     public async void JoinOrCreateRoom()
     {
-	    await _roomController.JoinOrCreateRoom();
+        await _roomController.JoinOrCreateRoom();
     }
 
     public async void LeaveAllRooms(Action onLeave)

@@ -116,6 +116,7 @@ namespace Colyseus
         public virtual void OverrideSettings(ColyseusSettings newSettings)
         {
             _colyseusSettings = newSettings;
+            _requests = new ColyseusRequest(_colyseusSettings);
         }
 
         /// <summary>
