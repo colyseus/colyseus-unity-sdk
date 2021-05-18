@@ -66,7 +66,7 @@ public class LobbyController : MonoBehaviour
 
         ExampleManager.Instance.OverrideSettings(clonedSettings);
 
-        ExampleManager.Instance.BeginServerConnection();
+        ExampleManager.Instance.InitializeClient();
 
         ExampleManager.Instance.UserName = desiredUserName;
 
@@ -80,7 +80,16 @@ public class LobbyController : MonoBehaviour
     {
         connectingCover.SetActive(true);
         string desiredRoomName = selectRoomMenu.RoomCreationName;
-        LoadGallery(() => { ExampleManager.Instance.CreateNewRoom(desiredRoomName); });
+        if (!string.IsNullOrEmpty(desiredRoomName))
+        {
+            LoadGallery(() => { ExampleManager.Instance.CreateNewRoom(desiredRoomName); });
+        }
+    }
+
+    public void JoinOrCreateRoom()
+    {
+        connectingCover.SetActive(true);
+        LoadGallery(() => { ExampleManager.Instance.JoinOrCreateRoom(); });
     }
 
     public void JoinRoom(string id)

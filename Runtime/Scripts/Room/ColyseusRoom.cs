@@ -415,8 +415,7 @@ namespace Colyseus
             }
             else if (code == ColyseusProtocol.ROOM_STATE)
             {
-                Debug.Log("ROOM_STATE");
-                SetState(bytes, 1);
+	            SetState(bytes, 1);
             }
             else if (code == ColyseusProtocol.ROOM_STATE_PATCH)
             {

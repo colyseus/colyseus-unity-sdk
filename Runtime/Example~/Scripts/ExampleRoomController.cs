@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -229,7 +229,7 @@ public class ExampleRoomController
     {
         _colyseusSettings = settings;
 
-        ColyseusClient.onAddRoom += OnAddRoom;
+        ColyseusClient.onAddRoom += AddRoom;
     }
 
     public void SetRoomOptions(Dictionary<string, object> options)
@@ -256,25 +256,15 @@ public class ExampleRoomController
     }
 
     /// <summary>
-    ///     Handler for the <see cref="ColyseusClient.onAddRoom" /> event.
-    /// </summary>
-    /// <param name="roomToAdd"></param>
-    private void OnAddRoom(IColyseusRoom roomToAdd)
-    {
-        _ = AddRoom(roomToAdd);
-    }
-
-    /// <summary>
     ///     Adds the given room to <see cref="rooms" /> and
     ///     initiates its connection to the server.
     /// </summary>
     /// <param name="roomToAdd"></param>
     /// <returns></returns>
-    public async Task AddRoom(IColyseusRoom roomToAdd)
+    public void AddRoom(IColyseusRoom roomToAdd)
     {
         roomToAdd.OnLeave += code => rooms.Remove(roomToAdd);
         rooms.Add(roomToAdd);
-        await roomToAdd.Connect();
     }
 
     /// <summary>
@@ -314,11 +304,11 @@ public class ExampleRoomController
     ///     Join an existing room or create a new one using <see cref="roomName" /> with no options.
     ///     <para>Locked or private rooms are ignored.</para>
     /// </summary>
-    public async void JoinOrCreateRoom()
+    public async Task JoinOrCreateRoom(Action<bool> onComplete = null)
     {
+        LSLog.LogImportant($"Join Or Create Room - Name = {roomName}.... ");
         try
         {
-            LSLog.LogImportant($"Join Or Create Room - Name = {roomName}.... ");
             // Populate an options dictionary with custom options provided elsewhere
             Dictionary<string, object> options = new Dictionary<string, object>();
             foreach (KeyValuePair<string, object> option in roomOptionsDictionary)
@@ -327,15 +317,18 @@ public class ExampleRoomController
             }
 
             _room = await _client.JoinOrCreate<ExampleRoomState>(roomName, options);
-
-            LSLog.LogImportant($"Joined / Created Room: {_room.Id}");
-            _lastRoomId = _room.Id;
-            RegisterRoomHandlers();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            LSLog.LogError($"Room Controller Error - {e.Message + e.StackTrace}");
+            LSLog.LogError($"Room Controller Error - {ex.Message + ex.StackTrace}");
+            onComplete?.Invoke(false);
+            return;
         }
+
+        onComplete?.Invoke(true);
+        LSLog.LogImportant($"Joined / Created Room: {_room.Id}");
+        _lastRoomId = _room.Id;
+        RegisterRoomHandlers();
     }
 
     public async Task LeaveAllRooms(bool consented, Action onLeave = null)
