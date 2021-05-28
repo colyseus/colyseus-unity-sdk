@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -65,11 +65,12 @@ namespace Colyseus
                 if (_headersDictionary == null)
                 {
                     _headersDictionary = new Dictionary<string, string>();
-                    for (int i = 0; i < _requestHeaders.Length; ++i)
-                    {
-                        _headersDictionary.Add(_requestHeaders[i].name, _requestHeaders[i].value);
-                    }
-                }
+
+					for (int i = 0; _requestHeaders != null && i < _requestHeaders.Length; ++i)
+					{
+						_headersDictionary.Add(_requestHeaders[i].name, _requestHeaders[i].value);
+					}
+				}
 
                 return _headersDictionary;
             }
