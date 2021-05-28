@@ -25,7 +25,7 @@ namespace Colyseus
     ///     Delegate function for when <see cref="ColyseusClient" /> leaves this room.
     /// </summary>
     /// <param name="code">Reason for closure</param>
-    public delegate void ColyseusCloseEventHandler(WebSocketCloseCode code);
+    public delegate void ColyseusCloseEventHandler(int code);
 
     /// <summary>
     ///     Delegate function for when some error has been triggered in the room.
@@ -166,7 +166,7 @@ namespace Colyseus
             }
             else
             {
-                OnLeave?.Invoke(WebSocketCloseCode.Normal);
+                OnLeave?.Invoke((int)WebSocketCloseCode.Normal);
             }
         }
 

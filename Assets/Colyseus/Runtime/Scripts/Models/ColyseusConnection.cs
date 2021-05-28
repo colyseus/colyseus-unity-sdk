@@ -74,10 +74,11 @@ namespace Colyseus
         ///     <see cref="ProcessingMessageQueue" /> while loop
         /// </remarks>
         /// <param name="code">The cause of the socket closure</param>
-        protected void _OnClose(WebSocketCloseCode code)
+        protected void _OnClose(int code)
         {
             ProcessingMessageQueue = false;
             IsOpen = false;
+			Debug.Log(string.Format("Websocket closed! Code:{0}", code.ToString()));
         }
     }
 }
