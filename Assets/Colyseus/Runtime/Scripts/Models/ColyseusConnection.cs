@@ -78,7 +78,7 @@ namespace Colyseus
         {
             ProcessingMessageQueue = false;
             IsOpen = false;
-			Debug.Log(string.Format("Websocket closed! Code:{0}", code.ToString()));
+            Debug.Log(string.Format("Websocket closed! Code:{0}", code.ToString()));
         }
     }
 }

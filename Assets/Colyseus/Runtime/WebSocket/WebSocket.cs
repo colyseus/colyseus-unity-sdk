@@ -316,19 +316,19 @@ namespace NativeWebSocket
     }
 
     public void DelegateOnOpenEvent () {
-      this.OnOpen?.Invoke ();
+        this.OnOpen?.Invoke ();
     }
 
     public void DelegateOnMessageEvent (byte[] data) {
-      this.OnMessage?.Invoke (data);
+        this.OnMessage?.Invoke (data);
     }
 
     public void DelegateOnErrorEvent (string errorMsg) {
-      this.OnError?.Invoke (errorMsg);
+        this.OnError?.Invoke (errorMsg);
     }
 
     public void DelegateOnCloseEvent (int closeCode) {
-      this.OnClose?.Invoke (closeCode);
+        this.OnClose?.Invoke (closeCode);
     }
 
   }

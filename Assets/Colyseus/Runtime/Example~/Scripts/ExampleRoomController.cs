@@ -411,7 +411,7 @@ public class ExampleRoomController
 
     private void OnLeaveRoom(int code)
     {
-	    WebSocketCloseCode parsedCode = WebSocketHelpers.ParseCloseCodeEnum(code);
+        WebSocketCloseCode parsedCode = WebSocketHelpers.ParseCloseCodeEnum(code);
         LSLog.Log(string.Format("ROOM: ON LEAVE =- Reason: {0} ({1})", parsedCode, code));
         _pingThread.Abort();
         _pingThread = null;
