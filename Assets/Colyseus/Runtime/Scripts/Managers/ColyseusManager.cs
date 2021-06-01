@@ -108,7 +108,7 @@ namespace Colyseus
         {
             _colyseusSettings = newSettings;
 
-            client?.OverrideSettings(newSettings, true);
+            client?.SetSettings(newSettings, true);
         }
 
         /// <summary>

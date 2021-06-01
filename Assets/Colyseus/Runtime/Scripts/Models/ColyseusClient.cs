@@ -92,16 +92,14 @@ namespace Colyseus
 		/// <param name="useWebSocketEndpoint">Determines whether the connection endpoint should use either web socket or http protocols.</param>
 		public ColyseusClient(ColyseusSettings settings, bool useWebSocketEndpoint)
         {
-	        Endpoint = new UriBuilder(new Uri(useWebSocketEndpoint ? settings.WebSocketEndpoint : settings.WebRequestEndpoint));
-
-	        Settings = settings;
+	        SetSettings(settings, useWebSocketEndpoint);
         }
 
-		public void OverrideSettings(ColyseusSettings newSettings, bool useWebSocketEndpoint)
+		public void SetSettings(ColyseusSettings settings, bool useWebSocketEndpoint)
 		{
-			Endpoint = new UriBuilder(new Uri(useWebSocketEndpoint ? newSettings.WebSocketEndpoint : newSettings.WebRequestEndpoint));
+			Endpoint = new UriBuilder(new Uri(useWebSocketEndpoint ? settings.WebSocketEndpoint : settings.WebRequestEndpoint));
 
-			Settings = newSettings;
+			Settings = settings;
 		}
 
         /// <summary>
