@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
@@ -12,18 +12,18 @@ using LucidSightTools;
 namespace Colyseus
 {
     /// <summary>
-    /// Centralized location for building out <see cref="UnityWebRequest"/>
+    /// Class for building out server requests using <see cref="UnityWebRequest"/>
     /// </summary>
     public class ColyseusRequest
     {
-        private static ColyseusSettings _serverSettings;
+        private ColyseusSettings _serverSettings;
 
         public ColyseusRequest(ColyseusSettings settings)
         {
             _serverSettings = settings;
         }
 
-        public static async Task<string> Request(string uriMethod, string uriPath, string uriQuery, string Token = "", UploadHandlerRaw data = null)
+        public async Task<string> Request(string uriMethod, string uriPath, string uriQuery, string Token = "", UploadHandlerRaw data = null)
         {
             UriBuilder uriBuilder = new UriBuilder(_serverSettings.WebRequestEndpoint);
             uriBuilder.Path = uriPath;
@@ -73,7 +73,7 @@ namespace Colyseus
             return json;
         }
 
-        public static async Task<string> Request(string uriMethod, string uriPath, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+        public async Task<string> Request(string uriMethod, string uriPath, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
         {
             UriBuilder uriBuilder = new UriBuilder(_serverSettings.WebRequestEndpoint);
             uriBuilder.Path = uriPath;

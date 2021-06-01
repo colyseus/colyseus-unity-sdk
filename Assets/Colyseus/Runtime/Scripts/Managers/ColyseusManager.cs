@@ -17,8 +17,6 @@ namespace Colyseus
         [SerializeField]
         protected ColyseusSettings _colyseusSettings;
 
-        private ColyseusRequest _requests;
-
         // Getters
         //==========================
         /// <summary>
@@ -55,7 +53,7 @@ namespace Colyseus
         //==========================
 
         /// <summary>
-        /// The Client that is created when connecting to the Colyseus server.
+        /// The primary Client object responsible for making connections to the server.
         /// </summary>
         protected ColyseusClient client;
 
@@ -71,10 +69,6 @@ namespace Colyseus
         /// </summary>
         protected virtual void Awake()
         {
-            // Copy request headers
-            List<ColyseusSettings.RequestHeader> requestHeaders =
-                new List<ColyseusSettings.RequestHeader>(_colyseusSettings.GetRequestHeaders());
-
             InitializeInstance();
         }
 
@@ -90,9 +84,6 @@ namespace Colyseus
             }
 
             Instance = GetComponent<T>();
-
-            // Initialize the requests object with settings
-            _requests = new ColyseusRequest(_colyseusSettings);
         }
 
         /// <summary>
@@ -116,7 +107,8 @@ namespace Colyseus
         public virtual void OverrideSettings(ColyseusSettings newSettings)
         {
             _colyseusSettings = newSettings;
-            _requests = new ColyseusRequest(_colyseusSettings);
+
+            client?.SetSettings(newSettings, true);
         }
 
         /// <summary>
