@@ -409,14 +409,15 @@ public class ExampleRoomController
         _room.colyseusConnection.OnClose += Room_OnClose;
     }
 
-    private void OnLeaveRoom(WebSocketCloseCode code)
+    private void OnLeaveRoom(int code)
     {
-        LSLog.Log("ROOM: ON LEAVE =- Reason: " + code);
+        WebSocketCloseCode parsedCode = WebSocketHelpers.ParseCloseCodeEnum(code);
+        LSLog.Log(string.Format("ROOM: ON LEAVE =- Reason: {0} ({1})", parsedCode, code));
         _pingThread.Abort();
         _pingThread = null;
         _room = null;
 
-        if (code != WebSocketCloseCode.Normal && !string.IsNullOrEmpty(_lastRoomId))
+        if (parsedCode != WebSocketCloseCode.Normal && !string.IsNullOrEmpty(_lastRoomId))
         {
             JoinRoomId(_lastRoomId);
         }
@@ -592,7 +593,7 @@ public class ExampleRoomController
     ///     Callback for when the room's connection closes.
     /// </summary>
     /// <param name="closeCode">Code reason for the connection close.</param>
-    private static void Room_OnClose(WebSocketCloseCode closeCode)
+    private static void Room_OnClose(int closeCode)
     {
         LSLog.LogError("Room_OnClose: " + closeCode);
     }
