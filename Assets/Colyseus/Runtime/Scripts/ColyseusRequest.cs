@@ -29,7 +29,7 @@ namespace Colyseus
             uriBuilder.Path = uriPath;
             uriBuilder.Query = uriQuery;
 
-            UnityWebRequest req = new UnityWebRequest();
+            using UnityWebRequest req = new UnityWebRequest();
             req.method = uriMethod;
 
             req.url = uriBuilder.Uri.ToString();
@@ -78,7 +78,7 @@ namespace Colyseus
             UriBuilder uriBuilder = new UriBuilder(_serverSettings.WebRequestEndpoint);
             uriBuilder.Path = uriPath;
 
-            UnityWebRequest req = new UnityWebRequest();
+            using UnityWebRequest req = new UnityWebRequest();
             req.method = uriMethod;
             req.url = uriBuilder.Uri.ToString();
             LSLog.Log($"Requesting from URL: {req.url}");
