@@ -74,12 +74,10 @@ namespace Colyseus
             Endpoint = new UriBuilder(new Uri(endpoint));
 
             // Create ColyseusSettings object to pass to the ColyseusRequest object
-            ColyseusSettings settings = new ColyseusSettings()
-	            {
-		            colyseusServerAddress = Endpoint.Host,
-		            colyseusServerPort = Endpoint.Port.ToString(),
-					useSecureProtocol = Endpoint.ToString().StartsWith("wss") || Endpoint.ToString().StartsWith("https")
-	            };
+            ColyseusSettings settings = ScriptableObject.CreateInstance<ColyseusSettings>();
+            settings.colyseusServerAddress = Endpoint.Host;
+            settings.colyseusServerPort = Endpoint.Port.ToString();
+            settings.useSecureProtocol = Endpoint.ToString().StartsWith("wss") || Endpoint.ToString().StartsWith("https");
 
             Settings = settings;
 		}
