@@ -29,8 +29,12 @@ namespace Colyseus
             uriBuilder.Path = uriPath;
             uriBuilder.Query = uriQuery;
 
-            using UnityWebRequest req = new UnityWebRequest();
-            req.method = uriMethod;
+#if UNITY_2020_2_OR_NEWER
+			using UnityWebRequest req = new UnityWebRequest();
+#else
+	        UnityWebRequest req = new UnityWebRequest();
+#endif
+			req.method = uriMethod;
 
             req.url = uriBuilder.Uri.ToString();
             // Send JSON on request body
@@ -82,8 +86,12 @@ namespace Colyseus
             UriBuilder uriBuilder = new UriBuilder(_serverSettings.WebRequestEndpoint);
             uriBuilder.Path = uriPath;
 
-            using UnityWebRequest req = new UnityWebRequest();
-            req.method = uriMethod;
+#if UNITY_2020_2_OR_NEWER
+			using UnityWebRequest req = new UnityWebRequest();
+#else
+	        UnityWebRequest req = new UnityWebRequest();
+#endif
+			req.method = uriMethod;
             req.url = uriBuilder.Uri.ToString();
             LSLog.Log($"Requesting from URL: {req.url}");
             if (options != null)
