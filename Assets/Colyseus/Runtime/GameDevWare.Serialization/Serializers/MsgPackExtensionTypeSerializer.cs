@@ -16,10 +16,12 @@
 using System;
 using System.Globalization;
 using GameDevWare.Serialization.MessagePack;
+using UnityEngine.Scripting;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	[Preserve]
 	public sealed class MsgPackExtensionTypeSerializer : TypeSerializer
 	{
 		private const string DATA_MEMBER_NAME = "$data";
