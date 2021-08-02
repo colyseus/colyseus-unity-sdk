@@ -53,7 +53,11 @@ namespace Colyseus
             req.downloadHandler = new DownloadHandlerBuffer();
             await req.SendWebRequest();
 
+#if UNITY_2020_1_OR_NEWER
+            if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
+#else
             if (req.isNetworkError || req.isHttpError)
+#endif
             {
                 if (_serverSettings.useSecureProtocol)
                 {
@@ -110,7 +114,11 @@ namespace Colyseus
             req.downloadHandler = new DownloadHandlerBuffer();
             await req.SendWebRequest();
 
+#if UNITY_2020_1_OR_NEWER
+            if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
+#else
             if (req.isNetworkError || req.isHttpError)
+#endif
             {
                 if (_serverSettings.useSecureProtocol)
                 {
