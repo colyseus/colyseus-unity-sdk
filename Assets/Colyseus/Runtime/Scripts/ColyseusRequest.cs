@@ -29,56 +29,54 @@ namespace Colyseus
             uriBuilder.Path = uriPath;
             uriBuilder.Query = uriQuery;
 
-#if UNITY_2020_2_OR_NEWER
-			using UnityWebRequest req = new UnityWebRequest();
-#else
-	        UnityWebRequest req = new UnityWebRequest();
-#endif
-			req.method = uriMethod;
-
-            req.url = uriBuilder.Uri.ToString();
-            // Send JSON on request body
-            if (data != null)
+            using (UnityWebRequest req = new UnityWebRequest())
             {
-                req.uploadHandler = data;
-            }
-
-            foreach (KeyValuePair<string,string> pair in _serverSettings.HeadersDictionary)
-            {
-                req.SetRequestHeader(pair.Key, pair.Value);
-            }
-
-            if (!string.IsNullOrEmpty(Token))
-            {
-                req.SetRequestHeader("Authorization", "Bearer " + Token);
-            }
-
-            // req.uploadHandler = new UploadHandlerRaw(bytes);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            await req.SendWebRequest();
+                req.method = uriMethod;
+        
+                req.url = uriBuilder.Uri.ToString();
+                // Send JSON on request body
+                if (data != null)
+                {
+                    req.uploadHandler = data;
+                }
+        
+                foreach (KeyValuePair<string, string> pair in _serverSettings.HeadersDictionary)
+                {
+                    req.SetRequestHeader(pair.Key, pair.Value);
+                }
+        
+                if (!string.IsNullOrEmpty(Token))
+                {
+                    req.SetRequestHeader("Authorization", "Bearer " + Token);
+                }
+        
+                // req.uploadHandler = new UploadHandlerRaw(bytes);
+                req.downloadHandler = new DownloadHandlerBuffer();
+                await req.SendWebRequest();
 
 #if UNITY_2020_1_OR_NEWER
-            if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
+                if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
 #else
             if (req.isNetworkError || req.isHttpError)
 #endif
-            {
-                if (_serverSettings.useSecureProtocol)
                 {
-                    //We failed to make this call with a secure protocol, try with non-secure and if that works we'll stick with it
-                    _serverSettings.useSecureProtocol = false;
-                    LSLog.LogError($"Failed to make request to {req.url} with secure protocol, trying again without!");
-                    return await Request(uriMethod, uriPath, uriQuery, Token, data);
+                    if (_serverSettings.useSecureProtocol)
+                    {
+                         //We failed to make this call with a secure protocol, try with non-secure and if that works we'll stick with it
+                         _serverSettings.useSecureProtocol = false;
+                         LSLog.LogError($"Failed to make request to {req.url} with secure protocol, trying again without!");
+                         return await Request(uriMethod, uriPath, uriQuery, Token, data);
+                    }
+                    else
+                    {
+                        throw new Exception(req.error);
+                    }
                 }
-                else
-                {
-                    throw new Exception(req.error);
-                }
-            }
-
-            string json = req.downloadHandler.text;
-
-            return json;
+            
+                string json = req.downloadHandler.text;
+            
+                return json;
+            } ;
         }
 
         public async Task<string> Request(string uriMethod, string uriPath, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
@@ -86,62 +84,60 @@ namespace Colyseus
             UriBuilder uriBuilder = new UriBuilder(_serverSettings.WebRequestEndpoint);
             uriBuilder.Path = uriPath;
 
-#if UNITY_2020_2_OR_NEWER
-			using UnityWebRequest req = new UnityWebRequest();
-#else
-	        UnityWebRequest req = new UnityWebRequest();
-#endif
-			req.method = uriMethod;
-            req.url = uriBuilder.Uri.ToString();
-            LSLog.Log($"Requesting from URL: {req.url}");
-            if (options != null)
+            using (UnityWebRequest req = new UnityWebRequest())
             {
-                // Send JSON options on request body
-                MemoryStream jsonBodyStream = new MemoryStream();
-                Json.Serialize(options, jsonBodyStream); //TODO: Replace GameDevWare serialization
-
-                req.uploadHandler = new UploadHandlerRaw(jsonBodyStream.ToArray())
+                req.method = uriMethod;
+                req.url = uriBuilder.Uri.ToString();
+                LSLog.Log($"Requesting from URL: {req.url}");
+                if (options != null)
                 {
-                    contentType = "application/json"
-                };
-            }
-
-            foreach (KeyValuePair<string, string> pair in _serverSettings.HeadersDictionary)
-            {
-                req.SetRequestHeader(pair.Key, pair.Value);
-            }
-
-            if (headers != null)
-            {
-                foreach (KeyValuePair<string, string> header in headers)
-                {
-                    req.SetRequestHeader(header.Key, header.Value);
+                    // Send JSON options on request body
+                    MemoryStream jsonBodyStream = new MemoryStream();
+                    Json.Serialize(options, jsonBodyStream); //TODO: Replace GameDevWare serialization
+                    
+                    req.uploadHandler = new UploadHandlerRaw(jsonBodyStream.ToArray())
+                    {
+                        contentType = "application/json"
+                    };
                 }
-            }
-
-            req.downloadHandler = new DownloadHandlerBuffer();
-            await req.SendWebRequest();
+                
+                foreach (KeyValuePair<string, string> pair in _serverSettings.HeadersDictionary)
+                {
+                    req.SetRequestHeader(pair.Key, pair.Value);
+                }
+                
+                if (headers != null)
+                {
+                    foreach (KeyValuePair<string, string> header in headers)
+                    {
+                        req.SetRequestHeader(header.Key, header.Value);
+                    }
+                }
+                
+                req.downloadHandler = new DownloadHandlerBuffer();
+                await req.SendWebRequest();
 
 #if UNITY_2020_1_OR_NEWER
-            if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
+                if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
 #else
-            if (req.isNetworkError || req.isHttpError)
+                if (req.isNetworkError || req.isHttpError)
 #endif
-            {
-                if (_serverSettings.useSecureProtocol)
                 {
-                    //We failed to make this call with a secure protocol, try with non-secure and if that works we'll stick with it
-                    _serverSettings.useSecureProtocol = false;
-                    LSLog.LogError($"Failed to make request to {req.url} with secure protocol, trying again without!");
-                    return await Request(uriMethod, uriPath, options, headers);
+                    if (_serverSettings.useSecureProtocol)
+                    {
+                        //We failed to make this call with a secure protocol, try with non-secure and if that works we'll stick with it
+                        _serverSettings.useSecureProtocol = false;
+                        LSLog.LogError($"Failed to make request to {req.url} with secure protocol, trying again without!");
+                        return await Request(uriMethod, uriPath, options, headers);
+                    }
+                    else
+                    {
+                        throw new Exception(req.error);
+                    }
                 }
-                else
-                {
-                    throw new Exception(req.error);
-                }
-            }
-
-            return req.downloadHandler.text;
+                
+                return req.downloadHandler.text;
+            };
         }
     }
 }
