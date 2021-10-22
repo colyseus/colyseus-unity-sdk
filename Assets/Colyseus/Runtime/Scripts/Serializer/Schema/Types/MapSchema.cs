@@ -11,6 +11,8 @@ namespace Colyseus.Schema
     /// <typeparam name="T">The type of object in this map</typeparam>
     public class MapSchema<T> : ISchemaCollection
     {
+        public CollectionSchemaCallbacks<string, T> __callbacks = null;
+
         protected Dictionary<int, string> Indexes = new Dictionary<int, string>();
 
         /// <summary>
@@ -143,9 +145,7 @@ namespace Colyseus.Schema
         {
             MapSchema<T> clone = new MapSchema<T>(items)
             {
-                OnAdd = OnAdd,
-                OnChange = OnChange,
-                OnRemove = OnRemove
+                __callbacks = __callbacks,
             };
             return clone;
         }
@@ -253,19 +253,47 @@ namespace Colyseus.Schema
         }
 
         /// <summary>
-        ///     Invoke <see cref="OnAdd" /> on all <see cref="items" />
+        ///     Attaches a callback that is triggered whenever a new item is received from the server
         /// </summary>
-        public void TriggerAll()
+		/// <returns>An Action that, when called, removes the registered callback</returns>
+        public Action OnAdd(KeyValueEventHandler<string, T> handler)
         {
-            if (OnAdd == null)
-            {
-                return;
-            }
+            if (__callbacks == null) __callbacks = new CollectionSchemaCallbacks<string, T>();
+
+            __callbacks.OnAdd += handler;
 
             foreach (DictionaryEntry item in items)
             {
-                OnAdd.Invoke((string) item.Key, (T)item.Value);
+                __callbacks.InvokeOnAdd(item.Value, item.Key);
             }
+
+            return () => __callbacks.OnAdd -= handler;
+        }
+
+        /// <summary>
+        ///     Attaches a callback that is triggered whenever a new item is received from the server
+        /// </summary>
+		/// <returns>An Action that, when called, removes the registered callback</returns>
+        public Action OnChange(KeyValueEventHandler<string, T> handler)
+        {
+            if (__callbacks == null) __callbacks = new CollectionSchemaCallbacks<string, T>();
+
+            __callbacks.OnChange += handler;
+
+            return () => __callbacks.OnChange -= handler;
+        }
+
+        /// <summary>
+        ///     Attaches a callback that is triggered whenever a new item is received from the server
+        /// </summary>
+		/// <returns>An Action that, when called, removes the registered callback</returns>
+        public Action OnRemove(KeyValueEventHandler<string, T> handler)
+        {
+            if (__callbacks == null) __callbacks = new CollectionSchemaCallbacks<string, T>();
+
+            __callbacks.OnRemove += handler;
+
+            return () => __callbacks.OnRemove -= handler;
         }
 
         /// <summary>
@@ -274,55 +302,12 @@ namespace Colyseus.Schema
         /// <param name="previousInstance">The <see cref="IRef" /> with the EventHandlers to copy</param>
         public void MoveEventHandlers(IRef previousInstance)
         {
-            OnAdd = ((MapSchema<T>) previousInstance).OnAdd;
-            OnChange = ((MapSchema<T>) previousInstance).OnChange;
-            OnRemove = ((MapSchema<T>) previousInstance).OnRemove;
+            __callbacks = ((MapSchema<T>)previousInstance).__callbacks;
         }
 
-        /// <summary>
-        ///     Trigger <see cref="OnAdd" /> with a specific <paramref name="item" /> at an <paramref name="index" />
-        /// </summary>
-        /// <param name="item">The item to add, will be cast to <typeparamref name="T" /> </param>
-        /// <param name="index">The index of the item, will be cast to <see cref="string" /></param>
-        public void InvokeOnAdd(object item, object index)
-        {
-            OnAdd?.Invoke((string) index, (T)item);
-        }
-
-        /// <summary>
-        ///     Trigger <see cref="OnChange" /> with a specific <paramref name="item" /> at an <paramref name="index" />
-        /// </summary>
-        /// <param name="item">The item to change, will be cast to <typeparamref name="T" /> </param>
-        /// <param name="index">The index of the item, will be cast to <see cref="string" /></param>
-        public void InvokeOnChange(object item, object index)
-        {
-            OnChange?.Invoke((string)index, (T)item);
-        }
-
-        /// <summary>
-        ///     Trigger <see cref="OnRemove" /> with a specific <paramref name="item" /> at an <paramref name="index" />
-        /// </summary>
-        /// <param name="item">The item to remove, will be cast to <typeparamref name="T" /> </param>
-        /// <param name="index">The index of the item, will be cast to <see cref="string" /></param>
-        public void InvokeOnRemove(object item, object index)
-        {
-            OnRemove?.Invoke((string)index, (T)item);
-        }
-
-        /// <summary>
-        ///     Event that is invoked when something is added to the <see cref="MapSchema{T}" />
-        /// </summary>
-        public event KeyValueEventHandler<string, T> OnAdd;
-
-        /// <summary>
-        ///     Event that is invoked when something is changed in the <see cref="MapSchema{T}" />
-        /// </summary>
-        public event KeyValueEventHandler<string, T> OnChange;
-
-        /// <summary>
-        ///     Event that is invoked when something is removed from the <see cref="MapSchema{T}" />
-        /// </summary>
-        public event KeyValueEventHandler<string, T> OnRemove;
+        public void InvokeOnAdd(object item, object index) { __callbacks?.InvokeOnAdd(item, index); }
+        public void InvokeOnChange(object item, object index) { __callbacks?.InvokeOnChange(item, index); }
+        public void InvokeOnRemove(object item, object index) { __callbacks?.InvokeOnRemove(item, index); }
 
         /// <summary>
         ///     Add a new item into <see cref="items" />

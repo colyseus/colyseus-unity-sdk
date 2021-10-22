@@ -123,6 +123,11 @@ namespace Colyseus.Schema
     public class DataChange
     {
         /// <summary>
+        ///     The reference id of the data change
+        /// </summary>
+		public int RefId;
+
+        /// <summary>
         ///     The field index of the data change
         /// </summary>
         public object DynamicIndex;
@@ -149,26 +154,6 @@ namespace Colyseus.Schema
     }
 
     /// <summary>
-    ///     Delegate function for handling a List of <see cref="Colyseus.DataChange" />
-    /// </summary>
-    /// <param name="changes">The changes that have occurred</param>
-    public delegate void OnChangeEventHandler(List<DataChange> changes);
-
-    /// <summary>
-    ///     Delegate for handling events given a <paramref name="key" /> and a <paramref name="value" />
-    /// </summary>
-    /// <param name="value">The affected value</param>
-    /// <param name="key">The key we're affecting</param>
-    /// <typeparam name="T">The <see cref="Schema" /> type</typeparam>
-    /// <typeparam name="K">The type of <see cref="object" /> we're attempting to access</typeparam>
-    public delegate void KeyValueEventHandler<K, T >(K key, T value);
-
-    /// <summary>
-    ///     Delegate function for handling <see cref="Schema" /> removal
-    /// </summary>
-    public delegate void OnRemoveEventHandler();
-
-    /// <summary>
     ///     Interface for a collection of multiple <see cref="Schema" />s
     /// </summary>
     [SuppressMessage("ReSharper", "MissingXmlDoc")]
@@ -179,12 +164,13 @@ namespace Colyseus.Schema
 
         int Count { get; }
         object this[object key] { get; set; }
+
         void InvokeOnAdd(object item, object index);
         void InvokeOnChange(object item, object index);
         void InvokeOnRemove(object item, object index);
+
         IDictionary GetItems();
         void SetItems(object items);
-        void TriggerAll();
         void Clear(ColyseusReferenceTracker refs);
 
         System.Type GetChildType();
@@ -220,6 +206,8 @@ namespace Colyseus.Schema
     /// </summary>
     public class Schema : IRef
     {
+        public SchemaCallbacks __callbacks = null;
+
         /// <summary>
         ///     Map of the <see cref="Type.ChildPrimitiveType" />s that this schema uses
         /// </summary>
@@ -287,13 +275,44 @@ namespace Colyseus.Schema
         public int __refId { get; set; }
 
         /// <summary>
+        ///     Attaches a callback that is triggered whenever a property on this Schema instance applies a change from the server.
+        /// </summary>
+		/// <returns>An Action that, when called, removes the registered callback</returns>
+        public Action OnChange (OnChangeEventHandler handler)
+		{
+            if (__callbacks == null) __callbacks = new SchemaCallbacks();
+
+            __callbacks.OnChange += handler;
+
+            return () => __callbacks.OnChange -= handler;
+        }
+
+        /// <summary>
+        ///     Attaches a callback that is triggered whenever this Schema instance has been removed from the server.
+        /// </summary>
+		/// <returns>An Action that, when called, removes the registered callback</returns>
+        public Action OnRemove (OnRemoveEventHandler handler)
+        {
+            if (__callbacks == null) __callbacks = new SchemaCallbacks();
+
+            __callbacks.OnRemove += handler;
+
+            return () => __callbacks.OnRemove -= handler;
+        }
+
+        ///// <inheritdoc cref="OnChangeEventHandler" />
+        //public event OnChangeEventHandler OnChange;
+
+        ///// <inheritdoc cref="OnRemoveEventHandler" />
+        //public event OnRemoveEventHandler OnRemove;
+
+        /// <summary>
         ///     Update this <see cref="Schema" />'s EventHandlers
         /// </summary>
         /// <param name="previousInstance">The instance of an <see cref="IRef" /> from which we will copy the EventHandlers</param>
         public void MoveEventHandlers(IRef previousInstance)
         {
-            OnChange = ((Schema) previousInstance).OnChange;
-            OnRemove = ((Schema) previousInstance).OnRemove;
+            __callbacks = ((Schema)previousInstance).__callbacks;
 
             foreach (KeyValuePair<int, string> item in ((Schema) previousInstance).fieldsByIndex)
             {
@@ -327,12 +346,6 @@ namespace Colyseus.Schema
             fieldsByIndex.TryGetValue(index, out fieldName);
             this[fieldName] = null;
         }
-
-        /// <inheritdoc cref="OnChangeEventHandler" />
-        public event OnChangeEventHandler OnChange;
-
-        /// <inheritdoc cref="OnRemoveEventHandler" />
-        public event OnRemoveEventHandler OnRemove;
 
         /// <summary>
         ///     Getter function, required for <see cref="ColyseusReferenceTracker.GarbageCollection" />
@@ -378,9 +391,7 @@ namespace Colyseus.Schema
             this.refs = refs;
             refs.Add(refId, _ref);
 
-            List<DataChange> changes = new List<DataChange>();
-            OrderedDictionary allChanges = new OrderedDictionary(); // Dictionary<int, List<DataChange>>
-            allChanges.Add(refId, changes);
+            List<DataChange> allChanges = new List<DataChange>();
 
             while (it.Offset < totalBytes)
             {
@@ -400,8 +411,8 @@ namespace Colyseus.Schema
                     }
 
                     // create empty list of changes for this refId.
-                    changes = new List<DataChange>();
-                    allChanges[(object) refId] = changes;
+                    //allChanges = new List<DataChange>();
+                    //allChanges[(object) refId] = allChanges;
 
                     continue;
                 }
@@ -595,16 +606,15 @@ namespace Colyseus.Schema
 
                             foreach (object key in items.Keys)
                             {
-                                deletes.Add(new DataChange
+                                allChanges.Add(new DataChange
                                 {
+                                    RefId = refId,
                                     DynamicIndex = key,
                                     Op = (byte) OPERATION.DELETE,
                                     Value = null,
                                     PreviousValue = items[key]
                                 });
                             }
-
-                            allChanges[(object) ((IRef) previousValue).__refId] = deletes;
                         }
                     }
 
@@ -632,8 +642,9 @@ namespace Colyseus.Schema
 
                 if (hasChange)
                 {
-                    changes.Add(new DataChange
+                    allChanges.Add(new DataChange
                     {
+                        RefId = refId,
                         Op = operation,
                         Field = fieldName,
                         DynamicIndex = dynamicIndex,
@@ -662,8 +673,9 @@ namespace Colyseus.Schema
                 return;
             }
 
-            OrderedDictionary allChanges = new OrderedDictionary();
-            TriggerAllFillChanges(this, ref allChanges);
+            List<DataChange> allChanges = new List<DataChange>();
+            HashSet<int> visitedRefs = new HashSet<int>();
+            TriggerAllFillChanges(this, ref allChanges, ref visitedRefs);
             TriggerChanges(ref allChanges);
         }
 
@@ -675,24 +687,24 @@ namespace Colyseus.Schema
         ///     a <see cref="Schema" /> and all of it's children
         /// </param>
         /// <param name="allChanges">The changes that have been found</param>
-        protected void TriggerAllFillChanges(IRef currentRef, ref OrderedDictionary allChanges)
+        protected void TriggerAllFillChanges(IRef currentRef, ref List<DataChange> allChanges, ref HashSet<int> visitedRefs)
         {
             // skip recursive structures...
-            if (allChanges.Contains(currentRef.__refId))
+            if (visitedRefs.Contains(currentRef.__refId))
             {
                 return;
             }
 
-            List<DataChange> changes = new List<DataChange>();
-            allChanges[(object) currentRef.__refId] = changes;
+            visitedRefs.Add(currentRef.__refId);
 
             if (currentRef is Schema)
             {
                 foreach (string fieldName in ((Schema) currentRef).fieldsByIndex.Values)
                 {
                     object value = ((Schema) currentRef)[fieldName];
-                    changes.Add(new DataChange
+                    allChanges.Add(new DataChange
                     {
+                        RefId = currentRef.__refId,
                         Field = fieldName,
                         Op = (byte) OPERATION.ADD,
                         Value = value
@@ -700,7 +712,7 @@ namespace Colyseus.Schema
 
                     if (value is IRef)
                     {
-                        TriggerAllFillChanges((IRef) value, ref allChanges);
+                        TriggerAllFillChanges((IRef) value, ref allChanges, ref visitedRefs);
                     }
                 }
             }
@@ -711,8 +723,9 @@ namespace Colyseus.Schema
                 {
                     object child = items[key];
 
-                    changes.Add(new DataChange
+                    allChanges.Add(new DataChange
                     {
+                        RefId = currentRef.__refId,
                         Field = (string) key,
                         DynamicIndex = key,
                         Op = (byte) OPERATION.ADD,
@@ -721,7 +734,7 @@ namespace Colyseus.Schema
 
                     if (child is IRef)
                     {
-                        TriggerAllFillChanges((IRef) child, ref allChanges);
+                        TriggerAllFillChanges((IRef) child, ref allChanges, ref visitedRefs);
                     }
                 }
             }
@@ -731,75 +744,107 @@ namespace Colyseus.Schema
         ///     Take all of the changes that have occurred and apply them in order to the <see cref="Schema" />
         /// </summary>
         /// <param name="allChanges">Dictionary of the changes to apply</param>
-        protected void TriggerChanges(ref OrderedDictionary allChanges)
+        protected void TriggerChanges(ref List<DataChange> allChanges)
         {
-            foreach (object refId in allChanges.Keys)
+            var uniqueRefIds = new HashSet<int>();
+
+            foreach (DataChange change in allChanges)
             {
-                List<DataChange> changes = (List<DataChange>) allChanges[refId];
+                var refId = change.RefId;
+                var _ref = refs.Get(refId);
+                var isSchema = _ref is Schema;
 
-                IRef _ref = refs.Get((int) refId);
-                bool isSchema = _ref is Schema;
+                var __callbacks = (isSchema)
+                    ? ((Schema)_ref).__callbacks
+                    : null;
 
-                foreach (DataChange change in changes)
+                //const listener = ref['$listeners'] && ref['$listeners'][change.field];
+
+                //
+                // trigger onRemove on child structure.
+                //
+                if (
+                    (change.Op & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE &&
+                    change.PreviousValue is Schema
+                )
                 {
-                    //const listener = ref['$listeners'] && ref['$listeners'][change.field];
-
-                    if (!isSchema)
-                    {
-                        ISchemaCollection container = (ISchemaCollection) _ref;
-
-                        if (change.Op == (byte) OPERATION.ADD &&
-                            change.PreviousValue == container.GetTypeDefaultValue())
-                        {
-                            container.InvokeOnAdd(change.Value, change.DynamicIndex);
-                        }
-                        else if (change.Op == (byte) OPERATION.DELETE)
-                        {
-                            //
-                            // FIXME: `previousValue` should always be avaiiable.
-                            // ADD + DELETE operations are still encoding DELETE operation.
-                            //
-                            if (change.PreviousValue != container.GetTypeDefaultValue())
-                            {
-                                container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex ?? change.Field);
-                            }
-                        }
-                        else if (change.Op == (byte) OPERATION.DELETE_AND_ADD)
-                        {
-                            if (change.PreviousValue != container.GetTypeDefaultValue())
-                            {
-                                container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex);
-                            }
-
-                            container.InvokeOnAdd(change.Value, change.DynamicIndex);
-                        }
-                        else if (
-                            change.Op == (byte) OPERATION.REPLACE ||
-                            change.Value != change.PreviousValue
-                        )
-                        {
-                            container.InvokeOnChange(change.Value, change.DynamicIndex);
-                        }
-                    }
-
-                    //
-                    // trigger onRemove on child structure.
-                    //
-                    if (
-                        (change.Op & (byte) OPERATION.DELETE) == (byte) OPERATION.DELETE &&
-                        change.PreviousValue is Schema
-                    )
-                    {
-                        ((Schema) change.PreviousValue).OnRemove?.Invoke();
-                    }
+                    ((Schema)change.PreviousValue).__callbacks?.InvokeOnRemove();
                 }
+
+                // no callbacks defined, skip this structure!
+                if (__callbacks == null) { continue; }
 
                 if (isSchema)
+				{
+					if (!uniqueRefIds.Contains(refId))
+					{
+						try
+						{
+                            // trigger onChange
+                            ((Schema)_ref).__callbacks.InvokeOnChange();
+
+						}
+						catch (Exception e)
+						{
+                            UnityEngine.Debug.LogError(e.Message);
+						}
+					}
+
+                    //change.Field
+                    //    change.Value
+                    TriggerFieldChange(change);
+				}
+                else
                 {
-                    ((Schema) _ref).OnChange?.Invoke(changes);
+                    ISchemaCollection container = (ISchemaCollection) _ref;
+
+                    if (change.Op == (byte) OPERATION.ADD &&
+                        change.PreviousValue == container.GetTypeDefaultValue())
+                    {
+                        container.InvokeOnAdd(change.Value, change.DynamicIndex);
+                    }
+                    else if (change.Op == (byte) OPERATION.DELETE)
+                    {
+                        //
+                        // FIXME: `previousValue` should always be avaiiable.
+                        // ADD + DELETE operations are still encoding DELETE operation.
+                        //
+                        if (change.PreviousValue != container.GetTypeDefaultValue())
+                        {
+                            container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex ?? change.Field);
+                        }
+                    }
+                    else if (change.Op == (byte) OPERATION.DELETE_AND_ADD)
+                    {
+                        if (change.PreviousValue != container.GetTypeDefaultValue())
+                        {
+                            container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex);
+                        }
+
+                        container.InvokeOnAdd(change.Value, change.DynamicIndex);
+                    }
+                    else if (
+                        change.Op == (byte) OPERATION.REPLACE ||
+                        change.Value != change.PreviousValue
+                    )
+                    {
+                        container.InvokeOnChange(change.Value, change.DynamicIndex);
+                    }
                 }
+
+                uniqueRefIds.Add(refId);
             }
+
+            //if (isSchema)
+            //{
+            //    ((Schema) _ref).OnChange?.Invoke(changes);
+            //}
         }
+
+        protected virtual void TriggerFieldChange(DataChange change)
+		{
+            // This method is overwriten by schema-codegen.
+		}
 
         /// <summary>
         ///     Determine what type of <see cref="Schema" /> this is
