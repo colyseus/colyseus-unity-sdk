@@ -24,6 +24,15 @@ namespace Colyseus.Schema
 	/// <typeparam name="T">The <see cref="Schema" /> type</typeparam>
     public delegate void KeyValueEventHandler<K, T>(K key, T value);
 
+    /// <summary>
+    ///     Delegate for handling events given a <paramref name="key" /> and a <paramref name="value" />
+    /// </summary>
+    /// <param name="value">The affected value</param>
+    /// <param name="key">The key we're affecting</param>
+    /// <typeparam name="K">The type of <see cref="object" /> we're attempting to access</typeparam>
+    /// <typeparam name="T">The <see cref="Schema" /> type</typeparam>
+    public delegate void PropertyChangeHandler<T>(T currentValue, T previousValue);
+
     public class CollectionSchemaCallbacks<K, T>
 	{
         public event KeyValueEventHandler<K, T> OnAdd;
@@ -69,6 +78,9 @@ namespace Colyseus.Schema
         /// <inheritdoc cref="OnRemoveEventHandler" />
         public event OnRemoveEventHandler OnRemove;
 
+        //public Dictionary<string, int> PropertyCallbacks = new Dictionary<string, int>();
+        public Dictionary<string, int> PropertyCallbacks = new Dictionary<string, int>();
+
         /// <summary>
         ///     Trigger <see cref="OnChange" />
         /// </summary>
@@ -84,6 +96,32 @@ namespace Colyseus.Schema
         {
             OnRemove?.Invoke();
         }
+
+		public void AddPropertyCallback(string property)
+		{
+            if (!PropertyCallbacks.ContainsKey(property))
+            {
+                PropertyCallbacks[property] = 0;
+            }
+
+			PropertyCallbacks[property]++;
+		}
+
+        public void RemovePropertyCallback(string property)
+        {
+			if ((--PropertyCallbacks[property]) == 0)
+			{
+				PropertyCallbacks.Remove(property);
+			}
+
+		}
+
+        public bool HasPropertyCallback(string property)
+		{
+            return PropertyCallbacks.ContainsKey(property);
+
+        }
+
     }
 
 }

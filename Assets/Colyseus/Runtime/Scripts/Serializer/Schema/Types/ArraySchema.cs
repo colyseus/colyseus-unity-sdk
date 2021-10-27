@@ -278,6 +278,7 @@ namespace Colyseus.Schema
             __callbacks = ((ArraySchema<T>)previousInstance).__callbacks;
         }
 
+        public bool HasCallbacks() { return __callbacks != null; }
         public void InvokeOnAdd(object item, object index) { __callbacks?.InvokeOnAdd(item, index); }
         public void InvokeOnChange(object item, object index) { __callbacks?.InvokeOnChange(item, index); }
         public void InvokeOnRemove(object item, object index) { __callbacks?.InvokeOnRemove(item, index); }

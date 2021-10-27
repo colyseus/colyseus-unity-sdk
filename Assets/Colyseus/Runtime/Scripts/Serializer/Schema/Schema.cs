@@ -198,6 +198,7 @@ namespace Colyseus.Schema
         object GetByIndex(int index);
         void DeleteByIndex(int index);
 
+        bool HasCallbacks();
         void MoveEventHandlers(IRef previousInstance);
     }
 
@@ -679,6 +680,11 @@ namespace Colyseus.Schema
             TriggerChanges(ref allChanges);
         }
 
+        public bool HasCallbacks()
+		{
+            return __callbacks != null;
+		}
+
         /// <summary>
         ///     Gets all fields and generates a change list
         /// </summary>
@@ -752,13 +758,6 @@ namespace Colyseus.Schema
             {
                 var refId = change.RefId;
                 var _ref = refs.Get(refId);
-                var isSchema = _ref is Schema;
-
-                var __callbacks = (isSchema)
-                    ? ((Schema)_ref).__callbacks
-                    : null;
-
-                //const listener = ref['$listeners'] && ref['$listeners'][change.field];
 
                 //
                 // trigger onRemove on child structure.
@@ -772,16 +771,21 @@ namespace Colyseus.Schema
                 }
 
                 // no callbacks defined, skip this structure!
-                if (__callbacks == null) { continue; }
+                if (!_ref.HasCallbacks())
+                {
+                    continue;
+                }
 
-                if (isSchema)
+                if (_ref is Schema)
 				{
-					if (!uniqueRefIds.Contains(refId))
+                    var __callbacks = ((Schema)_ref).__callbacks;
+
+                    if (!uniqueRefIds.Contains(refId))
 					{
 						try
 						{
                             // trigger onChange
-                            ((Schema)_ref).__callbacks.InvokeOnChange();
+                            __callbacks.InvokeOnChange();
 
 						}
 						catch (Exception e)
@@ -790,9 +794,10 @@ namespace Colyseus.Schema
 						}
 					}
 
-                    //change.Field
-                    //    change.Value
-                    TriggerFieldChange(change);
+                    if (__callbacks.HasPropertyCallback(change.Field))
+					{
+                        TriggerFieldChange(change);
+                    }
 				}
                 else
                 {
@@ -806,7 +811,7 @@ namespace Colyseus.Schema
                     else if (change.Op == (byte) OPERATION.DELETE)
                     {
                         //
-                        // FIXME: `previousValue` should always be avaiiable.
+                        // FIXME: `previousValue` should always be available.
                         // ADD + DELETE operations are still encoding DELETE operation.
                         //
                         if (change.PreviousValue != container.GetTypeDefaultValue())
@@ -823,10 +828,8 @@ namespace Colyseus.Schema
 
                         container.InvokeOnAdd(change.Value, change.DynamicIndex);
                     }
-                    else if (
-                        change.Op == (byte) OPERATION.REPLACE ||
-                        change.Value != change.PreviousValue
-                    )
+
+                    if (change.Value != change.PreviousValue)
                     {
                         container.InvokeOnChange(change.Value, change.DynamicIndex);
                     }
@@ -834,17 +837,14 @@ namespace Colyseus.Schema
 
                 uniqueRefIds.Add(refId);
             }
-
-            //if (isSchema)
-            //{
-            //    ((Schema) _ref).OnChange?.Invoke(changes);
-            //}
         }
 
         protected virtual void TriggerFieldChange(DataChange change)
 		{
-            // This method is overwriten by schema-codegen.
-		}
+            //
+            // This method is going to be overwriten by schema-codegen.
+            //
+        }
 
         /// <summary>
         ///     Determine what type of <see cref="Schema" /> this is
