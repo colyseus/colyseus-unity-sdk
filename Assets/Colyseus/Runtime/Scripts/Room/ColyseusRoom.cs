@@ -83,7 +83,7 @@ namespace Colyseus
         /// <summary>
         ///     Room ID
         /// </summary>
-        public string Id;
+        public string RoomId;
 
         /// <summary>
         ///     Room name
@@ -130,11 +130,16 @@ namespace Colyseus
             get { return serializer.GetState(); }
         }
 
+        [Obsolete(".Id is deprecated. Please use .RoomId instead.")]
+        public string Id
+        {
+            get { return RoomId; }
+        }
+
         /// <summary>
         ///     Occurs when <see cref="ColyseusClient" /> leaves this room.
         /// </summary>
         public event ColyseusCloseEventHandler OnLeave;
-
 
         /// <summary>
         ///     Implementation of <see cref="IColyseusRoom.Connect" />
@@ -145,7 +150,6 @@ namespace Colyseus
             await colyseusConnection.Connect();
         }
 
-
         /// <summary>
         ///     Leave the room
         /// </summary>
@@ -153,7 +157,7 @@ namespace Colyseus
         /// <returns>Connection closure depending on user consent</returns>
         public async Task Leave(bool consented = true)
         {
-            if (Id != null)
+            if (RoomId != null)
             {
                 if (consented)
                 {

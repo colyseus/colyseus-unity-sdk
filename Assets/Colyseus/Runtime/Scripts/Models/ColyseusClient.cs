@@ -292,14 +292,14 @@ namespace Colyseus
         {
             ColyseusRoom<T> room = new ColyseusRoom<T>(response.room.name)
             {
-                Id = response.room.roomId,
+                RoomId = response.room.roomId,
                 SessionId = response.sessionId
             };
 
             Dictionary<string, object> queryString = new Dictionary<string, object>();
             queryString.Add("sessionId", room.SessionId);
 
-            room.SetConnection(CreateConnection(response.room.processId + "/" + room.Id, queryString, headers));
+            room.SetConnection(CreateConnection(response.room.processId + "/" + room.RoomId, queryString, headers));
 
             TaskCompletionSource<ColyseusRoom<T>> tcs = new TaskCompletionSource<ColyseusRoom<T>>();
 
