@@ -229,15 +229,18 @@ namespace Colyseus.Schema
         ///     Attaches a callback that is triggered whenever a new item is received from the server
         /// </summary>
         /// <returns>An Action that, when called, removes the registered callback</returns>
-        public Action OnAdd(KeyValueEventHandler<int, T> handler)
+        public Action OnAdd(KeyValueEventHandler<int, T> handler, bool triggerAll = true)
         {
             if (__callbacks == null) __callbacks = new CollectionSchemaCallbacks<int, T>();
 
             __callbacks.OnAdd += handler;
 
-            for (int i = 0; i < items.Count; i++)
+            if (triggerAll)
             {
-                __callbacks.InvokeOnAdd(i, items[i]);
+                for (int i = 0; i < items.Count; i++)
+                {
+                    __callbacks.InvokeOnAdd(i, items[i]);
+                }
             }
 
             return () => __callbacks.OnAdd -= handler;

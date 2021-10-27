@@ -256,15 +256,18 @@ namespace Colyseus.Schema
         ///     Attaches a callback that is triggered whenever a new item is received from the server
         /// </summary>
 		/// <returns>An Action that, when called, removes the registered callback</returns>
-        public Action OnAdd(KeyValueEventHandler<string, T> handler)
+        public Action OnAdd(KeyValueEventHandler<string, T> handler, bool triggerAll = true)
         {
             if (__callbacks == null) __callbacks = new CollectionSchemaCallbacks<string, T>();
 
             __callbacks.OnAdd += handler;
 
-            foreach (DictionaryEntry item in items)
-            {
-                __callbacks.InvokeOnAdd(item.Value, item.Key);
+            if (triggerAll)
+			{
+                foreach (DictionaryEntry item in items)
+                {
+                    __callbacks.InvokeOnAdd(item.Value, item.Key);
+                }
             }
 
             return () => __callbacks.OnAdd -= handler;

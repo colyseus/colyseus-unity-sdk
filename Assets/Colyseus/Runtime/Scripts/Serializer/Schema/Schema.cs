@@ -592,8 +592,7 @@ namespace Colyseus.Schema
 
                     if (previousValue != null)
                     {
-                        ((ISchemaCollection) value).MoveEventHandlers(
-                            (ISchemaCollection) previousValue);
+                        ((ISchemaCollection) value).MoveEventHandlers((ISchemaCollection) previousValue);
 
                         if (
                             ((IRef) previousValue).__refId > 0 &&
@@ -602,7 +601,6 @@ namespace Colyseus.Schema
                         {
                             refs.Remove(((IRef) previousValue).__refId);
 
-                            List<DataChange> deletes = new List<DataChange>();
                             IDictionary items = ((ISchemaCollection) previousValue).GetItems();
 
                             foreach (object key in items.Keys)

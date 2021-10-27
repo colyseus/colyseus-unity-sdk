@@ -69,10 +69,10 @@ public class SchemaDeserializerTest
 		var state = new SchemaTest.ArraySchemaTypes.ArraySchemaTypes();
 		byte[] bytes = { 128, 1, 129, 2, 130, 3, 131, 4, 255, 1, 128, 0, 5, 128, 1, 6, 255, 2, 128, 0, 0, 128, 1, 10, 128, 2, 20, 128, 3, 205, 192, 13, 255, 3, 128, 0, 163, 111, 110, 101, 128, 1, 163, 116, 119, 111, 128, 2, 165, 116, 104, 114, 101, 101, 255, 4, 128, 0, 232, 3, 0, 0, 128, 1, 192, 13, 0, 0, 128, 2, 72, 244, 255, 255, 255, 5, 128, 100, 129, 208, 156, 255, 6, 128, 100, 129, 208, 156 };
 
-		state.arrayOfSchemas.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfSchemas => " + key);
-		state.arrayOfNumbers.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfNumbers => " + key);
-		state.arrayOfStrings.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfStrings => " + key);
-		state.arrayOfInt32.OnAdd += (value, key) => Debug.Log("onAdd, arrayOfInt32 => " + key);
+		state.arrayOfSchemas.OnAdd((value, key) => Debug.Log("onAdd, arrayOfSchemas => " + key));
+		state.arrayOfNumbers.OnAdd((value, key) => Debug.Log("onAdd, arrayOfNumbers => " + key));
+		state.arrayOfStrings.OnAdd((value, key) => Debug.Log("onAdd, arrayOfStrings => " + key));
+		state.arrayOfInt32.OnAdd((value, key) => Debug.Log("onAdd, arrayOfInt32 => " + key));
 
 		var refs = new Colyseus.Schema.ColyseusReferenceTracker();
 		state.Decode(bytes, null, refs);
@@ -101,10 +101,10 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(3520, state.arrayOfInt32[1]);
 		Assert.AreEqual(-3000, state.arrayOfInt32[2]);
 
-		state.arrayOfSchemas.OnRemove += (value, key) => Debug.Log("onRemove, arrayOfSchemas => " + key);
-		state.arrayOfNumbers.OnRemove += (value, key) => Debug.Log("onRemove, arrayOfNumbers => " + key);
-		state.arrayOfStrings.OnRemove += (value, key) => Debug.Log("onRemove, arrayOfStrings => " + key);
-		state.arrayOfInt32.OnRemove += (value, key) => Debug.Log("onRemove, arrayOfInt32 => " + key);
+		state.arrayOfSchemas.OnRemove((value, key) => Debug.Log("onRemove, arrayOfSchemas => " + key));
+		state.arrayOfNumbers.OnRemove((value, key) => Debug.Log("onRemove, arrayOfNumbers => " + key));
+		state.arrayOfStrings.OnRemove((value, key) => Debug.Log("onRemove, arrayOfStrings => " + key));
+		state.arrayOfInt32.OnRemove((value, key) => Debug.Log("onRemove, arrayOfInt32 => " + key));
 
 		byte[] popBytes = { 255, 1, 64, 1, 255, 2, 64, 3, 64, 2, 64, 1, 255, 4, 64, 2, 64, 1, 255, 3, 64, 2, 64, 1 };
 		state.Decode(popBytes, null, refs);
@@ -123,15 +123,15 @@ public class SchemaDeserializerTest
 		var state = new SchemaTest.MapSchemaTypes.MapSchemaTypes();
 		byte[] bytes = { 128, 1, 129, 2, 130, 3, 131, 4, 255, 1, 128, 0, 163, 111, 110, 101, 5, 128, 1, 163, 116, 119, 111, 6, 128, 2, 165, 116, 104, 114, 101, 101, 7, 255, 2, 128, 0, 163, 111, 110, 101, 1, 128, 1, 163, 116, 119, 111, 2, 128, 2, 165, 116, 104, 114, 101, 101, 205, 192, 13, 255, 3, 128, 0, 163, 111, 110, 101, 163, 79, 110, 101, 128, 1, 163, 116, 119, 111, 163, 84, 119, 111, 128, 2, 165, 116, 104, 114, 101, 101, 165, 84, 104, 114, 101, 101, 255, 4, 128, 0, 163, 111, 110, 101, 192, 13, 0, 0, 128, 1, 163, 116, 119, 111, 24, 252, 255, 255, 128, 2, 165, 116, 104, 114, 101, 101, 208, 7, 0, 0, 255, 5, 128, 100, 129, 204, 200, 255, 6, 128, 205, 44, 1, 129, 205, 144, 1, 255, 7, 128, 205, 244, 1, 129, 205, 88, 2 };
 
-		state.mapOfSchemas.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfSchemas => " + key);
-		state.mapOfNumbers.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfNumbers => " + key);
-		state.mapOfStrings.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfStrings => " + key);
-		state.mapOfInt32.OnAdd += (value, key) => Debug.Log("OnAdd, mapOfInt32 => " + key);
+		state.mapOfSchemas.OnAdd((value, key) => Debug.Log("OnAdd, mapOfSchemas => " + key));
+		state.mapOfNumbers.OnAdd((value, key) => Debug.Log("OnAdd, mapOfNumbers => " + key));
+		state.mapOfStrings.OnAdd((value, key) => Debug.Log("OnAdd, mapOfStrings => " + key));
+		state.mapOfInt32.OnAdd((value, key) => Debug.Log("OnAdd, mapOfInt32 => " + key));
 
-		state.mapOfSchemas.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfSchemas => " + key);
-		state.mapOfNumbers.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfNumbers => " + key);
-		state.mapOfStrings.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfStrings => " + key);
-		state.mapOfInt32.OnRemove += (value, key) => Debug.Log("OnRemove, mapOfInt32 => " + key);
+		state.mapOfSchemas.OnRemove((value, key) => Debug.Log("OnRemove, mapOfSchemas => " + key));
+		state.mapOfNumbers.OnRemove((value, key) => Debug.Log("OnRemove, mapOfNumbers => " + key));
+		state.mapOfStrings.OnRemove((value, key) => Debug.Log("OnRemove, mapOfStrings => " + key));
+		state.mapOfInt32.OnRemove((value, key) => Debug.Log("OnRemove, mapOfInt32 => " + key));
 
 		var refs = new Colyseus.Schema.ColyseusReferenceTracker();
 		state.Decode(bytes, null, refs);
