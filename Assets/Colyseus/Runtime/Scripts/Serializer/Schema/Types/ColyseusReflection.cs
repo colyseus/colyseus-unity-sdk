@@ -21,7 +21,7 @@ namespace Colyseus.Schema
         public string type;
 
         [Type(2, "number")]
-        public float referencedType;
+        public float referencedType = -1;
     }
 
     /// <summary>
@@ -56,6 +56,6 @@ namespace Colyseus.Schema
         public ArraySchema<ReflectionType> types = new ArraySchema<ReflectionType>();
 
         [Type(1, "number")]
-        public float rootType;
+        public float rootType = -1;
     }
 }
