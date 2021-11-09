@@ -19,20 +19,19 @@
   },
   "homepage": "https://github.com/colyseus/create-colyseus#readme",
   "devDependencies": {
-    "@colyseus/loadtest": "^0.14.0",
+    "@colyseus/loadtest": "^0.14.7",
+    "@colyseus/redis-driver": "^0.14.22",
     "@types/cors": "^2.8.6",
     "@types/express": "^4.17.1",
-    "copyfiles": "^2.4.1",
     "rimraf": "^2.7.1",
     "ts-node": "^8.1.0",
     "ts-node-dev": "^1.0.0-pre.63",
     "typescript": "^3.4.5"
   },
   "dependencies": {
-    "@colyseus/arena": "^0.14.9",
-    "@colyseus/monitor": "^0.14.0",
-    "@colyseus/social": "^0.10.9",
-    "colyseus": "^0.14.0",
+    "@colyseus/arena": "^0.14.24",
+    "@colyseus/monitor": "^0.14.22",
+    "colyseus": "^0.14.23",
     "cors": "^2.8.5",
     "express": "^4.16.4",
     "winston": "^3.3.3"
