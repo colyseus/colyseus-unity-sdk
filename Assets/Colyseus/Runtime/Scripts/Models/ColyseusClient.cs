@@ -299,7 +299,7 @@ namespace Colyseus
             Dictionary<string, object> queryString = new Dictionary<string, object>();
             queryString.Add("sessionId", room.SessionId);
 
-            room.SetConnection(CreateConnection(response.room.processId + "/" + room.RoomId, queryString, headers));
+            room.SetConnection(CreateConnection(response.room, queryString, headers));
 
             TaskCompletionSource<ColyseusRoom<T>> tcs = new TaskCompletionSource<ColyseusRoom<T>>();
 
@@ -353,8 +353,10 @@ namespace Colyseus
 
             string json = await colyseusRequest.Request("POST", $"matchmake/{method}/{roomName}", options, headers);
             LSLog.Log($"Server Response: {json}");
+
             ColyseusMatchMakeResponse response =
                 JsonUtility.FromJson<ColyseusMatchMakeResponse>(json);
+
             if (response == null)
             {
                 throw new Exception($"Error with request: {json}");
@@ -375,7 +377,7 @@ namespace Colyseus
         /// <param name="options">Dictionary of options to use when connecting</param>
         /// <param name="headers">Dictionary of headers to pass when connecting</param>
         /// <returns></returns>
-        protected ColyseusConnection CreateConnection(string path = "", Dictionary<string, object> options = null,
+        protected ColyseusConnection CreateConnection(ColyseusRoomAvailable room, Dictionary<string, object> options = null,
             Dictionary<string, string> headers = null)
         {
             if (options == null)
@@ -389,9 +391,14 @@ namespace Colyseus
                 list.Add(item.Key + "=" + (item.Value != null ? Convert.ToString(item.Value) : "null"));
             }
 
-            UriBuilder uriBuilder = new UriBuilder(Endpoint.Uri)
+            // Try to connect directly to custom publicAddress, if present.
+            var endpoint = (room.publicAddress != null && room.publicAddress.Length > 0)
+                ? new Uri($"{Endpoint.Scheme}://{room.publicAddress}")
+                : Endpoint.Uri;
+
+            UriBuilder uriBuilder = new UriBuilder(endpoint)
             {
-                Path = path,
+                Path = $"{room.processId}/{room.roomId}",
                 Query = string.Join("&", list.ToArray())
             };
 

@@ -661,6 +661,7 @@ namespace Colyseus.Schema
         /// <summary>
         ///     Gets all changes in <see cref="refs" /> and then triggers them
         /// </summary>
+        /*
         public void TriggerAll()
         {
             //
@@ -677,6 +678,7 @@ namespace Colyseus.Schema
             TriggerAllFillChanges(this, ref allChanges, ref visitedRefs);
             TriggerChanges(ref allChanges);
         }
+        */
 
         public bool HasCallbacks()
 		{
@@ -691,6 +693,7 @@ namespace Colyseus.Schema
         ///     a <see cref="Schema" /> and all of it's children
         /// </param>
         /// <param name="allChanges">The changes that have been found</param>
+		/*
         protected void TriggerAllFillChanges(IRef currentRef, ref List<DataChange> allChanges, ref HashSet<int> visitedRefs)
         {
             // skip recursive structures...
@@ -743,6 +746,7 @@ namespace Colyseus.Schema
                 }
             }
         }
+        */
 
         /// <summary>
         ///     Take all of the changes that have occurred and apply them in order to the <see cref="Schema" />

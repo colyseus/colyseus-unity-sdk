@@ -28,6 +28,11 @@ namespace Colyseus
         public string name;
 
         /// <summary>
+        ///     Public host address (optional)
+        /// </summary>
+        public string publicAddress;
+
+        /// <summary>
         ///     Process ID used for connection
         /// </summary>
         public string processId;
