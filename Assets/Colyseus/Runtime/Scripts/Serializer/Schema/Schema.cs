@@ -171,7 +171,7 @@ namespace Colyseus.Schema
 
         IDictionary GetItems();
         void SetItems(object items);
-        void Clear(ColyseusReferenceTracker refs);
+        void Clear(List<DataChange> changes, ColyseusReferenceTracker refs);
 
         System.Type GetChildType();
         object GetTypeDefaultValue();
@@ -426,7 +426,7 @@ namespace Colyseus.Schema
 
                 if (operation == (byte) OPERATION.CLEAR)
                 {
-                    ((ISchemaCollection) _ref).Clear(refs);
+                    ((ISchemaCollection) _ref).Clear(allChanges, refs);
                     continue;
                 }
 
@@ -658,95 +658,10 @@ namespace Colyseus.Schema
             refs.GarbageCollection();
         }
 
-        /// <summary>
-        ///     Gets all changes in <see cref="refs" /> and then triggers them
-        /// </summary>
-        /*
-        public void TriggerAll()
-        {
-            //
-            // first state not received from the server yet.
-            // nothing to trigger.
-            //
-            if (refs == null)
-            {
-                return;
-            }
-
-            List<DataChange> allChanges = new List<DataChange>();
-            HashSet<int> visitedRefs = new HashSet<int>();
-            TriggerAllFillChanges(this, ref allChanges, ref visitedRefs);
-            TriggerChanges(ref allChanges);
-        }
-        */
-
         public bool HasCallbacks()
 		{
             return __callbacks != null;
 		}
-
-        /// <summary>
-        ///     Gets all fields and generates a change list
-        /// </summary>
-        /// <param name="currentRef">
-        ///     The <see cref="IRef" /> that changes will be grabbed from. Used for recursive looping through
-        ///     a <see cref="Schema" /> and all of it's children
-        /// </param>
-        /// <param name="allChanges">The changes that have been found</param>
-		/*
-        protected void TriggerAllFillChanges(IRef currentRef, ref List<DataChange> allChanges, ref HashSet<int> visitedRefs)
-        {
-            // skip recursive structures...
-            if (visitedRefs.Contains(currentRef.__refId))
-            {
-                return;
-            }
-
-            visitedRefs.Add(currentRef.__refId);
-
-            if (currentRef is Schema)
-            {
-                foreach (string fieldName in ((Schema) currentRef).fieldsByIndex.Values)
-                {
-                    object value = ((Schema) currentRef)[fieldName];
-                    allChanges.Add(new DataChange
-                    {
-                        RefId = currentRef.__refId,
-                        Field = fieldName,
-                        Op = (byte) OPERATION.ADD,
-                        Value = value
-                    });
-
-                    if (value is IRef)
-                    {
-                        TriggerAllFillChanges((IRef) value, ref allChanges, ref visitedRefs);
-                    }
-                }
-            }
-            else
-            {
-                IDictionary items = ((ISchemaCollection) currentRef).GetItems();
-                foreach (object key in items.Keys)
-                {
-                    object child = items[key];
-
-                    allChanges.Add(new DataChange
-                    {
-                        RefId = currentRef.__refId,
-                        Field = (string) key,
-                        DynamicIndex = key,
-                        Op = (byte) OPERATION.ADD,
-                        Value = child
-                    });
-
-                    if (child is IRef)
-                    {
-                        TriggerAllFillChanges((IRef) child, ref allChanges, ref visitedRefs);
-                    }
-                }
-            }
-        }
-        */
 
         /// <summary>
         ///     Take all of the changes that have occurred and apply them in order to the <see cref="Schema" />

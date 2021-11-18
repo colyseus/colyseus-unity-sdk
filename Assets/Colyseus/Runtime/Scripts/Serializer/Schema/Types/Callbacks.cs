@@ -39,6 +39,30 @@ namespace Colyseus.Schema
         public event KeyValueEventHandler<K, T> OnChange;
         public event KeyValueEventHandler<K, T> OnRemove;
 
+        public static void RemoveChildRefs(ISchemaCollection collection, List<DataChange> changes, ColyseusReferenceTracker refs)
+        {
+            if (refs == null) { return; }
+
+            bool needRemoveRef = (collection.HasSchemaChild);
+
+            foreach (DictionaryEntry item in collection.GetItems())
+            {
+                changes.Add(new DataChange {
+                    RefId = collection.__refId,
+                    Op = (byte) OPERATION.DELETE,
+                    //Field = item.Key,
+                    DynamicIndex = item.Key,
+                    Value = null,
+                    PreviousValue = item.Value
+                });
+
+                if (needRemoveRef)
+                {
+                    refs.Remove((item.Value as IRef).__refId);
+                }
+            }
+        }
+
         /// <summary>
         ///     Trigger <see cref="OnAdd" /> with a specific <paramref name="item" /> at an <paramref name="index" />
         /// </summary>
