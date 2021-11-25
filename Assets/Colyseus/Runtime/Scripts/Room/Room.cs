@@ -55,6 +55,13 @@ namespace Colyseus
         Task Leave(bool consented);
     }
 
+    [Serializable]
+    public class ReconnectionToken
+    {
+        public string RoomId;
+        public string Token;
+    }
+
     public class ColyseusRoom<T> : IColyseusRoom
     {
         /// <summary>
@@ -111,6 +118,11 @@ namespace Colyseus
         ///     The room's session ID
         /// </summary>
         public string SessionId;
+
+        /// <summary>
+        ///     Reconnection Token for this room session. (must be provided for client.Reconnect())
+        /// </summary>
+        public ReconnectionToken ReconnectionToken;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ColyseusRoom{T}" /> class.
@@ -339,6 +351,9 @@ namespace Colyseus
             {
                 int offset = 1;
 
+                var reconnectionToken = Encoding.UTF8.GetString(bytes, offset + 1, bytes[offset]);
+                offset += reconnectionToken.Length + 1;
+
                 SerializerId = Encoding.UTF8.GetString(bytes, offset + 1, bytes[offset]);
                 offset += SerializerId.Length + 1;
 
@@ -378,6 +393,12 @@ namespace Colyseus
                 {
                     serializer.Handshake(bytes, offset);
                 }
+
+                ReconnectionToken = new ReconnectionToken()
+                {
+                    RoomId = RoomId,
+                    Token = reconnectionToken
+                };
 
                 OnJoin?.Invoke();
 

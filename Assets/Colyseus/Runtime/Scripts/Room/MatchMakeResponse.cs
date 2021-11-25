@@ -32,5 +32,7 @@ namespace Colyseus
         ///     Session ID used for connection to the room
         /// </summary>
         public string sessionId;
+
+        public string reconnectionToken;
     }
 }

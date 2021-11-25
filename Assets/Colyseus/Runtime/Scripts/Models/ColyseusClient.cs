@@ -159,17 +159,16 @@ namespace Colyseus
         /// <summary>
         ///     Reconnect to a <see cref="ColyseusRoom{T}" />
         /// </summary>
-        /// <param name="roomId">ID of the room</param>
-        /// <param name="sessionId">Previously connected sessionId</param>
+        /// <param name="reconnectionToken">Previously connected ReconnectionToken</param>
         /// <param name="headers">Dictionary of headers to pass to the server when we reconnect to the room</param>
         /// <typeparam name="T">Type of <see cref="ColyseusRoom{T}" /> we want to reconnect with</typeparam>
         /// <returns><see cref="ColyseusRoom{T}" /> via async task</returns>
-        public async Task<ColyseusRoom<T>> Reconnect<T>(string roomId, string sessionId,
+        public async Task<ColyseusRoom<T>> Reconnect<T>(ReconnectionToken reconnectionToken,
             Dictionary<string, string> headers = null)
         {
             Dictionary<string, object> options = new Dictionary<string, object>();
-            options.Add("sessionId", sessionId);
-            return await CreateMatchMakeRequest<T>("joinById", roomId, options, headers);
+            options.Add("reconnectionToken", reconnectionToken.Token);
+            return await CreateMatchMakeRequest<T>("reconnect", reconnectionToken.RoomId, options, headers);
         }
 
         //
@@ -299,6 +298,12 @@ namespace Colyseus
             Dictionary<string, object> queryString = new Dictionary<string, object>();
             queryString.Add("sessionId", room.SessionId);
 
+            // forward reconnection token
+            if (room.ReconnectionToken != null)
+            {
+                queryString.Add("reconnectionToken", room.ReconnectionToken);
+            }
+
             room.SetConnection(CreateConnection(response.room, queryString, headers));
 
             TaskCompletionSource<ColyseusRoom<T>> tcs = new TaskCompletionSource<ColyseusRoom<T>>();
@@ -354,9 +359,7 @@ namespace Colyseus
             string json = await colyseusRequest.Request("POST", $"matchmake/{method}/{roomName}", options, headers);
             LSLog.Log($"Server Response: {json}");
 
-            ColyseusMatchMakeResponse response =
-                JsonUtility.FromJson<ColyseusMatchMakeResponse>(json);
-
+            ColyseusMatchMakeResponse response = JsonUtility.FromJson<ColyseusMatchMakeResponse>(json);
             if (response == null)
             {
                 throw new Exception($"Error with request: {json}");
@@ -365,6 +368,12 @@ namespace Colyseus
             if (!string.IsNullOrEmpty(response.error))
             {
                 throw new CSAMatchMakeException(response.code, response.error);
+            }
+
+            // forward reconnection token on reconnect
+            if (method == "reconnect")
+            {
+                response.reconnectionToken = (string)options["reconnectionToken"];
             }
 
             return await ConsumeSeatReservation<T>(response, headers);
