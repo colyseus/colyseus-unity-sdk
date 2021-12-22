@@ -377,7 +377,9 @@ namespace Colyseus
 	                }
 	                catch (Exception e)
 	                {
+		                await Leave(false);
 		                OnError?.Invoke(0, e.Message);
+		                return;
 	                }
                 }
 
