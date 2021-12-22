@@ -378,7 +378,7 @@ namespace Colyseus
 	                catch (Exception e)
 	                {
 		                await Leave(false);
-		                OnError?.Invoke(0, e.Message);
+		                OnError?.Invoke(ColyseusErrorCode.SCHEMA_MISMATCH, e.Message);
 		                return;
 	                }
                 }
