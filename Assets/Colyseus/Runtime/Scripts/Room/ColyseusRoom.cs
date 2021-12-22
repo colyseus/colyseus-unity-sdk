@@ -372,7 +372,13 @@ namespace Colyseus
 
                 if (bytes.Length > offset)
                 {
-                    serializer.Handshake(bytes, offset);
+	                try {
+		                serializer.Handshake(bytes, offset);
+	                }
+	                catch (Exception e)
+	                {
+		                OnError?.Invoke(0, e.Message);
+	                }
                 }
 
                 OnJoin?.Invoke();
