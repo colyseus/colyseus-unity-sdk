@@ -19,6 +19,6 @@ namespace Colyseus
 	    /// <summary>
 	    ///     When local schema is different from schema on the server.
 	    /// </summary>
-	    public static int SCHEMA_MISMATCH = 4217;
+	    public static int SCHEMA_MISMATCH = 4300;
     }
 }
