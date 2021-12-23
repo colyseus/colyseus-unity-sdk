@@ -391,7 +391,15 @@ namespace Colyseus
 
                 if (bytes.Length > offset)
                 {
-                    serializer.Handshake(bytes, offset);
+	                try {
+		                serializer.Handshake(bytes, offset);
+	                }
+	                catch (Exception e)
+	                {
+		                await Leave(false);
+		                OnError?.Invoke(ColyseusErrorCode.SCHEMA_MISMATCH, e.Message);
+		                return;
+	                }
                 }
 
                 ReconnectionToken = new ReconnectionToken()
