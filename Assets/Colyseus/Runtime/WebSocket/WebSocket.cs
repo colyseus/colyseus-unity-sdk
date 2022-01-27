@@ -537,19 +537,18 @@ namespace NativeWebSocket
             }
         }
 
-        private Mutex m_MessageListMutex = new Mutex();
         private List<byte[]> m_MessageList = new List<byte[]>();
 
         // simple dispatcher for queued messages.
         public void DispatchMessageQueue()
         {
-            // lock mutex, copy queue content and clear the queue.
-            m_MessageListMutex.WaitOne();
-            List<byte[]> messageListCopy = new List<byte[]>();
-            messageListCopy.AddRange(m_MessageList);
-            m_MessageList.Clear();
-            // release mutex to allow the websocket to add new messages
-            m_MessageListMutex.ReleaseMutex();
+			List<byte[]> messageListCopy = new List<byte[]>();
+
+			lock (m_MessageList)
+			{
+				messageListCopy.AddRange(m_MessageList);
+				m_MessageList.Clear();
+			}
 
             foreach (byte[] bytes in messageListCopy)
             {
@@ -582,9 +581,10 @@ namespace NativeWebSocket
 
                         if (result.MessageType == WebSocketMessageType.Text)
                         {
-                            m_MessageListMutex.WaitOne();
-                            m_MessageList.Add(ms.ToArray());
-                            m_MessageListMutex.ReleaseMutex();
+							lock (m_MessageList)
+							{
+								m_MessageList.Add(ms.ToArray());
+							}
 
                             //using (var reader = new StreamReader(ms, Encoding.UTF8))
                             //{
@@ -594,9 +594,10 @@ namespace NativeWebSocket
                         }
                         else if (result.MessageType == WebSocketMessageType.Binary)
                         {
-                            m_MessageListMutex.WaitOne();
-                            m_MessageList.Add(ms.ToArray());
-                            m_MessageListMutex.ReleaseMutex();
+							lock (m_MessageList)
+							{
+								m_MessageList.Add(ms.ToArray());
+							}
                         }
                         else if (result.MessageType == WebSocketMessageType.Close)
                         {
