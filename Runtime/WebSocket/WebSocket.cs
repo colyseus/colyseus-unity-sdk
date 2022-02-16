@@ -543,17 +543,23 @@ namespace NativeWebSocket
         // simple dispatcher for queued messages.
         public void DispatchMessageQueue()
         {
-            List<byte[]> messageListCopy = new List<byte[]>();
+            if (m_MessageList.Count == 0)
+            {
+                return;
+            }
+
+            List<byte[]> messageListCopy;
 
             lock (IncomingMessageLock)
             {
-                messageListCopy.AddRange(m_MessageList);
+                messageListCopy = new List<byte[]>(m_MessageList);
                 m_MessageList.Clear();
             }
 
-            foreach (byte[] bytes in messageListCopy)
+            var len = messageListCopy.Count;
+            for (int i = 0; i < len; i++)
             {
-                OnMessage?.Invoke(bytes);
+                OnMessage?.Invoke(messageListCopy[i]);
             }
         }
 
