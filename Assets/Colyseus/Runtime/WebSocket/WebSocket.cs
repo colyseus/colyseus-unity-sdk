@@ -257,10 +257,10 @@ namespace NativeWebSocket
       return Task.CompletedTask;
     }
 
-	public void CancelConnection () {
-		if (State == WebSocketState.Open)
-			Close (WebSocketCloseCode.Abnormal);
-	}
+    public void CancelConnection () {
+        if (State == WebSocketState.Open)
+            Close (WebSocketCloseCode.Abnormal);
+    }
 
     public Task Close (WebSocketCloseCode code = WebSocketCloseCode.Normal, string reason = null) {
       int ret = WebSocketClose (this.instanceId, (int) code, reason);
@@ -349,7 +349,8 @@ namespace NativeWebSocket
         private CancellationTokenSource m_TokenSource;
         private CancellationToken m_CancellationToken;
 
-        private readonly object Lock = new object();
+        private readonly object OutgoingMessageLock = new object();
+        private readonly object IncomingMessageLock = new object();
 
         private bool isSending = false;
         private List<ArraySegment<byte>> sendBytesQueue = new List<ArraySegment<byte>>();
@@ -465,7 +466,7 @@ namespace NativeWebSocket
             // The state of the connection is contained in the context Items dictionary.
             bool sending;
 
-            lock (Lock)
+            lock (OutgoingMessageLock)
             {
                 sending = isSending;
 
@@ -498,7 +499,7 @@ namespace NativeWebSocket
                 }
 
                 // Note that we've finished sending.
-                lock (Lock)
+                lock (OutgoingMessageLock)
                 {
                     isSending = false;
                 }
@@ -509,7 +510,7 @@ namespace NativeWebSocket
             else
             {
                 // Add the message to the queue.
-                lock (Lock)
+                lock (OutgoingMessageLock)
                 {
                     queue.Add(buffer);
                 }
@@ -519,7 +520,7 @@ namespace NativeWebSocket
         private async Task HandleQueue(List<ArraySegment<byte>> queue, WebSocketMessageType messageType)
         {
             var buffer = new ArraySegment<byte>();
-            lock (Lock)
+            lock (OutgoingMessageLock)
             {
                 // Check for an item in the queue.
                 if (queue.Count > 0)
@@ -542,13 +543,13 @@ namespace NativeWebSocket
         // simple dispatcher for queued messages.
         public void DispatchMessageQueue()
         {
-			List<byte[]> messageListCopy = new List<byte[]>();
+            List<byte[]> messageListCopy = new List<byte[]>();
 
-			lock (m_MessageList)
-			{
-				messageListCopy.AddRange(m_MessageList);
-				m_MessageList.Clear();
-			}
+            lock (IncomingMessageLock)
+            {
+                messageListCopy.AddRange(m_MessageList);
+                m_MessageList.Clear();
+            }
 
             foreach (byte[] bytes in messageListCopy)
             {
@@ -581,23 +582,23 @@ namespace NativeWebSocket
 
                         if (result.MessageType == WebSocketMessageType.Text)
                         {
-							lock (m_MessageList)
-							{
-								m_MessageList.Add(ms.ToArray());
-							}
+                            lock (IncomingMessageLock)
+                            {
+                                m_MessageList.Add(ms.ToArray());
+                            }
 
                             //using (var reader = new StreamReader(ms, Encoding.UTF8))
                             //{
-                            //	string message = reader.ReadToEnd();
-                            //	OnMessage?.Invoke(this, new MessageEventArgs(message));
+                            //    string message = reader.ReadToEnd();
+                            //    OnMessage?.Invoke(this, new MessageEventArgs(message));
                             //}
                         }
                         else if (result.MessageType == WebSocketMessageType.Binary)
                         {
-							lock (m_MessageList)
-							{
-								m_MessageList.Add(ms.ToArray());
-							}
+                            lock (IncomingMessageLock)
+                            {
+                                m_MessageList.Add(ms.ToArray());
+                            }
                         }
                         else if (result.MessageType == WebSocketMessageType.Close)
                         {
