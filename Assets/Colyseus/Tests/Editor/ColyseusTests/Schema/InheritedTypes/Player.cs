@@ -2,15 +2,15 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 2.0.1
+// GENERATED USING @colyseus/schema 2.0.4
 // 
 
 using Colyseus.Schema;
 using Action = System.Action;
 
 namespace SchemaTest.InheritedTypes {
-	public partial class Player : Schema {
-		[Type(0, "string")]
+	public partial class Player : Entity {
+		[Type(2, "string")]
 		public string name = default(string);
 
 		/*

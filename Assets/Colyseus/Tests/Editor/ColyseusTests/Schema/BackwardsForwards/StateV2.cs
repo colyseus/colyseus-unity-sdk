@@ -2,7 +2,7 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 2.0.1
+// GENERATED USING @colyseus/schema 2.0.4
 // 
 
 using Colyseus.Schema;
@@ -35,17 +35,6 @@ namespace SchemaTest.BackwardsForwards {
 			};
 		}
 
-		protected event PropertyChangeHandler<MapSchema<PlayerV2>> _mapChange;
-		public Action OnMapChange(PropertyChangeHandler<MapSchema<PlayerV2>> handler) {
-			if (__callbacks == null) { __callbacks = new SchemaCallbacks(); }
-			__callbacks.AddPropertyCallback(nameof(map));
-			_mapChange += handler;
-			return () => {
-				__callbacks.RemovePropertyCallback(nameof(map));
-				_mapChange -= handler;
-			};
-		}
-
 		protected event PropertyChangeHandler<float> _countdownChange;
 		public Action OnCountdownChange(PropertyChangeHandler<float> handler) {
 			if (__callbacks == null) { __callbacks = new SchemaCallbacks(); }
@@ -60,7 +49,6 @@ namespace SchemaTest.BackwardsForwards {
 		protected override void TriggerFieldChange(DataChange change) {
 			switch (change.Field) {
 				case nameof(str): _strChange?.Invoke((string) change.Value, (string) change.PreviousValue); break;
-				case nameof(map): _mapChange?.Invoke((MapSchema<PlayerV2>) change.Value, (MapSchema<PlayerV2>) change.PreviousValue); break;
 				case nameof(countdown): _countdownChange?.Invoke((float) change.Value, (float) change.PreviousValue); break;
 				default: break;
 			}
