@@ -267,7 +267,7 @@ namespace Colyseus
         public async Task Send(string type)
         {
             byte[] encodedType = Encoding.UTF8.GetBytes(type);
-            byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType);
+            byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType, ColyseusProtocol.ROOM_DATA);
 
             byte[] bytes = new byte[initialBytes.Length + encodedType.Length];
             Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
@@ -287,7 +287,7 @@ namespace Colyseus
             MsgPack.Serialize(message, serializationOutput, SerializationOptions.SuppressTypeInformation);
 
             byte[] encodedType = Encoding.UTF8.GetBytes(type);
-            byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType);
+            byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType, ColyseusProtocol.ROOM_DATA);
             byte[] encodedMessage = serializationOutput.ToArray();
 
             byte[] bytes = new byte[encodedType.Length + encodedMessage.Length + initialBytes.Length];
@@ -296,6 +296,40 @@ namespace Colyseus
             Buffer.BlockCopy(encodedMessage, 0, bytes, initialBytes.Length + encodedType.Length, encodedMessage.Length);
 
             await colyseusConnection.Send(bytes);
+        }
+
+        /// <summary>
+        ///     Send a message by number type with raw bytes payload
+        /// </summary>
+        /// <param name="type">Message type</param>
+        /// <param name="bytes">Message payload</param>
+        public async Task SendBytes(byte type, byte[] bytes)
+        {
+            byte[] initialBytes = { ColyseusProtocol.ROOM_DATA_BYTES, type };
+
+            byte[] bytesToSend = new byte[initialBytes.Length + bytes.Length];
+            Buffer.BlockCopy(initialBytes, 0, bytesToSend, 0, initialBytes.Length);
+            Buffer.BlockCopy(bytes, 0, bytesToSend, initialBytes.Length, bytes.Length);
+
+            await colyseusConnection.Send(bytesToSend);
+        }
+
+        /// <summary>
+        ///     Send a message by string type with raw bytes payload
+        /// </summary>
+        /// <param name="type">Message type</param>
+        /// <param name="bytes">Message payload</param>
+        public async Task SendBytes(string type, byte[] bytes)
+        {
+            byte[] encodedType = Encoding.UTF8.GetBytes(type);
+            byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType, ColyseusProtocol.ROOM_DATA_BYTES);
+
+            byte[] bytesToSend = new byte[encodedType.Length + bytes.Length + initialBytes.Length];
+            Buffer.BlockCopy(initialBytes, 0, bytesToSend, 0, initialBytes.Length);
+            Buffer.BlockCopy(encodedType, 0, bytesToSend, initialBytes.Length, encodedType.Length);
+            Buffer.BlockCopy(bytes, 0, bytesToSend, initialBytes.Length + encodedType.Length, bytes.Length);
+
+            await colyseusConnection.Send(bytesToSend);
         }
 
         /// <summary>

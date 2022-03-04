@@ -56,6 +56,8 @@ namespace Colyseus
         /// </summary>
         public static byte ROOM_DATA_SCHEMA = 16;
 
+        public static byte ROOM_DATA_BYTES = 17;
+
         //
         // Matchmaking messages (20~30)
         //

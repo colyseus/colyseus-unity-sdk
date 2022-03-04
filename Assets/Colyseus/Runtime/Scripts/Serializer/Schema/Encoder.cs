@@ -26,9 +26,9 @@ namespace Colyseus.Schema
         /// <param name="encodedType">The incoming "type" encoded to a <see cref="byte" />[]</param>
         /// <returns>The important bytes we need based upon the incoming type</returns>
         /// <exception cref="Exception"></exception>
-        public byte[] getInitialBytesFromEncodedType(byte[] encodedType)
+        public byte[] getInitialBytesFromEncodedType(byte[] encodedType, byte protocol)
         {
-            byte[] initialBytes = {ColyseusProtocol.ROOM_DATA};
+            byte[] initialBytes = { protocol };
 
             if (encodedType.Length < 0x20)
             {
