@@ -25,17 +25,13 @@ namespace Colyseus
 
         public async Task<string> Request(string uriMethod, string uriPath, string uriQuery, string Token = "", UploadHandlerRaw data = null)
         {
-            UriBuilder uriBuilder = new UriBuilder(_serverSettings.WebRequestEndpoint);
-            uriBuilder.Path = uriPath;
-            uriBuilder.Query = uriQuery;
-
             using (UnityWebRequest req = new UnityWebRequest())
             {
                 req.method = uriMethod;
-        
-                req.url = uriBuilder.Uri.ToString();
-                // Send JSON on request body
-                if (data != null)
+                req.url = GetWebRequestURL(uriPath, uriQuery);
+
+				// Send JSON on request body
+				if (data != null)
                 {
                     req.uploadHandler = data;
                 }
@@ -81,13 +77,10 @@ namespace Colyseus
 
         public async Task<string> Request(string uriMethod, string uriPath, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
         {
-            UriBuilder uriBuilder = new UriBuilder(_serverSettings.WebRequestEndpoint);
-            uriBuilder.Path = uriPath;
-
-            using (UnityWebRequest req = new UnityWebRequest())
+			using (UnityWebRequest req = new UnityWebRequest())
             {
                 req.method = uriMethod;
-                req.url = uriBuilder.Uri.ToString();
+                req.url = GetWebRequestURL(uriPath);
                 LSLog.Log($"Requesting from URL: {req.url}");
                 if (options != null)
                 {
@@ -139,5 +132,29 @@ namespace Colyseus
                 return req.downloadHandler.text;
             };
         }
-    }
+
+        public UriBuilder GetUriBuilder(string path, string query = "")
+		{
+            string forwardSlash = "";
+
+            if (!_serverSettings.WebRequestEndpoint.EndsWith("/"))
+            {
+                forwardSlash = "/";
+            }
+
+            // WebRequestEndpoint will include any path that is included with the server address field of the server settings object so we need to add the request specific path to the WebRequestEndpoint value
+            UriBuilder uriBuilder = new UriBuilder($"{_serverSettings.WebRequestEndpoint}{forwardSlash}{path}");
+
+            uriBuilder.Port = _serverSettings.DetermineServerPort();
+            uriBuilder.Query = query;
+
+            return uriBuilder;
+        }
+
+        public string GetWebRequestURL(string path, string query = "")
+        {
+
+            return GetUriBuilder(path, query).ToString();
+        }
+	}
 }

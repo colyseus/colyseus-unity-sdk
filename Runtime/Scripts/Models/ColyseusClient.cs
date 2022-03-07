@@ -62,24 +62,24 @@ namespace Colyseus
 		/// </summary>
         public ColyseusRequest colyseusRequest;
 
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="ColyseusClient" /> class with
-        ///     the specified Colyseus Game Server endpoint.
-        /// </summary>
-        /// <param name="endpoint">
-        ///     A <see cref="string" /> that represents the WebSocket URL to connect.
-        /// </param>
-        public ColyseusClient(string endpoint)
-        {
-            Endpoint = new UriBuilder(new Uri(endpoint));
+		/// <summary>
+		///     Initializes a new instance of the <see cref="ColyseusClient" /> class with
+		///     the specified Colyseus Game Server endpoint.
+		/// </summary>
+		/// <param name="endpoint">
+		///     A <see cref="string" /> that represents the WebSocket URL to connect.
+		/// </param>
+		public ColyseusClient(string endpoint)
+		{
+			Endpoint = new UriBuilder(endpoint);
 
-            // Create ColyseusSettings object to pass to the ColyseusRequest object
-            ColyseusSettings settings = ScriptableObject.CreateInstance<ColyseusSettings>();
-            settings.colyseusServerAddress = Endpoint.Host;
-            settings.colyseusServerPort = Endpoint.Port.ToString();
-            settings.useSecureProtocol = Endpoint.ToString().StartsWith("wss") || Endpoint.ToString().StartsWith("https");
+			// Create ColyseusSettings object to pass to the ColyseusRequest object
+			ColyseusSettings settings = ScriptableObject.CreateInstance<ColyseusSettings>();
+			settings.colyseusServerAddress = $"{Endpoint.Host}{Endpoint.Path}";
+			settings.colyseusServerPort = Endpoint.Port.ToString();
+			settings.useSecureProtocol = string.Equals(Endpoint.Scheme, "wss") || string.Equals(Endpoint.Scheme, "https");
 
-            Settings = settings;
+			Settings = settings;
 		}
 
 		/// <summary>
@@ -95,7 +95,7 @@ namespace Colyseus
 
 		public void SetSettings(ColyseusSettings settings, bool useWebSocketEndpoint)
 		{
-			Endpoint = new UriBuilder(new Uri(useWebSocketEndpoint ? settings.WebSocketEndpoint : settings.WebRequestEndpoint));
+			Endpoint = new UriBuilder(useWebSocketEndpoint ? settings.WebSocketEndpoint : settings.WebRequestEndpoint);
 
 			Settings = settings;
 		}
@@ -389,11 +389,8 @@ namespace Colyseus
                 list.Add(item.Key + "=" + (item.Value != null ? Convert.ToString(item.Value) : "null"));
             }
 
-            UriBuilder uriBuilder = new UriBuilder(Endpoint.Uri)
-            {
-                Path = path,
-                Query = string.Join("&", list.ToArray())
-            };
+            var uriBuilder = colyseusRequest.GetUriBuilder(path, string.Join("&", list.ToArray()));
+            uriBuilder.Scheme = Endpoint.Scheme;
 
             return new ColyseusConnection(uriBuilder.ToString(), headers);
         }
