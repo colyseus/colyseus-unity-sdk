@@ -29,6 +29,7 @@ namespace Colyseus
             {
                 req.method = uriMethod;
                 req.url = GetWebRequestURL(uriPath, uriQuery);
+
 				// Send JSON on request body
 				if (data != null)
                 {
@@ -132,22 +133,28 @@ namespace Colyseus
             };
         }
 
+        public UriBuilder GetUriBuilder(string path, string query = "")
+		{
+            string forwardSlash = "";
+
+            if (!_serverSettings.WebRequestEndpoint.EndsWith("/"))
+            {
+                forwardSlash = "/";
+            }
+
+            // WebRequestEndpoint will include any path that is included with the server address field of the server settings object so we need to add the request specific path to the WebRequestEndpoint value
+            UriBuilder uriBuilder = new UriBuilder($"{_serverSettings.WebRequestEndpoint}{forwardSlash}{path}");
+
+            uriBuilder.Port = _serverSettings.DetermineServerPort();
+            uriBuilder.Query = query;
+
+            return uriBuilder;
+        }
+
         private string GetWebRequestURL(string path, string query = "")
         {
-	        string forwardSlash = "";
 
-	        if (!_serverSettings.WebRequestEndpoint.EndsWith("/"))
-	        {
-		        forwardSlash = "/";
-	        }
-
-	        // WebRequestEndpoint will include any path that is included with the server address field of the server settings object so we need to add the request specific path to the WebRequestEndpoint value
-	        UriBuilder uriBuilder = new UriBuilder($"{_serverSettings.WebRequestEndpoint}{forwardSlash}{path}");
-
-	        uriBuilder.Port = _serverSettings.DetermineServerPort();
-	        uriBuilder.Query = query;
-
-	        return uriBuilder.ToString();
+            return GetUriBuilder(path, query).ToString();
         }
 	}
 }

@@ -389,11 +389,8 @@ namespace Colyseus
                 list.Add(item.Key + "=" + (item.Value != null ? Convert.ToString(item.Value) : "null"));
             }
 
-            UriBuilder uriBuilder = new UriBuilder(Endpoint.Uri)
-            {
-                Path = path,
-                Query = string.Join("&", list.ToArray())
-            };
+            var uriBuilder = colyseusRequest.GetUriBuilder(path, string.Join("&", list.ToArray()));
+            uriBuilder.Scheme = Endpoint.Scheme;
 
             return new ColyseusConnection(uriBuilder.ToString(), headers);
         }
