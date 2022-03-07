@@ -151,7 +151,7 @@ namespace Colyseus
             return uriBuilder;
         }
 
-        private string GetWebRequestURL(string path, string query = "")
+        public string GetWebRequestURL(string path, string query = "")
         {
 
             return GetUriBuilder(path, query).ToString();

@@ -155,15 +155,14 @@ namespace Colyseus
 	        }
 	        else
 	        {
-		        Debug.LogError($"Get Web Request Endpoint - Error parsing server port: \"{colyseusServerPort}\"");
-
+		        //Debug.LogError($"Get Web Request Endpoint - Error parsing server port: \"{colyseusServerPort}\"");
 		        return -1;
 	        }
         }
 
         private bool ShouldIncludeServerPort()
         {
-	        return !string.IsNullOrEmpty(colyseusServerPort) && !string.Equals(colyseusServerPort, "80");
+	        return !string.IsNullOrEmpty(colyseusServerPort) && !string.Equals(colyseusServerPort, "80") && !string.Equals(colyseusServerPort, "443");
         }
 	}
 }
