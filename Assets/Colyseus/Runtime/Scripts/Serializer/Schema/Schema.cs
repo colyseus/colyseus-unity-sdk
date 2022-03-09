@@ -541,8 +541,8 @@ namespace Colyseus.Schema
                 }
                 else if (fieldType == "ref")
                 {
-                    refId = Convert.ToInt32(decode.DecodeNumber(bytes, it));
-                    value = refs.Get(refId);
+                    var __refId = Convert.ToInt32(decode.DecodeNumber(bytes, it));
+                    value = refs.Get(__refId);
 
                     if (operation != (byte) OPERATION.REPLACE)
                     {
@@ -558,7 +558,7 @@ namespace Colyseus.Schema
 
                                 if (
                                     ((IRef) previousValue).__refId > 0 &&
-                                    refId != ((IRef) previousValue).__refId
+                                    __refId != ((IRef) previousValue).__refId
                                 )
                                 {
                                     refs.Remove(((IRef) previousValue).__refId);
@@ -566,7 +566,7 @@ namespace Colyseus.Schema
                             }
                         }
 
-                        refs.Add(refId, (IRef) value, value != previousValue);
+                        refs.Add(__refId, (IRef) value, value != previousValue);
                     }
                 }
                 else if (childType == null)
@@ -576,14 +576,14 @@ namespace Colyseus.Schema
                 }
                 else
                 {
-                    refId = Convert.ToInt32(decode.DecodeNumber(bytes, it));
-                    value = refs.Get(refId);
+                    var __refId = Convert.ToInt32(decode.DecodeNumber(bytes, it));
 
-                    ISchemaCollection valueRef = refs.Has(refId)
+                    ISchemaCollection valueRef = refs.Has(__refId)
                         ? (ISchemaCollection) previousValue
                         : (ISchemaCollection) Activator.CreateInstance(childType);
 
                     value = valueRef.Clone();
+					((ISchemaCollection)value).__refId = __refId;
 
                     // keep reference to nested childPrimitiveType.
                     string childPrimitiveType;
@@ -596,7 +596,7 @@ namespace Colyseus.Schema
 
                         if (
                             ((IRef) previousValue).__refId > 0 &&
-                            refId != ((IRef) previousValue).__refId
+                            __refId != ((IRef) previousValue).__refId
                         )
                         {
                             refs.Remove(((IRef) previousValue).__refId);
@@ -607,7 +607,7 @@ namespace Colyseus.Schema
                             {
                                 allChanges.Add(new DataChange
                                 {
-                                    RefId = refId,
+                                    RefId = __refId,
                                     DynamicIndex = key,
                                     Op = (byte) OPERATION.DELETE,
                                     Value = null,
@@ -617,10 +617,8 @@ namespace Colyseus.Schema
                         }
                     }
 
-                    refs.Add(refId, (IRef) value, valueRef != previousValue);
+                    refs.Add(__refId, (IRef) value, valueRef != previousValue);
                 }
-
-                bool hasChange = previousValue != value;
 
                 if (value != null)
                 {
@@ -639,7 +637,7 @@ namespace Colyseus.Schema
                     }
                 }
 
-                if (hasChange)
+                if (previousValue != value)
                 {
                     allChanges.Add(new DataChange
                     {
@@ -748,7 +746,7 @@ namespace Colyseus.Schema
 
                     if (change.Value != change.PreviousValue)
                     {
-                        container.InvokeOnChange(change.Value, change.DynamicIndex);
+                        container.InvokeOnChange(change.Value, change.DynamicIndex ?? change.Field);
                     }
                 }
 
