@@ -711,7 +711,7 @@ namespace Colyseus.Schema
 
                     if (__callbacks.HasPropertyCallback(change.Field))
 					{
-                        TriggerFieldChange(change);
+						((Schema)_ref).TriggerFieldChange(change);
                     }
 				}
                 else
