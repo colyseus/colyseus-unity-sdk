@@ -39,7 +39,7 @@ namespace Colyseus.Schema
         public event KeyValueEventHandler<K, T> OnChange;
         public event KeyValueEventHandler<K, T> OnRemove;
 
-        public static void RemoveChildRefs(ISchemaCollection collection, List<DataChange> changes, ColyseusReferenceTracker refs)
+        public static void RemoveChildRefs(ISchemaCollection collection, ref List<DataChange> changes, ref ColyseusReferenceTracker refs)
         {
             if (refs == null) { return; }
 

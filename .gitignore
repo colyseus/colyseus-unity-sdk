@@ -3,6 +3,7 @@
 *.usertasks
 .DS_Store
 .vs/
+.vsconfig
 
 #Mono Project Files
 *.pidb

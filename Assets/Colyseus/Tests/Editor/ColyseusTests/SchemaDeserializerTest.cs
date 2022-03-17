@@ -118,6 +118,41 @@ public class SchemaDeserializerTest
 	}
 
 	[Test]
+	public void ArraySchemaClearTest()
+	{
+		var state = new SchemaTest.ArraySchemaClear.ArraySchemaClear();
+		var refs = new Colyseus.Schema.ColyseusReferenceTracker();
+		int onAddCount = 0;
+		int onRemoveCount = 0;
+		int onChangeCount = 0;
+
+		state.items.OnAdd((value, key) => onAddCount++);
+		state.items.OnRemove((value, key) => onRemoveCount++);
+		state.items.OnChange((value, key) => onChangeCount++);
+
+		byte[] bytes = { 128, 1, 255, 1, 128, 0, 2, 128, 1, 3, 128, 2, 4, 128, 3, 5, 128, 4, 6, 255, 2, 128, 0, 129, 0, 255, 3, 128, 0, 129, 0, 255, 4, 128, 0, 129, 0, 255, 5, 128, 0, 129, 0, 255, 6, 128, 0, 129, 0 };
+		state.Decode(bytes, null, refs);
+
+		Assert.AreEqual(5, onAddCount);
+		Assert.AreEqual(0, onRemoveCount);
+		Assert.AreEqual(5, onChangeCount);
+
+		byte[] clearBytes = { 255, 1, 10 };
+		state.Decode(clearBytes, null, refs);
+
+		Assert.AreEqual(5, onAddCount);
+		Assert.AreEqual(5, onRemoveCount);
+		Assert.AreEqual(10, onChangeCount);
+
+		byte[] reAddBytes = { 255, 1, 128, 5, 7, 128, 6, 8, 128, 7, 9, 128, 8, 10, 128, 9, 11, 255, 7, 128, 0, 129, 0, 255, 8, 128, 0, 129, 0, 255, 9, 128, 0, 129, 0, 255, 10, 128, 0, 129, 0, 255, 11, 128, 0, 129, 0 };
+		state.Decode(reAddBytes, null, refs);
+
+		Assert.AreEqual(10, onAddCount);
+		Assert.AreEqual(5, onRemoveCount);
+		Assert.AreEqual(15, onChangeCount);
+	}
+
+	[Test]
 	public void MapSchemaTypesTest()
 	{
 		var state = new SchemaTest.MapSchemaTypes.MapSchemaTypes();
@@ -296,7 +331,7 @@ public class SchemaDeserializerTest
 	public void InstanceSharingTypes()
 	{
 		var refs = new Colyseus.Schema.ColyseusReferenceTracker();
-		var client = new SchemaTest.InstanceSharing.State();
+		var client = new SchemaTest.InstanceSharingTypes.State();
 
 		client.Decode(new byte[] { 130, 1, 131, 2, 128, 3, 129, 3, 255, 1, 255, 2, 255, 3, 128, 4, 255, 3, 128, 4, 255, 4, 128, 10, 129, 10, 255, 4, 128, 10, 129, 10 }, null, refs);
 		Assert.AreEqual(client.player1, client.player2);

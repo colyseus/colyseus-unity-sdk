@@ -171,7 +171,7 @@ namespace Colyseus.Schema
 
         IDictionary GetItems();
         void SetItems(object items);
-        void Clear(List<DataChange> changes, ColyseusReferenceTracker refs);
+        void Clear(ref List<DataChange> changes, ref ColyseusReferenceTracker refs);
 
         System.Type GetChildType();
         object GetTypeDefaultValue();
@@ -426,7 +426,7 @@ namespace Colyseus.Schema
 
                 if (operation == (byte) OPERATION.CLEAR)
                 {
-                    ((ISchemaCollection) _ref).Clear(allChanges, refs);
+                    ((ISchemaCollection) _ref).Clear(ref allChanges, ref refs);
                     continue;
                 }
 
@@ -551,6 +551,7 @@ namespace Colyseus.Schema
                         if (value == null)
                         {
                             value = CreateTypeInstance(concreteChildType);
+                            ((IRef)value).__refId = __refId;
 
                             if (previousValue != null)
                             {
@@ -622,11 +623,6 @@ namespace Colyseus.Schema
 
                 if (value != null)
                 {
-                    if (value is IRef)
-                    {
-                        ((IRef) value).__refId = refId;
-                    }
-
                     if (_ref is Schema)
                     {
                         ((Schema) _ref)[fieldName] = value;
