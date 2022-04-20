@@ -26,7 +26,7 @@ namespace GameDevWare.Serialization
 {
 	public static class Json
 	{
-		
+
 		private static IFormatProvider _DefaultFormat = CultureInfo.InvariantCulture;
 		private static Encoding _DefaultEncoding = new UTF8Encoding(false, true);
 		private static string[] _DefaultDateTimeFormats;
@@ -95,7 +95,7 @@ namespace GameDevWare.Serialization
 				new TimeSpanSerializer(),
 				new DictionaryEntrySerializer(),
 
-#if UNITY_5 || UNITY_4 || UNITY_3_3 || UNITY_3_4 || UNITY_3_5
+#if UNITY_5 || UNITY_4 || UNITY_3_3 || UNITY_3_4 || UNITY_3_5 || UNITY_5_3_OR_NEWER
 				new BoundsSerializer(),
 				new Matrix4x4Serializer(),
 				new QuaternionSerializer(),
