@@ -1,5 +1,8 @@
-﻿/*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+#if UNITY_3_3 || UNITY_3_4 || UNITY_3_5 || UNITY_4 || UNITY_4_7 || UNITY_5 || UNITY_5_3_OR_NEWER
+#define UNITY
+#endif
+/*
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -21,19 +24,25 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
+#if NET35 || UNITY
+using TypeInfo = System.Type;
+#endif
+
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Metadata
 {
 	internal class TypeDescription : MemberDescription
 	{
-		private static readonly Dictionary<Type, TypeDescription> TypeDescriptions = new Dictionary<Type, TypeDescription>();
+		private static readonly Dictionary<TypeInfo, TypeDescription> TypeDescriptions = new Dictionary<TypeInfo, TypeDescription>();
+		private static readonly object[] EmptyParameters = new object[0];
 
-		private readonly Type objectType;
+		private readonly TypeInfo objectType;
 		private readonly Func<object> constructorFn;
+		private readonly ConstructorInfo defaultConstructor;
 		private readonly ReadOnlyCollection<DataMemberDescription> members;
 		private readonly Dictionary<string, DataMemberDescription> membersByName;
 
-		public Type ObjectType { get { return this.objectType; } }
+		public TypeInfo ObjectType { get { return this.objectType; } }
 		public bool IsAnonymousType { get; private set; }
 		public bool IsEnumerable { get; private set; }
 		public bool IsDictionary { get; private set; }
@@ -41,33 +50,36 @@ namespace GameDevWare.Serialization.Metadata
 		public bool IsSerializable { get; private set; }
 		public ReadOnlyCollection<DataMemberDescription> Members { get { return this.members; } }
 
-		public TypeDescription(Type objectType)
+		public TypeDescription(TypeInfo objectType)
 			: base(null, objectType)
 		{
 			if (objectType == null) throw new ArgumentNullException("objectType");
 
 			this.objectType = objectType;
 			this.IsDataContract = this.Attributes.Any(attribute => attribute.GetType().Name == DATA_CONTRACT_ATTRIBUTE_NAME);
+#if NETSTANDARD
+			this.IsSerializable = this.objectType.GetCustomAttributes(typeof(SerializableAttribute), true).Any();
+#else
 			this.IsSerializable = objectType.IsSerializable;
-			this.IsEnumerable = objectType.IsInstantiationOf(typeof(Enumerable)) && objectType != typeof(string);
-			this.IsDictionary = typeof(IDictionary).IsAssignableFrom(objectType);
-			this.IsAnonymousType = objectType.IsSealed && objectType.IsNotPublic && objectType.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Length > 0; ;
+#endif
+			this.IsEnumerable = this.objectType.IsInstantiationOf(typeof(Enumerable)) && this.objectType != typeof(string);
+			this.IsDictionary = typeof(IDictionary).GetTypeInfo().IsAssignableFrom(this.objectType);
+			this.IsAnonymousType = this.objectType.IsSealed && this.objectType.IsNotPublic && this.objectType.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Any();
 
-			var allMembers = this.FindMembers(objectType);
+			var allMembers = this.FindMembers(this.objectType);
 
 			this.members = allMembers.AsReadOnly();
 			this.membersByName = allMembers.ToDictionary(m => m.Name, StringComparer.Ordinal);
 
-			GettersAndSetters.TryGetConstructor(objectType, out this.constructorFn);
+			MetadataReflection.TryGetConstructor(this.objectType, out this.constructorFn, out this.defaultConstructor);
 		}
 
-		private List<DataMemberDescription> FindMembers(Type objectType)
+		private List<DataMemberDescription> FindMembers(TypeInfo objectType)
 		{
 			if (objectType == null) throw new ArgumentNullException("objectType");
 
 			var members = new List<DataMemberDescription>();
 			var memberNames = new HashSet<string>(StringComparer.Ordinal);
-
 			var isOptIn = objectType.GetCustomAttributes(false).Any(a => a.GetType().Name == DATA_CONTRACT_ATTRIBUTE_NAME);
 			var searchFlags = BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | (isOptIn ? BindingFlags.NonPublic : 0);
 			var properties = objectType.GetProperties(searchFlags);
@@ -116,19 +128,22 @@ namespace GameDevWare.Serialization.Metadata
 		{
 			if (this.constructorFn != null)
 				return this.constructorFn();
+			else if (this.defaultConstructor != null && !this.objectType.IsAbstract)
+				return this.defaultConstructor.Invoke(EmptyParameters);
 			else
-				return Activator.CreateInstance(this.objectType);
+				throw JsonSerializationException.CantCreateInstanceOfType(this.objectType);
 		}
 
 		public static TypeDescription Get(Type type)
 		{
 			if (type == null) throw new ArgumentNullException("type");
 
+			var typeInfo = type.GetTypeInfo();
 			lock (TypeDescriptions)
 			{
 				TypeDescription objectTypeDescription;
-				if (!TypeDescriptions.TryGetValue(type, out objectTypeDescription))
-					TypeDescriptions.Add(type, objectTypeDescription = new TypeDescription(type));
+				if (!TypeDescriptions.TryGetValue(typeInfo, out objectTypeDescription))
+					TypeDescriptions.Add(typeInfo, objectTypeDescription = new TypeDescription(typeInfo));
 				return objectTypeDescription;
 			}
 		}

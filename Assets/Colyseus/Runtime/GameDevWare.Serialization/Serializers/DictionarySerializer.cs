@@ -1,5 +1,5 @@
-﻿/*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+/*
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -93,13 +93,16 @@ namespace GameDevWare.Serialization.Serializers
 							reader.ReadArrayBegin();
 							try { entry.Key = reader.ReadValue(this.keyType); }
 							catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' key of dictionary: {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
+							reader.Context.Path.Push(new PathSegment(entry.Key));
 							try { entry.Value = reader.ReadValue(this.valueType); }
 							catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' value for key '{1}' in dictionary: {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key, e.Message), e); }
+							reader.Context.Path.Pop();
 							reader.ReadArrayEnd();
 						}
 						else
 						{
 							reader.ReadObjectBegin();
+							var keyIsPushed = false;
 							while (reader.Token != JsonToken.EndOfObject)
 							{
 								var memberName = reader.ReadMember();
@@ -108,6 +111,11 @@ namespace GameDevWare.Serialization.Serializers
 									case DictionaryEntrySerializer.KEY_MEMBER_NAME:
 										try { entry.Key = reader.ReadValue(this.keyType); }
 										catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' key of dictionary: {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
+										if (!keyIsPushed)
+										{
+											reader.Context.Path.Push(new PathSegment(entry.Key));
+											keyIsPushed = true;
+										}
 										break;
 									case DictionaryEntrySerializer.VALUE_MEMBER_NAME:
 										try { entry.Value = reader.ReadValue(this.valueType); }
@@ -119,6 +127,11 @@ namespace GameDevWare.Serialization.Serializers
 									default:
 										throw new SerializationException(string.Format("Unknown member found '{0}' in dictionary entry while '{1}' or '{2}' are expected.", memberName, DictionaryEntrySerializer.KEY_MEMBER_NAME, DictionaryEntrySerializer.VALUE_MEMBER_NAME));
 								}
+
+							}
+							if (keyIsPushed)
+							{
+								reader.Context.Path.Pop();
 							}
 							reader.ReadObjectEnd();
 						}
@@ -135,10 +148,12 @@ namespace GameDevWare.Serialization.Serializers
 
 						try { entry.Key = reader.ReadValue(this.keyType); }
 						catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' key of dictionary: {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
+						reader.Context.Path.Push(new PathSegment(entry.Key));
 
 						try { entry.Value = reader.ReadValue(this.valueType); }
 						catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' value for key '{1}' in dictionary: {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key, e.Message), e); }
 
+						reader.Context.Path.Pop();
 						container.Add(entry);
 					}
 					reader.ReadObjectEnd(nextToken: false);
@@ -190,10 +205,14 @@ namespace GameDevWare.Serialization.Serializers
 				foreach (DictionaryEntry pair in dictionary)
 				{
 					var keyStr = Convert.ToString(pair.Key, writer.Context.Format);
+					writer.Context.Path.Push(new PathSegment(keyStr));
+
 					// key
 					writer.WriteMember(keyStr);
 					// value
 					writer.WriteValue(pair.Value, this.valueType);
+
+					writer.Context.Path.Pop();
 				}
 				writer.WriteObjectEnd();
 			}
@@ -202,10 +221,12 @@ namespace GameDevWare.Serialization.Serializers
 				writer.WriteArrayBegin(dictionary.Count);
 				foreach (DictionaryEntry pair in dictionary)
 				{
+					writer.Context.Path.Push(new PathSegment(pair.Key));
 					writer.WriteArrayBegin(2);
 					writer.WriteValue(pair.Key, this.keyType);
 					writer.WriteValue(pair.Value, this.valueType);
 					writer.WriteArrayEnd();
+					writer.Context.Path.Pop();
 				}
 				writer.WriteArrayEnd();
 			}

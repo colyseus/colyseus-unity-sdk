@@ -1,5 +1,5 @@
 /* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -751,16 +751,6 @@ namespace GameDevWare.Serialization
 			var valueStr = value.ToString(null, formatProvider);
 			valueStr.CopyTo(0, buffer, start, valueStr.Length);
 			return valueStr.Length;
-		}
-
-		private static bool LookupAt(char[] buffer, int start, int len, string matchString)
-		{
-			for (var i = 0; i < len; i++)
-			{
-				if (buffer[start + i] != matchString[i])
-					return false;
-			}
-			return true;
 		}
 	}
 }

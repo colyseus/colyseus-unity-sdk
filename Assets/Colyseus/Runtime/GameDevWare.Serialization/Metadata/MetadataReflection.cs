@@ -1,16 +1,19 @@
-/*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+#if UNITY_3_3 || UNITY_3_4 || UNITY_3_5 || UNITY_4 || UNITY_4_7 || UNITY_5 || UNITY_5_3_OR_NEWER
+#define UNITY
+#endif
+/* 
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
-	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND
-	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE
-	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY,
-	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE
+	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND 
+	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE 
+	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY, 
+	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE 
 	AND THOSE ARISING BY STATUTE OR FROM CUSTOM OR USAGE OF TRADE OR COURSE OF DEALING.
-
-	This source code is distributed via Unity Asset Store,
-	to use it in your project you should accept Terms of Service and EULA
+	
+	This source code is distributed via Unity Asset Store, 
+	to use it in your project you should accept Terms of Service and EULA 
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
@@ -24,39 +27,49 @@ using System.Reflection.Emit;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Metadata
 {
-	internal static class GettersAndSetters
+	internal static class MetadataReflection
 	{
-#if !NET_STANDARD_2_0
-		private static readonly bool AotRuntime;
+		/// <summary>
+		/// Set to true to disable access optimizations (generated read/write access delegates) in AOT runtime.
+		/// </summary>
+		public static bool AotRuntime;
 
 		private static readonly Dictionary<MemberInfo, Func<object, object>> ReadFunctions;
 		private static readonly Dictionary<MemberInfo, Action<object, object>> WriteFunctions;
 		private static readonly Dictionary<MemberInfo, Func<object>> ConstructorFunctions;
-#endif
 
-#if !NET_STANDARD_2_0
-		static GettersAndSetters()
+		static MetadataReflection()
 		{
 #if ((UNITY_WEBGL || UNITY_IOS || ENABLE_IL2CPP) && !UNITY_EDITOR)
 			AotRuntime = true;
 #else
-			try { Expression.Lambda<Func<bool>>(Expression.Constant(true)).Compile(); }
-			catch (Exception) { AotRuntime = true; }
+			try
+			{
+				// try compile expression
+				Expression.Lambda<Func<bool>>(Expression.Constant(true)).Compile();
+#if (NET35 || UNITY) && !NET_STANDARD_2_0
+				var voidDynamicMethod = new DynamicMethod("TestVoidMethod", typeof(void), Type.EmptyTypes, restrictedSkipVisibility: true);
+				var il = voidDynamicMethod.GetILGenerator();
+				il.Emit(OpCodes.Nop);
+				voidDynamicMethod.CreateDelegate(typeof(Action));
+#endif
+			}
+			catch
+			{
+				AotRuntime = true;
+			}
 #endif
 			ReadFunctions = new Dictionary<MemberInfo, Func<object, object>>();
 			WriteFunctions = new Dictionary<MemberInfo, Action<object, object>>();
 			ConstructorFunctions = new Dictionary<MemberInfo, Func<object>>();
 		}
-#endif
 
-		public static bool TryGetAssessors(MethodInfo getMethod, MethodInfo setMethod, out Func<object, object> getFn, out Action<object, object> setFn)
+		public static bool TryGetMemberAccessFunc(MethodInfo getMethod, MethodInfo setMethod, out Func<object, object> getFn, out Action<object, object> setFn)
 		{
 			getFn = null;
 			setFn = null;
 
-#if NET_STANDARD_2_0
-			return false;
-#else
+
 			if (AotRuntime)
 				return false;
 
@@ -68,7 +81,7 @@ namespace GameDevWare.Serialization.Metadata
 					{
 						var instanceParam = Expression.Parameter(typeof(object), "instance");
 						var declaringType = getMethod.DeclaringType;
-						Debug.Assert(declaringType != null, "getMethodDeclaringType != null");
+						Debug.Assert(declaringType != null, "getMethod.DeclaringType != null");
 						getFn = Expression.Lambda<Func<object, object>>(
 							Expression.Convert(
 								Expression.Call(
@@ -87,38 +100,30 @@ namespace GameDevWare.Serialization.Metadata
 				{
 					if (WriteFunctions.TryGetValue(setMethod, out setFn) == false)
 					{
+						var instanceParam = Expression.Parameter(typeof(object), "instance");
+						var valueParam = Expression.Parameter(typeof(object), "value");
 						var declaringType = setMethod.DeclaringType;
-						var valueParameter = setMethod.GetParameters().Single();
-						Debug.Assert(declaringType != null, "getMethodDeclaringType != null");
-						var setDynamicMethod = new DynamicMethod(declaringType.FullName + "::" + setMethod.Name, typeof(void), new Type[] { typeof(object), typeof(object) }, restrictedSkipVisibility: true);
-						var il = setDynamicMethod.GetILGenerator();
+						var valueType = setMethod.GetParameters()[0].ParameterType;
+						Debug.Assert(declaringType != null, "setMethod.DeclaringType != null");
 
-						il.Emit(OpCodes.Ldarg_0); // instance
-						il.Emit(OpCodes.Castclass, declaringType);
-						il.Emit(OpCodes.Ldarg_1); // value
-						if (valueParameter.ParameterType.IsValueType)
-							il.Emit(OpCodes.Unbox_Any, valueParameter.ParameterType);
-						else
-							il.Emit(OpCodes.Castclass, valueParameter.ParameterType);
-						il.Emit(OpCodes.Callvirt, setMethod); // call instance.Set(value)
-						il.Emit(OpCodes.Ret);
-						setFn = (Action<object, object>)setDynamicMethod.CreateDelegate(typeof(Action<object, object>));
+						setFn = ((Expression<Action<object, object>>)Expression.Lambda(typeof(Action<object, object>),
+							Expression.Call(
+								Expression.Convert(instanceParam, declaringType),
+								setMethod,
+								Expression.Convert(valueParam, valueType)),
+							instanceParam,
+							valueParam
+						)).Compile();
 						WriteFunctions.Add(setMethod, setFn);
 					}
 				}
 			}
-
 			return true;
-#endif
 		}
-		public static bool TryGetAssessors(FieldInfo fieldInfo, out Func<object, object> getFn, out Action<object, object> setFn)
+		public static bool TryGetMemberAccessFunc(FieldInfo fieldInfo, out Func<object, object> getFn, out Action<object, object> setFn)
 		{
 			getFn = null;
 			setFn = null;
-
-#if NET_STANDARD_2_0
-			return false;
-#else
 
 			if (AotRuntime || fieldInfo.IsStatic)
 				return false;
@@ -149,8 +154,9 @@ namespace GameDevWare.Serialization.Metadata
 					if (WriteFunctions.TryGetValue(fieldInfo, out setFn) == false)
 					{
 						var declaringType = fieldInfo.DeclaringType;
+						Debug.Assert(declaringType != null, "fieldInfo.DeclaringType != null");
 						var fieldType = fieldInfo.FieldType;
-						Debug.Assert(declaringType != null, "getMethodDeclaringType != null");
+#if (NET35 || UNITY) && !NET_STANDARD_2_0
 						var setDynamicMethod = new DynamicMethod(declaringType.FullName + "::" + fieldInfo.Name, typeof(void), new Type[] { typeof(object), typeof(object) }, restrictedSkipVisibility: true);
 						var il = setDynamicMethod.GetILGenerator();
 
@@ -165,29 +171,38 @@ namespace GameDevWare.Serialization.Metadata
 						il.Emit(OpCodes.Ret);
 
 						setFn = (Action<object, object>)setDynamicMethod.CreateDelegate(typeof(Action<object, object>));
+#else
+						var instanceParam = Expression.Parameter(typeof(object), "instance");
+						var valueParam = Expression.Parameter(typeof(object), "value");
+
+						setFn = ((Expression<Action<object, object>>)Expression.Lambda(typeof(Action<object, object>),
+							Expression.Assign(
+								Expression.Field(Expression.Convert(instanceParam, declaringType), fieldInfo), 
+								Expression.Convert(valueParam, fieldType)),
+							instanceParam,
+							valueParam
+						)).Compile();
+#endif
 						WriteFunctions.Add(fieldInfo, setFn);
 					}
 				}
 			}
 
 			return true;
-#endif
 		}
-		public static bool TryGetConstructor(Type type, out Func<object> ctrFn)
+		public static bool TryGetConstructor(Type type, out Func<object> ctrFn, out ConstructorInfo defaultConstructor)
 		{
 			if (type == null) throw new ArgumentNullException("type");
 
 			ctrFn = null;
+			defaultConstructor = null;
 
-#if NET_STANDARD_2_0
-			return false;
-#else
 			if (AotRuntime || type.IsAbstract || type.IsInterface)
 				return false;
 
-			var defaultCtr = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(ctr => ctr.GetParameters().Length == 0);
+			defaultConstructor = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(ctr => ctr.GetParameters().Length == 0);
 
-			if (defaultCtr == null)
+			if (defaultConstructor == null)
 				return false;
 
 			lock (ConstructorFunctions)
@@ -197,7 +212,7 @@ namespace GameDevWare.Serialization.Metadata
 
 				ctrFn = Expression.Lambda<Func<object>>(
 					Expression.Convert(
-						Expression.New(defaultCtr),
+						Expression.New(defaultConstructor),
 						typeof(object))
 					).Compile();
 
@@ -205,7 +220,6 @@ namespace GameDevWare.Serialization.Metadata
 			}
 
 			return true;
-#endif
 		}
 	}
 }

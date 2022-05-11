@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -25,7 +25,8 @@ namespace GameDevWare.Serialization
 
 		public Stream Stream { get { return writer.BaseStream; } }
 
-		public JsonStreamWriter(Stream stream, SerializationContext context) : base(context)
+		public JsonStreamWriter(Stream stream, SerializationContext context, char[] buffer = null)
+			: base(context, buffer)
 		{
 			if (stream == null) throw new ArgumentNullException("stream");
 			if (!stream.CanWrite) throw JsonSerializationException.StreamIsNotWriteable();

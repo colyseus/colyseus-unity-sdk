@@ -1,5 +1,5 @@
 ﻿/*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -52,7 +52,7 @@ namespace GameDevWare.Serialization.Metadata
 			{
 				var dataMemberAttribute = attributesList.FirstOrDefault(a => a.GetType().Name == DATA_MEMBER_ATTRIBUTE_NAME);
 				if (dataMemberAttribute != null)
-					this.name = ReflectionExtentions.GetDataMemberName(dataMemberAttribute) ?? this.name;
+					this.name = ReflectionExtensions.GetDataMemberName(dataMemberAttribute) ?? this.name;
 			}
 
 			this.attributes = new ReadOnlyCollection<Attribute>(attributesList);

@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -30,7 +30,7 @@ namespace GameDevWare.Serialization
 		bool IsEndOfStream();
 
 		/// <summary>
-		///     Resets Line/Column numbers, CharactersReaded and Token information of reader
+		///     Resets Line/Column numbers, CharactersRead and Token information of reader
 		/// </summary>
 		void Reset();
 	}

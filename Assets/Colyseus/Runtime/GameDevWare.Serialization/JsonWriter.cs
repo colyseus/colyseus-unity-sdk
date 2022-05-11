@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -22,15 +22,16 @@ namespace GameDevWare.Serialization
 {
 	public abstract class JsonWriter : IJsonWriter
 	{
+		public const int DEFAULT_BUFFER_SIZE = 1024;
+
 		[Flags]
 		private enum Structure : byte
 		{
-			None = 0,
 			IsContainer = 0x1,
 			IsObject = 0x2 | IsContainer,
 			IsArray = 0x4 | IsContainer,
-			IsBegining = 0x1 << 7,
-			IsBeginingOfContainer = IsContainer | IsBegining
+			IsStartOfStructure = 0x1 << 7,
+			IsStartOfContainer = IsContainer | IsStartOfStructure
 		}
 
 		private const long JS_NUMBER_MAX_VALUE_INT64 = 9007199254740992L;
@@ -51,18 +52,21 @@ namespace GameDevWare.Serialization
 		private static readonly char[] True = "true".ToCharArray();
 		private static readonly char[] False = "false".ToCharArray();
 
-		private readonly Stack<Structure> structStack = new Stack<Structure>(10);
-		private readonly char[] outputBuffer = new char[512];
+		private readonly Stack<Structure> structStack;
+		private readonly char[] buffer;
 
 		public SerializationContext Context { get; private set; }
 		public long CharactersWritten { get; protected set; }
 		public int InitialPadding { get; set; }
 
-		protected JsonWriter(SerializationContext context)
+		protected JsonWriter(SerializationContext context, char[] buffer = null)
 		{
 			if (context == null) throw new ArgumentNullException("context");
+			if (buffer != null && buffer.Length < 1024) throw new ArgumentOutOfRangeException("buffer", "Buffer should be at least 1024 bytes long.");
 
 			this.Context = context;
+			this.buffer = buffer ?? new char[DEFAULT_BUFFER_SIZE];
+			this.structStack = new Stack<Structure>(10);
 		}
 
 		public abstract void Flush();
@@ -81,15 +85,16 @@ namespace GameDevWare.Serialization
 
 			var len = value.Length;
 			var offset = 0;
-			outputBuffer[0] = '"';
-			this.WriteJson(outputBuffer, 0, 1);
+			this.buffer[0] = '"';
+			this.WriteJson(this.buffer, 0, 1);
 			while (offset < len)
 			{
-				var writtenInBuffer = JsonUtils.EscapeBuffer(value, ref offset, outputBuffer, 0);
-				this.WriteJson(outputBuffer, 0, writtenInBuffer);
+				var writtenInBuffer = JsonUtils.EscapeBuffer(value, ref offset, this.buffer, 0);
+				this.WriteJson(this.buffer, 0, writtenInBuffer);
 			}
-			outputBuffer[0] = '"';
-			this.WriteJson(outputBuffer, 0, 1);
+
+			this.buffer[0] = '"';
+			this.WriteJson(this.buffer, 0, 1);
 		}
 		public void Write(JsonMember member)
 		{
@@ -116,67 +121,67 @@ namespace GameDevWare.Serialization
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.Int32ToBuffer(number, outputBuffer, 0, this.Context.Format);
-			this.WriteJson(outputBuffer, 0, len);
+			var len = JsonUtils.Int32ToBuffer(number, this.buffer, 0, this.Context.Format);
+			this.WriteJson(this.buffer, 0, len);
 		}
 		public void Write(uint number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.UInt32ToBuffer(number, outputBuffer, 0, this.Context.Format);
-			this.WriteJson(outputBuffer, 0, len);
+			var len = JsonUtils.UInt32ToBuffer(number, this.buffer, 0, this.Context.Format);
+			this.WriteJson(this.buffer, 0, len);
 		}
 		public void Write(long number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.Int64ToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.Int64ToBuffer(number, this.buffer, 0, this.Context.Format);
 
 			if (number > JS_NUMBER_MAX_VALUE_INT64)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
 		public void Write(ulong number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.UInt64ToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.UInt64ToBuffer(number, this.buffer, 0, this.Context.Format);
 
 			if (number > JS_NUMBER_MAX_VALUE_U_INT64)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
 		public void Write(float number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.SingleToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.SingleToBuffer(number, this.buffer, 0, this.Context.Format);
 			if (number > JS_NUMBER_MAX_VALUE_SINGLE)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
 		public void Write(double number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.DoubleToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.DoubleToBuffer(number, this.buffer, 0, this.Context.Format);
 			if (number > JS_NUMBER_MAX_VALUE_DOUBLE)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
 		public void Write(decimal number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.DecimalToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.DecimalToBuffer(number, this.buffer, 0, this.Context.Format);
 			if (number > JS_NUMBER_MAX_VALUE_DECIMAL)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
 		public void Write(DateTime dateTime)
 		{
@@ -214,14 +219,14 @@ namespace GameDevWare.Serialization
 		{
 			this.WriteFormatting(JsonToken.BeginObject);
 
-			structStack.Push(Structure.IsObject | Structure.IsBegining);
+			this.structStack.Push(Structure.IsObject | Structure.IsStartOfStructure);
 			this.WriteJson(ObjectBegin, 0, ObjectBegin.Length);
 		}
 		public void WriteObjectEnd()
 		{
 			this.WriteFormatting(JsonToken.EndOfObject);
 
-			structStack.Pop();
+			this.structStack.Pop();
 			this.WriteNewlineAndPad(0);
 			this.WriteJson(ObjectEnd, 0, ObjectEnd.Length);
 		}
@@ -229,14 +234,14 @@ namespace GameDevWare.Serialization
 		{
 			this.WriteFormatting(JsonToken.BeginArray);
 
-			structStack.Push(Structure.IsArray | Structure.IsBegining);
+			this.structStack.Push(Structure.IsArray | Structure.IsStartOfStructure);
 			this.WriteJson(ArrayBegin, 0, ArrayBegin.Length);
 		}
 		public void WriteArrayEnd()
 		{
 			this.WriteFormatting(JsonToken.EndOfArray);
 
-			structStack.Pop();
+			this.structStack.Pop();
 			this.WriteJson(ArrayEnd, 0, ArrayEnd.Length);
 		}
 		public void WriteNull()
@@ -279,10 +284,10 @@ namespace GameDevWare.Serialization
 				return;
 
 			// it's a begining of container we add padding and remove "is begining" flag
-			if ((stackPeek & Structure.IsBeginingOfContainer) == Structure.IsBeginingOfContainer)
+			if ((stackPeek & Structure.IsStartOfContainer) == Structure.IsStartOfContainer)
 			{
 				stackPeek = this.structStack.Pop();
-				this.structStack.Push(stackPeek ^ Structure.IsBegining); // revert "is begining"
+				this.structStack.Push(stackPeek ^ Structure.IsStartOfStructure); // revert "is begining"
 			}
 			// else if it's new array's value or new object's member put comman and padding
 			else if (!isEndToken)

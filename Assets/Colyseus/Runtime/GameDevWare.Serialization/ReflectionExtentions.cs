@@ -1,5 +1,8 @@
-﻿/* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+#if UNITY_3_3 || UNITY_3_4 || UNITY_3_5 || UNITY_4 || UNITY_4_7 || UNITY_5 || UNITY_5_3_OR_NEWER
+#define UNITY
+#endif
+/* 
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -20,7 +23,7 @@ using System.Reflection;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
-	internal static class ReflectionExtentions
+	internal static class ReflectionExtensions
 	{
 		private static readonly Dictionary<Type, MethodInfo> GetNameMethods = new Dictionary<Type, MethodInfo>();
 		private static readonly object[] EmptyArgs = new object[0];
@@ -194,5 +197,12 @@ namespace GameDevWare.Serialization
 			else
 				return null;
 		}
+
+#if NET35 || UNITY
+		public static Type GetTypeInfo(this Type type)
+		{
+			return type;
+		}
+#endif
 	}
 }

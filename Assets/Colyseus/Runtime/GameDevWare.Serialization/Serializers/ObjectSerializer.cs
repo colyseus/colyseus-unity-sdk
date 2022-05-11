@@ -1,5 +1,5 @@
 /* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -54,7 +54,9 @@ namespace GameDevWare.Serialization.Serializers
 			{
 				var baseSerializer = context.GetSerializerForType(this.objectType.BaseType);
 				if (baseSerializer is ObjectSerializer == false)
+				{
 					throw JsonSerializationException.TypeRequiresCustomSerializer(this.objectType, this.GetType());
+				}
 				this.baseTypeSerializer = (ObjectSerializer)baseSerializer;
 			}
 
@@ -102,14 +104,18 @@ namespace GameDevWare.Serialization.Serializers
 			{
 				writer.WriteObjectBegin(container.Count + 1);
 
+				writer.Context.Path.Push(new PathSegment(TYPE_MEMBER_NAME));
 				writer.WriteMember(TYPE_MEMBER_NAME);
 				writer.WriteString(objectTypeNameWithoutVersion);
+				this.context.Path.Pop();
 			}
 
 			foreach (var kv in container)
 			{
+				writer.Context.Path.Push(new PathSegment(kv.Key.Name));
 				writer.WriteMember(kv.Key.Name);
 				writer.WriteValue(kv.Value, kv.Key.ValueType);
+				this.context.Path.Pop();
 			}
 
 			writer.WriteObjectEnd();
@@ -144,6 +150,7 @@ namespace GameDevWare.Serialization.Serializers
 				memberName = reader.Value.AsString; // string
 				if (string.Equals(memberName, TYPE_MEMBER_NAME) && this.SuppressTypeInformation == false)
 				{
+					this.context.Path.Push(new PathSegment(TYPE_MEMBER_NAME));
 					reader.NextToken();
 					var typeName = reader.ReadString(false);
 					var type = default(Type);
@@ -156,6 +163,7 @@ namespace GameDevWare.Serialization.Serializers
 						throw new SerializationException(string.Format("Failed to resolve type '{0}' of value for '{1}' of '{2}' type.\r\n" +
 							"More detailed information in inner exception.", typeName, memberName, this.objectType.Name), getTypeError);
 					}
+					this.context.Path.Pop();
 
 					if (type == typeof(object))
 					{
@@ -178,6 +186,8 @@ namespace GameDevWare.Serialization.Serializers
 					}
 				}
 
+				this.context.Path.Push(new PathSegment(memberName));
+
 				var member = default(DataMemberDescription);
 				var valueType = typeof(object);
 
@@ -196,6 +206,8 @@ namespace GameDevWare.Serialization.Serializers
 				}
 
 				container[memberName] = value;
+
+				this.context.Path.Pop();
 			}
 
 			return null;
