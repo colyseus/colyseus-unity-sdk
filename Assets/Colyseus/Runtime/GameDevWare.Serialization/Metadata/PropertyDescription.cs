@@ -1,5 +1,5 @@
 ﻿/*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -41,7 +41,7 @@ namespace GameDevWare.Serialization.Metadata
 			this.getMethod = propertyInfo.GetGetMethod(nonPublic: true);
 			this.setMethod = propertyInfo.GetSetMethod(nonPublic: true);
 
-			GettersAndSetters.TryGetAssessors(this.getMethod, this.setMethod, out this.getFn, out this.setFn);
+			MetadataReflection.TryGetMemberAccessFunc(this.getMethod, this.setMethod, out this.getFn, out this.setFn);
 		}
 
 		public override object GetValue(object target)

@@ -1,5 +1,5 @@
 ﻿/* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -13,7 +13,7 @@
 	to use it in your project you should accept Terms of Service and EULA 
 	https://unity3d.com/ru/legal/as_terms
 */
-#if UNITY_5 || UNITY_4 || UNITY_3_3 || UNITY_3_4 || UNITY_3_5
+#if UNITY_5 || UNITY_4 || UNITY_3_3 || UNITY_3_4 || UNITY_3_5 || UNITY_5_3_OR_NEWER
 using System;
 using UnityEngine;
 

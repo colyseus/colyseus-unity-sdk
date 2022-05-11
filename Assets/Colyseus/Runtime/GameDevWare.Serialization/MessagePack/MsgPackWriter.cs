@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -22,21 +22,24 @@ namespace GameDevWare.Serialization.MessagePack
 {
 	public class MsgPackWriter : IJsonWriter
 	{
+		public const int DEFAULT_BUFFER_SIZE = 32;
+
 		private readonly SerializationContext context;
 		private readonly Stream outputStream;
 		private readonly byte[] buffer;
 		private readonly EndianBitConverter bitConverter;
 		private long bytesWritten;
 
-		public MsgPackWriter(Stream stream, SerializationContext context)
+		public MsgPackWriter(Stream stream, SerializationContext context, byte[] buffer = null)
 		{
 			if (stream == null) throw new ArgumentNullException("stream");
 			if (context == null) throw new ArgumentNullException("context");
 			if (!stream.CanWrite) throw JsonSerializationException.StreamIsNotReadable();
+			if (buffer != null && buffer.Length < 32) throw new ArgumentOutOfRangeException("buffer", "Buffer should be at least 32 bytes long.");
 
 			this.context = context;
 			this.outputStream = stream;
-			this.buffer = new byte[32];
+			this.buffer = buffer ?? new byte[DEFAULT_BUFFER_SIZE];
 			this.bitConverter = EndianBitConverter.Big;
 			this.bytesWritten = 0;
 		}
@@ -234,7 +237,7 @@ namespace GameDevWare.Serialization.MessagePack
 			{
 				var decimalStr = number.ToString(null, this.context.Format);
 				this.Write(decimalStr);
-			}			
+			}
 		}
 
 		public void Write(bool value)
@@ -302,14 +305,14 @@ namespace GameDevWare.Serialization.MessagePack
 			else if (value.Length < ushort.MaxValue)
 			{
 				this.buffer[0] = (byte)MsgPackType.Bin16;
-				this.bitConverter.CopyBytes(checked((ushort)value.LongLength), this.buffer, 1);
+				this.bitConverter.CopyBytes(checked((ushort)value.Length), this.buffer, 1);
 				this.outputStream.Write(this.buffer, 0, 3);
 				this.bytesWritten += 3;
 			}
 			else
 			{
 				this.buffer[0] = (byte)MsgPackType.Bin32;
-				this.bitConverter.CopyBytes(checked((uint)value.LongLength), this.buffer, 1);
+				this.bitConverter.CopyBytes(checked((uint)value.Length), this.buffer, 1);
 				this.outputStream.Write(this.buffer, 0, 5);
 				this.bytesWritten += 5;
 			}
