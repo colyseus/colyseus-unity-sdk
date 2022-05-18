@@ -1,6 +1,6 @@
 {
 	"name": "io.colyseus.sdk",
-	"version": "0.14.12",
+	"version": "0.14.14",
 	"displayName": "Colyseus SDK",
 	"description": "Colyseus Multiplayer SDK for Unity",
 	"unity": "2019.1",
@@ -8,7 +8,7 @@
 	"category": "Networking",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/colyseus/colyseus-unity3d.git"
+		"url": "https://github.com/colyseus/colyseus-unity-sdk.git"
 	},
 	"author": {
 		"name": "Colyseus",
