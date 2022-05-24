@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -24,6 +24,8 @@ namespace GameDevWare.Serialization.MessagePack
 {
 	public class MsgPackReader : IJsonReader
 	{
+		public const int DEFAULT_BUFFER_SIZE = 1024 * 8;
+
 		private static readonly object TrueObject = true;
 		private static readonly object FalseObject = false;
 
@@ -151,10 +153,10 @@ namespace GameDevWare.Serialization.MessagePack
 		private readonly EndianBitConverter bitConverter;
 		private readonly Stack<ClosingToken> closingTokens;
 		private int bufferOffset;
-		private int bufferReaded;
+		private int bufferRead;
 		private int bufferAvailable;
 		private bool isEndOfStream;
-		private int totalBytesReaded;
+		private int totalBytesRead;
 
 		public SerializationContext Context { get; private set; }
 		JsonToken IJsonReader.Token
@@ -191,17 +193,18 @@ namespace GameDevWare.Serialization.MessagePack
 		}
 		internal MsgPackValueInfo Value { get; private set; }
 
-		public MsgPackReader(Stream stream, SerializationContext context, Endianness endianness = Endianness.BigEndian)
+		public MsgPackReader(Stream stream, SerializationContext context, Endianness endianness = Endianness.BigEndian, byte[] buffer = null)
 		{
 			if (stream == null) throw new ArgumentNullException("stream");
 			if (context == null) throw new ArgumentNullException("context");
 			if (!stream.CanRead) throw JsonSerializationException.StreamIsNotReadable();
+			if (buffer != null && buffer.Length < 1024) throw new ArgumentOutOfRangeException("buffer", "Buffer should be at least 1024 bytes long.");
 
 			this.Context = context;
 			this.inputStream = stream;
-			this.buffer = new byte[8 * 1024]; // 8kb
+			this.buffer = buffer ?? new byte[DEFAULT_BUFFER_SIZE];
 			this.bufferOffset = 0;
-			this.bufferReaded = 0;
+			this.bufferRead = 0;
 			this.bufferAvailable = 0;
 			this.bitConverter = endianness == Endianness.BigEndian ? EndianBitConverter.Big : (EndianBitConverter)EndianBitConverter.Little;
 			this.closingTokens = new Stack<ClosingToken>();
@@ -216,7 +219,7 @@ namespace GameDevWare.Serialization.MessagePack
 			if (this.closingTokens.Count > 0 && this.closingTokens.Peek().Counter == 0)
 			{
 				var closingToken = this.closingTokens.Pop();
-				this.Value.SetValue(null, closingToken.Token, this.totalBytesReaded);
+				this.Value.SetValue(null, closingToken.Token, this.totalBytesRead);
 
 				this.DecrementClosingTokenCounter();
 
@@ -226,11 +229,11 @@ namespace GameDevWare.Serialization.MessagePack
 			if (!this.ReadToBuffer(1, throwOnEos: false))
 			{
 				this.isEndOfStream = true;
-				this.Value.SetValue(null, JsonToken.EndOfStream, this.totalBytesReaded);
+				this.Value.SetValue(null, JsonToken.EndOfStream, this.totalBytesRead);
 				return false;
 			}
 
-			var pos = this.totalBytesReaded;
+			var pos = this.totalBytesRead;
 			var formatValue = this.buffer[this.bufferOffset];
 			if (formatValue >= (byte)MsgPackType.FixArrayStart && formatValue <= (byte)MsgPackType.FixArrayEnd)
 			{
@@ -476,8 +479,8 @@ namespace GameDevWare.Serialization.MessagePack
 			Array.Clear(this.buffer, 0, this.buffer.Length);
 			this.bufferOffset = 0;
 			this.bufferAvailable = 0;
-			this.bufferReaded = 0;
-			this.totalBytesReaded = 0;
+			this.bufferRead = 0;
+			this.totalBytesRead = 0;
 			this.Value.Reset();
 		}
 		public bool IsEndOfStream()
@@ -487,9 +490,9 @@ namespace GameDevWare.Serialization.MessagePack
 
 		private bool ReadToBuffer(int bytesRequired, bool throwOnEos)
 		{
-			this.bufferAvailable -= this.bufferReaded;
-			this.bufferOffset += this.bufferReaded;
-			this.bufferReaded = 0;
+			this.bufferAvailable -= this.bufferRead;
+			this.bufferOffset += this.bufferRead;
+			this.bufferRead = 0;
 
 			if (this.bufferAvailable < bytesRequired)
 			{
@@ -506,23 +509,23 @@ namespace GameDevWare.Serialization.MessagePack
 						continue;
 
 					if (throwOnEos)
-						JsonSerializationException.UnexpectedEndOfStream(this);
+						throw JsonSerializationException.UnexpectedEndOfStream(this);
 					else
 						return false;
 				}
 			}
 
-			this.bufferReaded = bytesRequired;
-			this.totalBytesReaded += bytesRequired;
+			this.bufferRead = bytesRequired;
+			this.totalBytesRead += bytesRequired;
 			return true;
 		}
 		private ArraySegment<byte> ReadBytes(long bytesRequired, bool forceNewBuffer = false)
 		{
 			if (bytesRequired > int.MaxValue) throw new ArgumentOutOfRangeException("bytesRequired");
 
-			this.bufferAvailable -= this.bufferReaded;
-			this.bufferOffset += this.bufferReaded;
-			this.bufferReaded = 0;
+			this.bufferAvailable -= this.bufferRead;
+			this.bufferOffset += this.bufferRead;
+			this.bufferRead = 0;
 
 			if (this.bufferAvailable >= bytesRequired && !forceNewBuffer)
 			{
@@ -530,7 +533,7 @@ namespace GameDevWare.Serialization.MessagePack
 
 				this.bufferAvailable -= (int)bytesRequired;
 				this.bufferOffset += (int)bytesRequired;
-				this.totalBytesReaded += (int)bytesRequired;
+				this.totalBytesRead += (int)bytesRequired;
 
 				return bytes;
 			}
@@ -547,7 +550,7 @@ namespace GameDevWare.Serialization.MessagePack
 					this.bufferOffset += bytesToCopy;
 
 					this.bufferAvailable -= bytesToCopy;
-					this.totalBytesReaded += bytesToCopy;
+					this.totalBytesRead += bytesToCopy;
 				}
 
 				if (this.bufferAvailable == 0)
@@ -558,7 +561,7 @@ namespace GameDevWare.Serialization.MessagePack
 					var read = this.inputStream.Read(bytes, bytesOffset, bytes.Length - bytesOffset);
 
 					bytesOffset += read;
-					this.totalBytesReaded += read;
+					this.totalBytesRead += read;
 
 					if (read == 0 && bytesOffset < bytes.Length)
 						throw JsonSerializationException.UnexpectedEndOfStream(this);

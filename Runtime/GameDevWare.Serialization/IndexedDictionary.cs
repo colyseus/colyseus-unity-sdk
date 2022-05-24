@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,7 +8,7 @@ using System.Linq;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
-	[Serializable, DebuggerDisplay("{Count}")]
+	[Serializable, DebuggerDisplay("IndexedDictionary, Count: {Count}")]
 	public class IndexedDictionary<KeyT, ValueT> : IDictionary<KeyT, ValueT>, IDictionary
 	{
 		[DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
@@ -320,7 +320,7 @@ namespace GameDevWare.Serialization
 		/// <inheritdoc />
 		public override string ToString()
 		{
-			return this.Count.ToString();
+			return "Count: " + this.Count.ToString();
 		}
 
 		public struct Enumerator : IEnumerator<KeyValuePair<KeyT, ValueT>>, IDictionaryEnumerator

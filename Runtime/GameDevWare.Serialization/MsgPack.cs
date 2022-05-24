@@ -1,5 +1,5 @@
 /* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -60,6 +60,25 @@ namespace GameDevWare.Serialization
 			writer.Flush();
 		}
 
+		public static object Deserialize(Type objectType, byte[] msgPackInput, int offset, int length)
+		{
+			if (msgPackInput == null) throw new ArgumentNullException("msgPackInput");
+
+			return Deserialize(objectType, new MemoryStream(msgPackInput, offset, length));
+		}
+		public static object Deserialize(Type objectType, byte[] msgPackInput, int offset, int length, SerializationOptions options)
+		{
+			if (msgPackInput == null) throw new ArgumentNullException("msgPackInput");
+
+			return Deserialize(objectType, new MemoryStream(msgPackInput, offset, length), options);
+		}
+		public static object Deserialize(Type objectType, byte[] msgPackInput, int offset, int length, SerializationContext context)
+		{
+			if (msgPackInput == null) throw new ArgumentNullException("msgPackInput");
+
+			return Deserialize(objectType, new MemoryStream(msgPackInput, offset, length), context);
+		}
+
 		public static object Deserialize(Type objectType, Stream msgPackInput)
 		{
 			return Deserialize(objectType, msgPackInput, CreateDefaultContext(SerializationOptions.None));
@@ -77,6 +96,25 @@ namespace GameDevWare.Serialization
 
 			var reader = new MsgPackReader(msgPackInput, context);
 			return reader.ReadValue(objectType, false);
+		}
+
+		public static T Deserialize<T>(byte[] msgPackInput, int offset, int length)
+		{
+			if (msgPackInput == null) throw new ArgumentNullException("msgPackInput");
+
+			return Deserialize<T>(new MemoryStream(msgPackInput, offset, length));
+		}
+		public static T Deserialize<T>(byte[] msgPackInput, int offset, int length, SerializationOptions options)
+		{
+			if (msgPackInput == null) throw new ArgumentNullException("msgPackInput");
+
+			return Deserialize<T>(new MemoryStream(msgPackInput, offset, length), options);
+		}
+		public static T Deserialize<T>(byte[] msgPackInput, int offset, int length, SerializationContext context)
+		{
+			if (msgPackInput == null) throw new ArgumentNullException("msgPackInput");
+
+			return Deserialize<T>(new MemoryStream(msgPackInput, offset, length), context);
 		}
 
 		public static T Deserialize<T>(Stream msgPackInput)

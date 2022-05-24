@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -28,8 +28,8 @@ namespace GameDevWare.Serialization
 			get { return writer; }
 		}
 
-		public JsonTextWriter(TextWriter writer, SerializationContext context)
-			: base(context)
+		public JsonTextWriter(TextWriter writer, SerializationContext context, char[] buffer = null)
+			: base(context, buffer)
 		{
 			if (writer == null)
 				throw new ArgumentNullException("writer");

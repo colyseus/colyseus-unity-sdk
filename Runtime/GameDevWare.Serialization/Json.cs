@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -26,7 +26,7 @@ namespace GameDevWare.Serialization
 {
 	public static class Json
 	{
-		
+
 		private static IFormatProvider _DefaultFormat = CultureInfo.InvariantCulture;
 		private static Encoding _DefaultEncoding = new UTF8Encoding(false, true);
 		private static string[] _DefaultDateTimeFormats;
@@ -95,7 +95,7 @@ namespace GameDevWare.Serialization
 				new TimeSpanSerializer(),
 				new DictionaryEntrySerializer(),
 
-#if UNITY_5 || UNITY_4 || UNITY_3_3 || UNITY_3_4 || UNITY_3_5
+#if UNITY_5 || UNITY_4 || UNITY_3_3 || UNITY_3_4 || UNITY_3_5 || UNITY_5_3_OR_NEWER
 				new BoundsSerializer(),
 				new Matrix4x4Serializer(),
 				new QuaternionSerializer(),
@@ -219,6 +219,37 @@ namespace GameDevWare.Serialization
 			return writer.ToString();
 		}
 
+		public static object Deserialize(Type objectType, byte[] jsonBytes, int offset, int length)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize(objectType, new MemoryStream(jsonBytes, offset, length));
+		}
+		public static object Deserialize(Type objectType, byte[] jsonBytes, int offset, int length, Encoding encoding)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize(objectType, new MemoryStream(jsonBytes, offset, length), encoding);
+		}
+		public static object Deserialize(Type objectType, byte[] jsonBytes, int offset, int length, SerializationOptions options)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize(objectType, new MemoryStream(jsonBytes, offset, length), options);
+		}
+		public static object Deserialize(Type objectType, byte[] jsonBytes, int offset, int length, SerializationOptions options, Encoding encoding)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize(objectType, new MemoryStream(jsonBytes, offset, length), options, encoding);
+		}
+		public static object Deserialize(Type objectType, byte[] jsonBytes, int offset, int length, SerializationContext context)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize(objectType, new MemoryStream(jsonBytes, offset, length), context);
+		}
+
 		public static object Deserialize(Type objectType, Stream jsonStream)
 		{
 			return Deserialize(objectType, jsonStream, CreateDefaultContext(SerializationOptions.None));
@@ -290,6 +321,39 @@ namespace GameDevWare.Serialization
 
 			return reader.ReadValue(objectType, false);
 		}
+
+
+		public static T Deserialize<T>(byte[] jsonBytes, int offset, int length)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize<T>(new MemoryStream(jsonBytes, offset, length));
+		}
+		public static T Deserialize<T>(byte[] jsonBytes, int offset, int length, Encoding encoding)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize<T>(new MemoryStream(jsonBytes, offset, length), encoding);
+		}
+		public static T Deserialize<T>(byte[] jsonBytes, int offset, int length, SerializationOptions options)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize<T>(new MemoryStream(jsonBytes, offset, length), options);
+		}
+		public static T Deserialize<T>(byte[] jsonBytes, int offset, int length, SerializationOptions options, Encoding encoding)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize<T>(new MemoryStream(jsonBytes, offset, length), options, encoding);
+		}
+		public static T Deserialize<T>(byte[] jsonBytes, int offset, int length, SerializationContext context)
+		{
+			if (jsonBytes == null) throw new ArgumentNullException("jsonBytes");
+
+			return Deserialize<T>( new MemoryStream(jsonBytes, offset, length), context);
+		}
+
 
 		public static T Deserialize<T>(Stream jsonStream)
 		{
