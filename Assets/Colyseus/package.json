@@ -1,6 +1,6 @@
 {
 	"name": "io.colyseus.sdk",
-	"version": "0.14.16",
+	"version": "0.14.17",
 	"displayName": "Colyseus SDK",
 	"description": "Colyseus Multiplayer SDK for Unity",
 	"unity": "2019.1",
