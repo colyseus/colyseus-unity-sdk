@@ -34,5 +34,10 @@ namespace Colyseus
         public string sessionId;
 
         public string reconnectionToken;
+
+        /// <summary>
+        ///     Establish server connection after server reloading
+        /// </summary>
+        public Boolean devMode;
     }
 }

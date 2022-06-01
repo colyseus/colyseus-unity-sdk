@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using LucidSightTools;
 using UnityEngine;
@@ -284,11 +285,17 @@ namespace Colyseus
         /// </summary>
         /// <param name="response">The response from the matchmaking attempt</param>
         /// <param name="headers">Dictionary of headers to pass to the server</param>
+        /// <param name="devModeRetryAttempt">Index to keep devMode re-connection tryout number: Please do not use this devMode param for general purposes</param>
+        /// <param name="previousRoom">Previous ColyseusRoom{T} instance to re-establish the server connection: Please do not use this devMode param for general purposes</param>
         /// <typeparam name="T">Type of <see cref="ColyseusRoom{T}" /> we're consuming the seat from</typeparam>
         /// <returns><see cref="ColyseusRoom{T}" /> in which we now have a seat via async task</returns>
         public async Task<ColyseusRoom<T>> ConsumeSeatReservation<T>(ColyseusMatchMakeResponse response,
-            Dictionary<string, string> headers = null)
+            Dictionary<string, string> headers = null, int devModeRetryAttempt = 0, ColyseusRoom<T> previousRoom = null)
         {
+	        if (response.devMode && devModeRetryAttempt > 10)
+	        {
+		        return null; // Exit devMode recursion after maximum number of tries
+	        }
             ColyseusRoom<T> room = new ColyseusRoom<T>(response.room.name)
             {
                 RoomId = response.room.roomId,
@@ -304,29 +311,57 @@ namespace Colyseus
                 queryString.Add("reconnectionToken", room.ReconnectionToken);
             }
 
-            room.SetConnection(CreateConnection(response.room, queryString, headers));
+            ColyseusRoom<T> targetRoom = previousRoom ?? room;
+            if (response.devMode) // Integrate devMode server re-connection callback
+            {
+	            room.SetConnection(CreateConnection(response.room, queryString, headers), async () =>
+	            {
+		            LSLog.Log($"[Colyseus devMode]: Re-establishing connection with room id {room.RoomId}");
+		            try
+		            {
+			            devModeRetryAttempt++;
+			            LSLog.Log(
+				            await ConsumeSeatReservation<T>(response, headers, devModeRetryAttempt, targetRoom) != null
+					            ? $"[Colyseus devMode]: Successfully re-established connection with room {room.RoomId}"
+					            : $"[Colyseus devMode]: Failed to reconnect! Is your server running? Please check server logs!");
+		            }
+		            catch (Exception e)
+		            {
+			            LSLog.Log($"[Colyseus devMode]: retrying... ({devModeRetryAttempt} out of 10)");
+		            }
+		            finally
+		            {
+			            Thread.Sleep(1000);
+		            }
+	            }, targetRoom);
+            }
+            else
+            {
+	            room.SetConnection(CreateConnection(response.room, queryString, headers));
+            }
+
 
             TaskCompletionSource<ColyseusRoom<T>> tcs = new TaskCompletionSource<ColyseusRoom<T>>();
 
             void OnError(int code, string message)
             {
-                room.OnError -= OnError;
+                targetRoom.OnError -= OnError;
                 tcs.SetException(new CSAMatchMakeException(code, message));
             }
 
             void OnJoin()
             {
-                room.OnError -= OnError;
+                targetRoom.OnError -= OnError;
                 tcs.TrySetResult(room);
             }
 
-            room.OnError += OnError;
-            room.OnJoin += OnJoin;
+            targetRoom.OnError += OnError;
+            targetRoom.OnJoin += OnJoin;
 
             onAddRoom?.Invoke(room);
 
 #pragma warning disable 4014
-            room.Connect();
+            targetRoom.Connect();
 #pragma warning restore 4014
 
             return await tcs.Task;

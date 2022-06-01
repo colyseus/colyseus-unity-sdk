@@ -205,17 +205,25 @@ namespace Colyseus
         ///     Called by the <see cref="ColyseusClient" /> upon connection to a room
         /// </summary>
         /// <param name="colyseusConnection">The connection created by the client</param>
-        public void SetConnection(ColyseusConnection colyseusConnection)
+        public void SetConnection(ColyseusConnection colyseusConnection, Action devModeCloseCallback = null, ColyseusRoom<T> room = null)
         {
-            this.colyseusConnection = colyseusConnection;
+	        room ??= this;
+	        room.colyseusConnection = colyseusConnection;
 
-            this.colyseusConnection.OnClose += code => OnLeave?.Invoke(code);
+	        if (devModeCloseCallback != null)
+	        {
+		        room.colyseusConnection.OnClose += code => devModeCloseCallback.Invoke();
+	        }
+	        else
+	        {
+		        room.colyseusConnection.OnClose += code => room.OnLeave?.Invoke(code);
+	        }
 
-            // TODO: expose WebSocket error code!
-            // Connection.OnError += (code, message) => OnError?.Invoke(code, message);
+	        // TODO: expose WebSocket error code!
+	        // Connection.OnError += (code, message) => OnError?.Invoke(code, message);
 
-            this.colyseusConnection.OnError += message => OnError?.Invoke(0, message);
-            this.colyseusConnection.OnMessage += bytes => ParseMessage(bytes);
+	        room.colyseusConnection.OnError += message => room.OnError?.Invoke(0, message);
+	        room.colyseusConnection.OnMessage += bytes => room.ParseMessage(bytes);
         }
 
         /// <summary>
