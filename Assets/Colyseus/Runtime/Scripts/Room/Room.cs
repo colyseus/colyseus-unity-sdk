@@ -205,7 +205,7 @@ namespace Colyseus
         ///     Called by the <see cref="ColyseusClient" /> upon connection to a room
         /// </summary>
         /// <param name="colyseusConnection">The connection created by the client</param>
-        public void SetConnection(ColyseusConnection colyseusConnection, Action devModeCloseCallback = null, ColyseusRoom<T> room = null)
+        public void SetConnection(ColyseusConnection colyseusConnection,  ColyseusRoom<T> room = null, Action devModeCloseCallback = null)
         {
 	        room ??= this;
 	        room.colyseusConnection = colyseusConnection;
