@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Colyseus.Schema;
 using GameDevWare.Serialization;
+using LucidSightTools;
 using NativeWebSocket;
 using UnityEngine;
 using Type = System.Type;
@@ -210,14 +211,17 @@ namespace Colyseus
 	        room ??= this;
 	        room.colyseusConnection = colyseusConnection;
 
-	        if (devModeCloseCallback != null)
+	        room.colyseusConnection.OnClose += code =>
 	        {
-		        room.colyseusConnection.OnClose += code => devModeCloseCallback.Invoke();
-	        }
-	        else
-	        {
-		        room.colyseusConnection.OnClose += code => room.OnLeave?.Invoke(code);
-	        }
+		        if (devModeCloseCallback == null || code == 1006)
+		        {
+			        room.colyseusConnection.OnClose += code => room.OnLeave?.Invoke(code);
+		        }
+		        else
+		        {
+			        devModeCloseCallback();
+		        }
+	        };
 
 	        // TODO: expose WebSocket error code!
 	        // Connection.OnError += (code, message) => OnError?.Invoke(code, message);
