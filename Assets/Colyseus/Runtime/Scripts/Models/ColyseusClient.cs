@@ -308,10 +308,10 @@ namespace Colyseus
 
             ColyseusRoom<T> targetRoom = previousRoom ?? room;
 
-            async void devModeCloseCallback()
+            async void DevModeCloseCallback()
             {
 	            LSLog.Log($"[Colyseus devMode]: Re-establishing connection with room id {targetRoom.RoomId}");
-	            var devModeRetryAttempt = 0;
+	            int devModeRetryAttempt = 0;
 	            const int devModeMaxRetryCount = 8;
 
 	            async Task retryConnection()
@@ -320,30 +320,29 @@ namespace Colyseus
 		            try
 		            {
 			            await ConsumeSeatReservation<T>(response, headers, targetRoom);
-			            LSLog.Log(
-				            $"[Colyseus devMode]: Successfully re-established connection with room {targetRoom.RoomId}");
+			            LSLog.Log($"[Colyseus devMode]: Successfully re-established connection with room {targetRoom.RoomId}");
 		            }
 		            catch (Exception e)
 		            {
 			            if (devModeRetryAttempt < devModeMaxRetryCount)
 			            {
-				            LSLog.Log($"[Colyseus devMode]: retrying... ({devModeRetryAttempt} out of 10)");
-				            Thread.Sleep(1000);
+				            LSLog.Log($"[Colyseus devMode]: retrying... ({devModeRetryAttempt.ToString()} out of {devModeMaxRetryCount.ToString()})");
+				            await Task.Delay(2000);
 				            await retryConnection();
 			            }
 			            else
 			            {
-				            LSLog.Log(
-					            $"[Colyseus devMode]: Failed to reconnect! Is your server running? Please check server logs!");
+				            LSLog.Log($"[Colyseus devMode]: Failed to reconnect! Is your server running? Please check server logs!");
 			            }
 		            }
 	            }
 
-	            Thread.Sleep(1000);
+	            await Task.Delay(2000);
 	            await retryConnection();
             }
 
-            targetRoom.SetConnection(CreateConnection(response.room, queryString, headers), targetRoom, response.devMode? devModeCloseCallback : null);
+            targetRoom.SetConnection(CreateConnection(response.room, queryString, headers), targetRoom, response.devMode? DevModeCloseCallback
+	            : null);
 
             TaskCompletionSource<ColyseusRoom<T>> tcs = new TaskCompletionSource<ColyseusRoom<T>>();
 
