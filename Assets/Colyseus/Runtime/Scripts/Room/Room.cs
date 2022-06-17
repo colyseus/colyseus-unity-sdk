@@ -170,6 +170,10 @@ namespace Colyseus
         /// <returns>Connection closure depending on user consent</returns>
         public async Task Leave(bool consented = true)
         {
+            if (!colyseusConnection.IsOpen) {
+                return;
+            }
+
             if (RoomId != null)
             {
                 if (consented)
@@ -215,7 +219,7 @@ namespace Colyseus
 	        {
 		        if (devModeCloseCallback == null || code == 1006)
 		        {
-			        room.colyseusConnection.OnClose += code => room.OnLeave?.Invoke(code);
+			        room.OnLeave?.Invoke(code);
 		        }
 		        else
 		        {
