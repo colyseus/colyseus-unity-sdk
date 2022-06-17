@@ -284,10 +284,11 @@ namespace Colyseus
         /// </summary>
         /// <param name="response">The response from the matchmaking attempt</param>
         /// <param name="headers">Dictionary of headers to pass to the server</param>
+        /// <param name="previousRoom">Previous ColyseusRoom{T} instance to re-establish the server connection: Please do not use this devMode param for general purposes</param>
         /// <typeparam name="T">Type of <see cref="ColyseusRoom{T}" /> we're consuming the seat from</typeparam>
         /// <returns><see cref="ColyseusRoom{T}" /> in which we now have a seat via async task</returns>
         public async Task<ColyseusRoom<T>> ConsumeSeatReservation<T>(ColyseusMatchMakeResponse response,
-            Dictionary<string, string> headers = null)
+            Dictionary<string, string> headers = null, ColyseusRoom<T> previousRoom = null)
         {
             ColyseusRoom<T> room = new ColyseusRoom<T>(response.room.name)
             {
@@ -304,29 +305,65 @@ namespace Colyseus
                 queryString.Add("reconnectionToken", room.ReconnectionToken);
             }
 
-            room.SetConnection(CreateConnection(response.room, queryString, headers));
+            ColyseusRoom<T> targetRoom = previousRoom ?? room;
+
+            async void DevModeCloseCallback()
+            {
+	            LSLog.Log($"[Colyseus devMode]: Re-establishing connection with room id {targetRoom.RoomId}");
+	            int devModeRetryAttempt = 0;
+	            const int devModeMaxRetryCount = 8;
+
+	            async Task retryConnection()
+	            {
+		            devModeRetryAttempt++;
+		            try
+		            {
+			            await ConsumeSeatReservation<T>(response, headers, targetRoom);
+			            LSLog.Log($"[Colyseus devMode]: Successfully re-established connection with room {targetRoom.RoomId}");
+		            }
+		            catch (Exception e)
+		            {
+			            if (devModeRetryAttempt < devModeMaxRetryCount)
+			            {
+				            LSLog.Log($"[Colyseus devMode]: retrying... ({devModeRetryAttempt.ToString()} out of {devModeMaxRetryCount.ToString()})");
+				            await Task.Delay(2000);
+				            await retryConnection();
+			            }
+			            else
+			            {
+				            LSLog.Log($"[Colyseus devMode]: Failed to reconnect! Is your server running? Please check server logs!");
+			            }
+		            }
+	            }
+
+	            await Task.Delay(2000);
+	            await retryConnection();
+            }
+
+            targetRoom.SetConnection(CreateConnection(response.room, queryString, headers), targetRoom, response.devMode? DevModeCloseCallback
+	            : null);
 
             TaskCompletionSource<ColyseusRoom<T>> tcs = new TaskCompletionSource<ColyseusRoom<T>>();
 
             void OnError(int code, string message)
             {
-                room.OnError -= OnError;
+                targetRoom.OnError -= OnError;
                 tcs.SetException(new CSAMatchMakeException(code, message));
             }
 
             void OnJoin()
             {
-                room.OnError -= OnError;
-                tcs.TrySetResult(room);
+                targetRoom.OnError -= OnError;
+                tcs.TrySetResult(targetRoom);
             }
 
-            room.OnError += OnError;
-            room.OnJoin += OnJoin;
+            targetRoom.OnError += OnError;
+            targetRoom.OnJoin += OnJoin;
 
-            onAddRoom?.Invoke(room);
+            onAddRoom?.Invoke(targetRoom);
 
 #pragma warning disable 4014
-            room.Connect();
+            targetRoom.Connect();
 #pragma warning restore 4014
 
             return await tcs.Task;

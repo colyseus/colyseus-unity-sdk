@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Colyseus.Schema;
 using GameDevWare.Serialization;
+using LucidSightTools;
 using NativeWebSocket;
 using UnityEngine;
 using Type = System.Type;
@@ -205,17 +206,28 @@ namespace Colyseus
         ///     Called by the <see cref="ColyseusClient" /> upon connection to a room
         /// </summary>
         /// <param name="colyseusConnection">The connection created by the client</param>
-        public void SetConnection(ColyseusConnection colyseusConnection)
+        public void SetConnection(ColyseusConnection colyseusConnection,  ColyseusRoom<T> room = null, Action devModeCloseCallback = null)
         {
-            this.colyseusConnection = colyseusConnection;
+	        room ??= this;
+	        room.colyseusConnection = colyseusConnection;
 
-            this.colyseusConnection.OnClose += code => OnLeave?.Invoke(code);
+	        room.colyseusConnection.OnClose += code =>
+	        {
+		        if (devModeCloseCallback == null || code == 1006)
+		        {
+			        room.colyseusConnection.OnClose += code => room.OnLeave?.Invoke(code);
+		        }
+		        else
+		        {
+			        devModeCloseCallback();
+		        }
+	        };
 
-            // TODO: expose WebSocket error code!
-            // Connection.OnError += (code, message) => OnError?.Invoke(code, message);
+	        // TODO: expose WebSocket error code!
+	        // Connection.OnError += (code, message) => OnError?.Invoke(code, message);
 
-            this.colyseusConnection.OnError += message => OnError?.Invoke(0, message);
-            this.colyseusConnection.OnMessage += bytes => ParseMessage(bytes);
+	        room.colyseusConnection.OnError += message => room.OnError?.Invoke(0, message);
+	        room.colyseusConnection.OnMessage += bytes => room.ParseMessage(bytes);
         }
 
         /// <summary>
