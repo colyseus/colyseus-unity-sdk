@@ -321,11 +321,11 @@ namespace Colyseus
 			            await ConsumeSeatReservation<T>(response, headers, targetRoom);
 			            LSLog.Log($"[Colyseus devMode]: Successfully re-established connection with room {targetRoom.RoomId}");
 		            }
-		            catch (Exception e)
-		            {
+		            catch (Exception)
+					{
 			            if (devModeRetryAttempt < devModeMaxRetryCount)
 			            {
-				            LSLog.Log($"[Colyseus devMode]: retrying... ({devModeRetryAttempt.ToString()} out of {devModeMaxRetryCount.ToString()})");
+				            LSLog.Log($"[Colyseus devMode]: retrying... ({devModeRetryAttempt} out of {devModeMaxRetryCount})");
 				            await Task.Delay(2000);
 				            await retryConnection();
 			            }
