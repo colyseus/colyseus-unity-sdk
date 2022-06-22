@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Colyseus;
 using UnityEngine;
 using UnityEditor;
+using System.IO;
 
 [CustomEditor(typeof(ColyseusSettings))]
 public class ServerSettingsEditor : Editor
@@ -16,19 +17,33 @@ public class ServerSettingsEditor : Editor
     private Texture colyseusIcon;
     private float buttonWidth = 250;
     private float sectionSpacer = 20;
-    void OnEnable()
+
+	private const string IconDirectory = "Runtime\\Editor Default Resources\\Icons\\ColyseusSettings";
+
+	void OnEnable()
     {
         url = serializedObject.FindProperty("colyseusServerAddress");
         port = serializedObject.FindProperty("colyseusServerPort");
         secureProto= serializedObject.FindProperty("useSecureProtocol");
         requestHeaders = serializedObject.FindProperty("_requestHeaders");
-        GUIContent content = EditorGUIUtility.IconContent("Packages/io.colyseus.sdk/Runtime/Editor Default Resources/Icons/ColyseusSettings");
-        if (content != null)
-        {
-            colyseusIcon = content.image;
-        }
-        
-    }
+
+		string fullAssetDirectory = Path.Combine(Application.dataPath, "Colyseus", IconDirectory);
+
+		GUIContent content = null;
+		if (Directory.Exists(fullAssetDirectory))
+		{
+			content = EditorGUIUtility.IconContent(fullAssetDirectory);
+		}
+		else
+		{
+			content = EditorGUIUtility.IconContent(Path.Combine("Packages\\io.colyseus.sdk", IconDirectory));
+		}
+
+		if (content != null)
+		{
+			colyseusIcon = content.image;
+		}
+	}
 
     public override void OnInspectorGUI()
     {
