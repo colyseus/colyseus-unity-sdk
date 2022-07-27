@@ -288,6 +288,11 @@ namespace Colyseus.Schema
             return () => __callbacks.OnChange -= handler;
         }
 
+        public void AddToOnChange(OnChangeEventHandler handler)
+        {
+	        __callbacks.OnChange += handler;
+        }
+
         /// <summary>
         ///     Attaches a callback that is triggered whenever this Schema instance has been removed from the server.
         /// </summary>

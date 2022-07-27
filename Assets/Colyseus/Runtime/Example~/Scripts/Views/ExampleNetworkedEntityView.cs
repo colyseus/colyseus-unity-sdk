@@ -132,8 +132,8 @@ using UnityEngine;
             {
                 state = entity;
                 IsMine = ExampleManager.Instance.CurrentUser != null && string.Equals(ExampleManager.Instance.CurrentUser.sessionId, state.ownerId);
-                state.attributes.OnChange += Attributes_OnChange;
-                state.OnChange += Entity_State_OnChange;
+                state.attributes.OnChange(Attributes_OnChange);
+                state.OnChange(Entity_State_OnChange);
 
                 OwnerId = state.ownerId;
                 Id = state.id;
@@ -168,7 +168,7 @@ using UnityEngine;
             // Entity removed from room state;
         }
 
-        virtual protected void Entity_State_OnChange(List<Colyseus.Schema.DataChange> changes)
+        virtual protected void Entity_State_OnChange()
         {
             // Only record state change has been updated locally
             lastStateTimestamp = state.timestamp;

@@ -7,6 +7,7 @@ using Colyseus.Schema;
 using GameDevWare.Serialization;
 using LucidSightTools;
 using NativeWebSocket;
+using Settings;
 using UnityEngine;
 
 /// <summary>
@@ -135,6 +136,11 @@ public class ExampleRoomController
     ///     All the connected rooms.
     /// </summary>
     public List<IColyseusRoom> rooms = new List<IColyseusRoom>();
+
+    private Action DisposeNetworkEntitiesOnAdd;
+    private Action DisposeNetworkEntitiesOnRemove;
+    private Action DisposeNetworkedUsersOnAdd;
+    private Action DisposeNetworkedUsersOnRemove;
 
     /// <summary>
     ///     Returns the synchronized time from the server in milliseconds.
@@ -295,7 +301,7 @@ public class ExampleRoomController
         }
 
         onComplete?.Invoke(true);
-        LSLog.LogImportant($"Created Room: {_room.Id}");
+        LSLog.LogImportant($"Created Room: {_room.RoomId}");
         _lastRoomId = roomId;
         RegisterRoomHandlers();
     }
@@ -326,8 +332,8 @@ public class ExampleRoomController
         }
 
         onComplete?.Invoke(true);
-        LSLog.LogImportant($"Joined / Created Room: {_room.Id}");
-        _lastRoomId = _room.Id;
+        LSLog.LogImportant($"Joined / Created Room: {_room.RoomId}");
+        _lastRoomId = _room.RoomId;
         RegisterRoomHandlers();
     }
 
@@ -396,14 +402,12 @@ public class ExampleRoomController
         //_room.OnMessage<YOUR_CUSTOM_MESSAGE>("messageNameInCustomLogic", objectOfTypeYOUR_CUSTOM_MESSAGE => {  });
 
         //========================
-        _room.State.networkedEntities.OnAdd += OnEntityAdd;
-        _room.State.networkedEntities.OnRemove += OnEntityRemoved;
+        this.DisposeNetworkEntitiesOnAdd = _room.State.networkedEntities.OnAdd(OnEntityAdd);
+        this.DisposeNetworkEntitiesOnRemove = _room.State.networkedEntities.OnRemove(OnEntityRemoved);
 
-        _room.State.networkedUsers.OnAdd += OnUserAdd;
-        _room.State.networkedUsers.OnRemove += OnUserRemove;
-
-        _room.State.TriggerAll();
-        //========================
+        this.DisposeNetworkedUsersOnAdd = _room.State.networkedUsers.OnAdd(OnUserAdd);
+        this.DisposeNetworkedUsersOnRemove = _room.State.networkedUsers.OnRemove(OnUserRemove);
+        
 
         _room.colyseusConnection.OnError += Room_OnError;
         _room.colyseusConnection.OnClose += Room_OnClose;
@@ -439,10 +443,10 @@ public class ExampleRoomController
             return;
         }
 
-        _room.State.networkedEntities.OnAdd -= OnEntityAdd;
-        _room.State.networkedEntities.OnRemove -= OnEntityRemoved;
-        _room.State.networkedUsers.OnAdd -= OnUserAdd;
-        _room.State.networkedUsers.OnRemove -= OnUserRemove;
+        this.DisposeNetworkEntitiesOnAdd();
+        this.DisposeNetworkEntitiesOnRemove();
+        this.DisposeNetworkedUsersOnAdd();
+        this.DisposeNetworkedUsersOnRemove();
 
         _room.colyseusConnection.OnError -= Room_OnError;
         _room.colyseusConnection.OnClose -= Room_OnClose;
@@ -564,7 +568,7 @@ public class ExampleRoomController
         _users.Add(key, user);
 
         // On entity update...
-        user.OnChange += changes =>
+        user.OnChange(() =>
         {
             user.updateHash = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 
@@ -574,7 +578,7 @@ public class ExampleRoomController
             {
                 OnCurrentUserStateChanged?.Invoke(user.attributes);
             }
-        };
+        });
     }
 
     /// <summary>

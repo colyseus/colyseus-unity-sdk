@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using LucidSightTools;
+using Settings;
 using UnityEngine;
 
 // ReSharper disable InconsistentNaming

@@ -29,7 +29,7 @@ public class CreateUserMenu : MonoBehaviour
             {
                 return serverURLInput.text;
             }
-
+            
             return ExampleManager.Instance.ColyseusServerAddress;
         }
     }
