@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Colyseus;
@@ -63,7 +63,6 @@ public class LobbyController : MonoBehaviour
 
         ColyseusSettings clonedSettings = ExampleManager.Instance.CloneSettings();
         clonedSettings.colyseusServerAddress = createUserMenu.ServerURL;
-        LSLog.Log(clonedSettings.colyseusServerAddress);
         clonedSettings.colyseusServerPort = createUserMenu.ServerPort;
         clonedSettings.useSecureProtocol= createUserMenu.UseSecure;
 
