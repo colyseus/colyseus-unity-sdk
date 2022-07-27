@@ -1,7 +1,9 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Colyseus;
+using LucidSightTools;
+using Settings;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 

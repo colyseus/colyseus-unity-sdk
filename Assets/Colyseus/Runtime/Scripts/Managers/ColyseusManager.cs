@@ -1,12 +1,11 @@
-using System.Collections.Generic;
-using LucidSightTools;
+using Settings;
 using UnityEngine;
 // ReSharper disable InconsistentNaming
 
 namespace Colyseus
 {
     /// <summary>
-    /// Base manager class 
+    /// Base manager class
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class ColyseusManager<T> : MonoBehaviour
@@ -15,7 +14,7 @@ namespace Colyseus
         /// Reference to the Colyseus settings object.
         /// </summary>
         [SerializeField]
-        protected ColyseusSettings _colyseusSettings;
+        protected static ColyseusSettings _colyseusSettings;
 
         // Getters
         //==========================
@@ -30,7 +29,7 @@ namespace Colyseus
         /// </summary>
         public string ColyseusServerAddress
         {
-            get { return _colyseusSettings.colyseusServerAddress; }
+	        get { return _colyseusSettings.colyseusServerAddress; }
         }
 
         /// <summary>
@@ -84,6 +83,7 @@ namespace Colyseus
             }
 
             Instance = GetComponent<T>();
+            _colyseusSettings = ScriptableObject.CreateInstance<ColyseusSettings>();
         }
 
         /// <summary>

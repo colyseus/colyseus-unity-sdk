@@ -8,6 +8,7 @@ using UnityEngine.Networking;
 using System.IO;
 using GameDevWare.Serialization;
 using LucidSightTools;
+using Settings;
 
 namespace Colyseus
 {
@@ -32,24 +33,24 @@ namespace Colyseus
             using (UnityWebRequest req = new UnityWebRequest())
             {
                 req.method = uriMethod;
-        
+
                 req.url = uriBuilder.Uri.ToString();
                 // Send JSON on request body
                 if (data != null)
                 {
                     req.uploadHandler = data;
                 }
-        
+
                 foreach (KeyValuePair<string, string> pair in _serverSettings.HeadersDictionary)
                 {
                     req.SetRequestHeader(pair.Key, pair.Value);
                 }
-        
+
                 if (!string.IsNullOrEmpty(Token))
                 {
                     req.SetRequestHeader("Authorization", "Bearer " + Token);
                 }
-        
+
                 // req.uploadHandler = new UploadHandlerRaw(bytes);
                 req.downloadHandler = new DownloadHandlerBuffer();
                 await req.SendWebRequest();
@@ -72,9 +73,9 @@ namespace Colyseus
                         throw new Exception(req.error);
                     }
                 }
-            
+
                 string json = req.downloadHandler.text;
-            
+
                 return json;
             } ;
         }
@@ -94,18 +95,18 @@ namespace Colyseus
                     // Send JSON options on request body
                     MemoryStream jsonBodyStream = new MemoryStream();
                     Json.Serialize(options, jsonBodyStream); //TODO: Replace GameDevWare serialization
-                    
+
                     req.uploadHandler = new UploadHandlerRaw(jsonBodyStream.ToArray())
                     {
                         contentType = "application/json"
                     };
                 }
-                
+
                 foreach (KeyValuePair<string, string> pair in _serverSettings.HeadersDictionary)
                 {
                     req.SetRequestHeader(pair.Key, pair.Value);
                 }
-                
+
                 if (headers != null)
                 {
                     foreach (KeyValuePair<string, string> header in headers)
@@ -113,7 +114,7 @@ namespace Colyseus
                         req.SetRequestHeader(header.Key, header.Value);
                     }
                 }
-                
+
                 req.downloadHandler = new DownloadHandlerBuffer();
                 await req.SendWebRequest();
 
@@ -135,7 +136,7 @@ namespace Colyseus
                         throw new Exception(req.error);
                     }
                 }
-                
+
                 return req.downloadHandler.text;
             };
         }
