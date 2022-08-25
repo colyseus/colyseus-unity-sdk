@@ -30,7 +30,7 @@ public class MenuManager : MonoBehaviour
     public string Protocol
     {
         get => secureProtocol ? "wss" : "ws";
-        set => secureProtocol = Convert.ToBoolean(value);
+        set => secureProtocol = !secureProtocol;
     }
 
     public string HostAddress => $"{Protocol}://{HostName}:{Port}";

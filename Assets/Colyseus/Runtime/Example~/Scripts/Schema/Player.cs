@@ -7,7 +7,8 @@
 
 using Colyseus.Schema;
 
-public partial class Player : Schema {
+public partial class Player : Schema
+{
 	[Type(0, "number")]
 	public float x = default(float);
 

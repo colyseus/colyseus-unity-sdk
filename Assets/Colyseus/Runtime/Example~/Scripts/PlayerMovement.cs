@@ -14,6 +14,12 @@ public class PlayerMovement : MonoBehaviour
         _networkManager = gameObject.AddComponent<NetworkManager>();
         await _networkManager.JoinOrCreateGame();
         
+        // Assigning listener for incoming messages
+        _networkManager.GameRoom.OnMessage<string>("welcomeMessage", message =>
+        {
+            Debug.Log(message);
+        });
+        
         // Set player's new position after synchronized the mouse click's position with the Colyseus server. 
         _networkManager.GameRoom.State.OnChange += (changes) =>
         {

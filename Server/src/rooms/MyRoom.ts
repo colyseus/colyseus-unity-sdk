@@ -17,6 +17,9 @@ export class MyRoom extends Room<MyRoomState> {
     
     this.state.players.set(client.sessionId, new Player());
 
+    // Send welcome message to the client.
+    client.send("welcomeMessage", "Welcome to Colyseus!");
+
     // Listen to position changes from the client.
     this.onMessage("position", (client, position: Position) => {
       const player = this.state.players.get(client.sessionId);
