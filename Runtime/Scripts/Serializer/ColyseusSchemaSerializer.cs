@@ -77,13 +77,15 @@ namespace Colyseus
             {
                 System.Type schemaType = Array.Find(namespaceSchemaTypes, t => CompareTypes(t, reflection.types[i]));
 
-                if (schemaType == null)
+                if (schemaType != null)
                 {
-                    throw new Exception(
+                    ColyseusContext.GetInstance().SetTypeId(schemaType, reflection.types[i].id);   
+                } 
+                else 
+                {
+                    UnityEngine.Debug.LogWarning(
                         "Local schema mismatch from server. Use \"schema-codegen\" to generate up-to-date local definitions.");
                 }
-
-                ColyseusContext.GetInstance().SetTypeId(schemaType, reflection.types[i].id);
             }
         }
 
