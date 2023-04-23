@@ -283,17 +283,32 @@ namespace Colyseus
         }
 
         /// <summary>
-        ///     Method to add new message handlers to the room
+        /// Disposable class to return with OnMessage function, so that a message callback can be removed.
         /// </summary>
-        /// <param name="type">The type of message received</param>
-        /// <param name="handler"></param>
-        /// <typeparam name="MessageType">The type of object this message should respond with</typeparam>
-        public void OnMessage<MessageType>(string type, Action<MessageType> handler)
+        /// <typeparam name="MessageType">The type of object the message responds with</typeparam>
+        private class MessageRemover<MessageType> : IDisposable
         {
-            OnMessageHandlers.Add(type, new ColyseusMessageHandler<MessageType>
+            private string _type;
+            private Action<MessageType> _targetHandler;
+            private Dictionary<string, IColyseusMessageHandler> _onMessageHandlers;
+
+            public MessageRemover(string type,
+                Action<MessageType> targetHandler,
+                Dictionary<string, IColyseusMessageHandler> onMessageHandlers)
             {
-                Action = handler
-            });
+                _type = type;
+                _targetHandler = targetHandler;
+                _onMessageHandlers = onMessageHandlers;
+            }
+
+            public void Dispose()
+            {
+                var messageHandler = _onMessageHandlers[_type] as ColyseusMessageHandler<MessageType>;
+                messageHandler.Action -= _targetHandler;
+                if (messageHandler.Action == null) {
+                    _onMessageHandlers.Remove(_type);
+                }
+            }
         }
 
         /// <summary>
@@ -302,12 +317,30 @@ namespace Colyseus
         /// <param name="type">The type of message received</param>
         /// <param name="handler"></param>
         /// <typeparam name="MessageType">The type of object this message should respond with</typeparam>
-        public void OnMessage<MessageType>(byte type, Action<MessageType> handler)
+        /// <returns>IDisposable object to remove the message handler when called</returns>
+        public IDisposable OnMessage<MessageType>(string type, Action<MessageType> handler)
         {
-            OnMessageHandlers.Add("i" + type, new ColyseusMessageHandler<MessageType>
-            {
-                Action = handler
-            });
+            if (OnMessageHandlers.ContainsKey(type)) {
+                (OnMessageHandlers[type] as ColyseusMessageHandler<MessageType>).Action += handler;
+            } else {
+                OnMessageHandlers.Add(type, new ColyseusMessageHandler<MessageType>
+                {
+                    Action = handler
+                });
+            }
+            return new MessageRemover<MessageType>(type, handler, OnMessageHandlers);
+        }
+
+        /// <summary>
+        ///     Method to add new message handlers to the room
+        /// </summary>
+        /// <param name="type">The type of message received</param>
+        /// <param name="handler"></param>
+        /// <typeparam name="MessageType">The type of object this message should respond with</typeparam>
+        /// <returns>IDisposable object to remove the message handler when called</returns>
+        public IDisposable OnMessage<MessageType>(byte type, Action<MessageType> handler)
+        {
+            return this.OnMessage<MessageType>("i" + type, handler);
         }
 
         /// <summary>
@@ -315,12 +348,10 @@ namespace Colyseus
         /// </summary>
         /// <param name="handler"></param>
         /// <typeparam name="MessageType">The type of object this message should respond with</typeparam>
-        public void OnMessage<MessageType>(Action<MessageType> handler) where MessageType : Schema.Schema, new()
+        /// <returns>IDisposable object to remove the message handler when called</returns>
+        public IDisposable OnMessage<MessageType>(Action<MessageType> handler) where MessageType : Schema.Schema, new()
         {
-            OnMessageHandlers.Add("s" + typeof(MessageType), new ColyseusMessageHandler<MessageType>
-            {
-                Action = handler
-            });
+            return this.OnMessage<MessageType>("s" + typeof(MessageType), handler);
         }
 
         /// <summary>
@@ -372,15 +403,15 @@ namespace Colyseus
 
                 if (bytes.Length > offset)
                 {
-	                try {
-		                serializer.Handshake(bytes, offset);
-	                }
-	                catch (Exception e)
-	                {
-		                await Leave(false);
-		                OnError?.Invoke(ColyseusErrorCode.SCHEMA_MISMATCH, e.Message);
-		                return;
-	                }
+                    try {
+                        serializer.Handshake(bytes, offset);
+                    }
+                    catch (Exception e)
+                    {
+                        await Leave(false);
+                        OnError?.Invoke(ColyseusErrorCode.SCHEMA_MISMATCH, e.Message);
+                        return;
+                    }
                 }
 
                 OnJoin?.Invoke();
@@ -423,7 +454,7 @@ namespace Colyseus
             }
             else if (code == ColyseusProtocol.ROOM_STATE)
             {
-	            SetState(bytes, 1);
+                SetState(bytes, 1);
             }
             else if (code == ColyseusProtocol.ROOM_STATE_PATCH)
             {
