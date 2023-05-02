@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -23,8 +23,8 @@ namespace GameDevWare.Serialization
 	{
 		private readonly TextReader reader;
 
-		public JsonTextReader(TextReader reader, SerializationContext context, int bufferSize = DEFAULT_BUFFER_SIZE)
-			: base(context, bufferSize)
+		public JsonTextReader(TextReader reader, SerializationContext context, char[] buffer = null)
+			: base(context, buffer)
 		{
 			if (reader == null)
 				throw new ArgumentNullException("reader");
@@ -45,8 +45,8 @@ namespace GameDevWare.Serialization
 			if (count <= 0)
 				return index;
 
-			var readed = reader.Read(buffer, index, count);
-			return index + readed;
+			var read = this.reader.Read(buffer, index, count);
+			return index + read;
 		}
 	}
 }

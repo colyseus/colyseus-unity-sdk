@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2019 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -24,9 +24,8 @@ namespace GameDevWare.Serialization
 		private readonly StringBuilder jsonString;
 		private int position;
 
-		public JsonStringBuilderReader(StringBuilder stringBuilder, SerializationContext context,
-			int bufferSize = DEFAULT_BUFFER_SIZE)
-			: base(context, bufferSize)
+		public JsonStringBuilderReader(StringBuilder stringBuilder, SerializationContext context, char[] buffer = null)
+			: base(context, buffer)
 		{
 			if (stringBuilder == null)
 				throw new ArgumentNullException("str");
@@ -44,7 +43,7 @@ namespace GameDevWare.Serialization
 				throw new ArgumentOutOfRangeException("index");
 
 
-			var block = Math.Min(jsonString.Length - position, buffer.Length - index);
+			var block = Math.Min(this.jsonString.Length - position, buffer.Length - index);
 			if (block <= 0)
 				return index;
 

@@ -46,8 +46,8 @@ namespace Colyseus
             {
                 DispatchMessageQueue();
 
-                // probably should be waiting until a new frame started or so
-                await Task.Delay(TimeSpan.FromSeconds(1.0f / 120.0f)); //TODO: Some magic numbers here
+                // Switch context
+                await Task.Yield();
             }
         }
 #endif

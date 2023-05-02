@@ -1,7 +1,10 @@
-﻿using System;
+using System;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Security;
 using GameDevWare.Serialization.Serializers;
+
+#pragma warning disable 1591
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
@@ -9,7 +12,7 @@ namespace GameDevWare.Serialization
 	[Serializable]
 	public class JsonSerializationException : SerializationException
 	{
-		internal enum ErrorCode
+		public enum ErrorCode
 		{
 			SerializationException = 1,
 			EmptyMemberName,
@@ -34,40 +37,38 @@ namespace GameDevWare.Serialization
 			TypeRequiresCustomSerializer
 		}
 
-		public int Code { get; set; }
+		public ErrorCode Code { get; set; }
 		public int LineNumber { get; set; }
 		public int ColumnNumber { get; set; }
 		public ulong CharactersWritten { get; set; }
-		public string Path { get; set; }
 
 		internal JsonSerializationException(string message, ErrorCode errorCode, IJsonReader reader = null)
 			: base(message)
 		{
-			this.Code = (int)errorCode;
+			this.Code = errorCode;
 			if (reader != null)
 				this.Update(reader);
 		}
 		internal JsonSerializationException(string message, ErrorCode errorCode, IJsonReader reader, Exception innerException)
 			: base(message, innerException)
 		{
-			this.Code = (int)errorCode;
+			this.Code = errorCode;
 			if (reader != null)
 				this.Update(reader);
 		}
 		internal JsonSerializationException(string message, Exception innerException)
 			: base(message, innerException)
 		{
-			this.Code = (int)ErrorCode.SerializationException;
+			this.Code = ErrorCode.SerializationException;
 		}
 
 		protected JsonSerializationException(SerializationInfo info, StreamingContext context)
 			: base(info, context)
 		{
-			this.Code = info.GetInt32("Code");
+			this.Code = (ErrorCode)info.GetInt32("Code");
 			this.LineNumber = info.GetInt32("LineNumber");
 			this.ColumnNumber = info.GetInt32("ColumnNumber");
 			this.CharactersWritten = info.GetUInt64("CharactersWritten");
-			this.Path = info.GetString("Path");
 		}
 
 		private void Update(IJsonReader reader)
@@ -80,11 +81,10 @@ namespace GameDevWare.Serialization
 		[SecurityCritical]
 		public override void GetObjectData(SerializationInfo info, StreamingContext context)
 		{
-			info.AddValue("Code", this.Code);
+			info.AddValue("Code", (int)this.Code);
 			info.AddValue("LineNumber", this.LineNumber);
 			info.AddValue("ColumnNumber", this.ColumnNumber);
 			info.AddValue("CharactersWritten", this.CharactersWritten);
-			info.AddValue("Path", this.Path);
 
 			base.GetObjectData(info, context);
 		}
@@ -93,7 +93,7 @@ namespace GameDevWare.Serialization
 		{
 			return new JsonSerializationException
 			(
-				"An empty member name was deserialized.",
+				string.Format("An empty member name was deserialized. Path: '{0}'", reader.Context.GetPath()),
 				ErrorCode.EmptyMemberName,
 				reader
 			);
@@ -110,34 +110,33 @@ namespace GameDevWare.Serialization
 		{
 			return new JsonSerializationException
 			(
-				string.Format("Discriminator member '{0}' should be first member of object.", ObjectSerializer.TYPE_MEMBER_NAME),
+				string.Format("Discriminator member '{0}' should be first member of object. Path: '{1}'.", ObjectSerializer.TYPE_MEMBER_NAME, reader.Context.GetPath()),
 				ErrorCode.DiscriminatorNotFirstMemberOfObject,
 				reader
 			);
 		}
-		public static Exception CantCreateInstanceOfType(IJsonReader reader, Type type)
+		public static Exception CantCreateInstanceOfType(Type type)
 		{
 			return new JsonSerializationException
 			(
-				string.Format("Unable to deserialize instance of '{0}' because ", type.Name) +
-					(type.IsAbstract ? "it is an abstract type." : "there is no parameterless constructor is defined on type."),
-				ErrorCode.CantCreateInstanceOfType,
-				reader
+				string.Format("Unable to deserialize instance of '{0}' because ", type.FullName) +
+					(type.GetTypeInfo().IsAbstract ? "it is an abstract type." : "there is no parameterless constructor is defined on type."),
+				ErrorCode.CantCreateInstanceOfType
 			);
 		}
-		public static Exception SerializationGraphIsTooBig(ulong maxObjects)
+		public static Exception SerializationGraphIsTooBig(IJsonReader reader, ulong maxObjects)
 		{
 			return new JsonSerializationException
 			(
-				string.Format("Serialization graph is too big. Maximum serialized objects is {0}.", maxObjects),
+				string.Format("Serialization graph is too big. Maximum serialized objects is {0}. Path: '{1}'", maxObjects, reader.Context.GetPath()),
 				ErrorCode.SerializationGraphIsTooBig
 			);
 		}
-		public static Exception SerializationGraphIsTooDeep(ulong maxDepth)
+		public static Exception SerializationGraphIsTooDeep(IJsonReader reader, ulong maxDepth)
 		{
 			return new JsonSerializationException
 			(
-					string.Format("Serialization graph is too deep. Maximum depth is {0}.", maxDepth),
+					string.Format("Serialization graph is too deep. Maximum depth is {0}. Path: '{1}'", maxDepth, reader.Context.GetPath()),
 				ErrorCode.SerializationGraphIsTooDeep)
 			;
 		}
@@ -171,7 +170,7 @@ namespace GameDevWare.Serialization
 		{
 			return new JsonSerializationException
 			(
-				"Unexpected end of stream.",
+				string.Format("Unexpected end of stream while more data is expected. Path: '{0}'.", reader.Context.GetPath()),
 				ErrorCode.UnexpectedEndOfStream,
 				reader
 			);
@@ -180,7 +179,7 @@ namespace GameDevWare.Serialization
 		{
 			return new JsonSerializationException
 			(
-				string.Format("Unexpected member '{0}' is readed while '{1}' is expected.", memberName, expected),
+				string.Format("Unexpected member '{0}' is read while '{1}' is expected. Path: '{2}'.", memberName, expected, reader.Context.GetPath()),
 				ErrorCode.UnexpectedMemberName,
 				reader
 			);
@@ -197,31 +196,40 @@ namespace GameDevWare.Serialization
 #if NET40
 				tokensStr = String.Join(", ", expectedTokens);
 #else
-				var tokens = Array.ConvertAll(expectedTokens, c => c.ToString());
+				var tokens = expectedTokens.ConvertAll(c => c.ToString());
 				tokensStr = String.Join(", ", tokens);
 #endif
 			}
 
-			if (expectedTokens.Length > 1)
+			if (reader.Token == JsonToken.EndOfStream)
+			{
+				return UnexpectedEndOfStream(reader);
+			}
+			else if (expectedTokens.Length > 1)
+			{
 				return new JsonSerializationException
 				(
-					string.Format("Unexpected token readed '{0}' while any of '{1}' are expected.", reader.Token, tokensStr),
+					string.Format("Unexpected token read '{0}' while any of '{1}' are expected. Path: '{2}'.", reader.Token, tokensStr, reader.Context.GetPath()),
 					ErrorCode.UnexpectedToken,
 					reader
 				);
+
+			}
 			else
+			{
 				return new JsonSerializationException
 				(
-					string.Format("Unexpected token readed '{0}' while '{1}' is expected.", reader.Token, tokensStr),
+					string.Format("Unexpected token read '{0}' while '{1}' is expected. Path: '{2}'.", reader.Token, tokensStr, reader.Context.GetPath()),
 					ErrorCode.UnexpectedToken,
 					reader
 				);
+			}
 		}
 		public static Exception UnknownEscapeSequence(string escape, IJsonReader reader)
 		{
 			return new JsonSerializationException
 			(
-				string.Format("An unknown escape sequence '{0}' is readed.", escape),
+				string.Format("An unknown escape sequence '{0}' is read. Path: '{1}'.", escape, reader.Context.GetPath()),
 				ErrorCode.UnknownEscapeSequence,
 				reader
 			);
@@ -238,7 +246,7 @@ namespace GameDevWare.Serialization
 		{
 			return new JsonSerializationException
 			(
-				"Can\'t perform deserialization from stream which doesn\'t support reading.",
+				"Can\'t perform deserialization from stream which doesn't support reading.",
 				ErrorCode.StreamIsNotReadable
 			);
 		}
@@ -246,7 +254,7 @@ namespace GameDevWare.Serialization
 		{
 			return new JsonSerializationException
 			(
-				"Can\'t perform serialization to stream which doesn\'t support writing.",
+				"Can\'t perform serialization to stream which doesn't support writing.",
 				ErrorCode.StreamIsNotWriteable
 			);
 		}
@@ -254,7 +262,7 @@ namespace GameDevWare.Serialization
 		{
 			return new JsonSerializationException
 			(
-				"An unterminated string literal.",
+				string.Format("An unterminated string literal. Path: '{0}'.", reader.Context.GetPath()),
 				ErrorCode.UnterminatedStringLiteral,
 				reader
 			);
@@ -263,7 +271,7 @@ namespace GameDevWare.Serialization
 		{
 			return new JsonSerializationException
 			(
-				string.Format("An unknown notation '{0}'.", notation),
+				string.Format("An unknown notation '{0}'. Path: '{1}'.", notation, reader.Context.GetPath()),
 				ErrorCode.UnknownNotation,
 				reader
 			);
@@ -272,7 +280,7 @@ namespace GameDevWare.Serialization
 		{
 			return new JsonSerializationException
 			(
-				string.Format("Type '{0}' can't be serialized by '{1}' and requires custom {2} registered in Json.DefaultSerializers.", type.FullName, typeSerializer.Name, typeof(TypeSerializer).Name),
+				string.Format("Type '{0}' can't be serialized by '{1}' and requires custom {2} registered in 'Json.DefaultSerializers'.", type.FullName, typeSerializer.Name, typeof(TypeSerializer).Name),
 				ErrorCode.TypeRequiresCustomSerializer
 			);
 		}

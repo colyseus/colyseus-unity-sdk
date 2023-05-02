@@ -6,11 +6,11 @@
   "main": "lib/index.js",
   "scripts": {
     "start": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "loadtest": "colyseus-loadtest loadtest/example.ts --room my_room --numClients 2",
+    "tsx": "tsx watch src/index.ts",
+    "loadtest": "ts-node loadtest/example.ts --room my_room --numClients 99",
     "build": "npm run clean && tsc && node node_modules/copyfiles/copyfiles package.json ./lib && node node_modules/copyfiles/copyfiles arena.env ./lib",
     "clean": "node node_modules/rimraf/bin lib",
-    "schema-codegen": "schema-codegen src/rooms/schema/* --csharp --output ../Assets/Colyseus/Runtime/Example/Scripts/States/",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --require ts-node/register test/**_test.ts --exit --timeout 15000"
   },
   "author": "",
   "license": "UNLICENSED",
@@ -19,21 +19,28 @@
   },
   "homepage": "https://github.com/colyseus/create-colyseus#readme",
   "devDependencies": {
-    "@colyseus/loadtest": "^0.14.7",
-    "@colyseus/redis-driver": "^0.14.22",
+    "@colyseus/cloud": "file:../cli",
+    "@colyseus/loadtest": "^0.15.0-preview.10",
+    "@colyseus/testing": "^0.15.0-preview.1",
     "@types/cors": "^2.8.6",
     "@types/express": "^4.17.1",
+    "@types/mocha": "^8.2.3",
+    "copyfiles": "^2.4.1",
+    "mocha": "^9.0.2",
     "rimraf": "^2.7.1",
-    "ts-node": "^8.1.0",
-    "ts-node-dev": "^1.0.0-pre.63",
-    "typescript": "^3.4.5"
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
+    "tsx": "^3.12.7",
+    "typescript": "^5.0.4"
   },
   "dependencies": {
-    "@colyseus/arena": "^0.14.24",
-    "@colyseus/monitor": "^0.14.22",
-    "colyseus": "^0.14.23",
+    "@colyseus/core": "^0.15.0-preview.8",
+    "@colyseus/monitor": "^0.15.0-preview.3",
+    "@colyseus/redis-driver": "^0.15.0-preview.0",
+    "@colyseus/redis-presence": "^0.15.0-preview.2",
+    "@colyseus/tools": "^0.15.0-preview.10",
+    "colyseus": "^0.15.0-preview.4",
     "cors": "^2.8.5",
-    "express": "^4.16.4",
-    "winston": "^3.3.3"
+    "express": "^4.16.4"
   }
 }

@@ -1,4 +1,3 @@
-
 var LibraryWebSocket = {
 	$webSocketState: {
 		/*
