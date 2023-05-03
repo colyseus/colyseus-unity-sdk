@@ -2,13 +2,13 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 2.0.4
+// GENERATED USING @colyseus/schema 2.0.5
 // 
 
 using Colyseus.Schema;
 using Action = System.Action;
 
-namespace SchemaTest.InstanceSharing {
+namespace SchemaTest.InstanceSharingTypes {
 	public partial class Position : Schema {
 		[Type(0, "number")]
 		public float x = default(float);

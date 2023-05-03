@@ -348,7 +348,7 @@ namespace Colyseus
             void OnError(int code, string message)
             {
                 targetRoom.OnError -= OnError;
-                tcs.SetException(new CSAMatchMakeException(code, message));
+                tcs.SetException(new MatchMakeException(code, message));
             }
 
             void OnJoin()
@@ -379,7 +379,7 @@ namespace Colyseus
         /// <typeparam name="T">Type of <see cref="ColyseusRoom{T}" /> we want to match with</typeparam>
         /// <returns><see cref="ColyseusRoom{T}" /> we have matched with via async task</returns>
         /// <exception cref="Exception">Thrown if there is a network related error</exception>
-        /// <exception cref="CSAMatchMakeException">Thrown if there is an error in the match making process on the server side</exception>
+        /// <exception cref="MatchMakeException">Thrown if there is an error in the match making process on the server side</exception>
         protected async Task<ColyseusRoom<T>> CreateMatchMakeRequest<T>(string method, string roomName,
             Dictionary<string, object> options, Dictionary<string, string> headers)
         {
@@ -404,7 +404,7 @@ namespace Colyseus
 
             if (!string.IsNullOrEmpty(response.error))
             {
-                throw new CSAMatchMakeException(response.code, response.error);
+                throw new MatchMakeException(response.code, response.error);
             }
 
             // forward reconnection token on reconnect

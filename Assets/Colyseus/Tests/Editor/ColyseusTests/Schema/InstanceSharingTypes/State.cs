@@ -2,13 +2,13 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 2.0.4
+// GENERATED USING @colyseus/schema 2.0.5
 // 
 
 using Colyseus.Schema;
 using Action = System.Action;
 
-namespace SchemaTest.InstanceSharing {
+namespace SchemaTest.InstanceSharingTypes {
 	public partial class State : Schema {
 		[Type(0, "ref", typeof(Player))]
 		public Player player1 = new Player();

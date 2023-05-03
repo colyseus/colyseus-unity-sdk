@@ -1,3 +1,6 @@
+# Server build files
+Server/build
+
 #User Specific
 *.userprefs
 *.usertasks

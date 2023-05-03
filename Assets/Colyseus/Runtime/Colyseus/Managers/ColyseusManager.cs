@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Colyseus
 {
     /// <summary>
-    /// Base manager class 
+    /// Base manager class
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class ColyseusManager<T> : MonoBehaviour

@@ -35,17 +35,17 @@ namespace Colyseus
                 {
                     req.uploadHandler = data;
                 }
-        
+
                 foreach (KeyValuePair<string, string> pair in _serverSettings.HeadersDictionary)
                 {
                     req.SetRequestHeader(pair.Key, pair.Value);
                 }
-        
+
                 if (!string.IsNullOrEmpty(Token))
                 {
                     req.SetRequestHeader("Authorization", "Bearer " + Token);
                 }
-        
+
                 // req.uploadHandler = new UploadHandlerRaw(bytes);
                 req.downloadHandler = new DownloadHandlerBuffer();
                 await req.SendWebRequest();
@@ -53,7 +53,7 @@ namespace Colyseus
 #if UNITY_2020_1_OR_NEWER
                 if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
 #else
-            if (req.isNetworkError || req.isHttpError)
+                if (req.isNetworkError || req.isHttpError)
 #endif
                 {
                     if (_serverSettings.useSecureProtocol)
@@ -68,16 +68,16 @@ namespace Colyseus
                         throw new Exception(req.error);
                     }
                 }
-            
+
                 string json = req.downloadHandler.text;
-            
+
                 return json;
             } ;
         }
 
         public async Task<string> Request(string uriMethod, string uriPath, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
         {
-			using (UnityWebRequest req = new UnityWebRequest())
+            using (UnityWebRequest req = new UnityWebRequest())
             {
                 req.method = uriMethod;
                 req.url = GetWebRequestURL(uriPath);
@@ -87,18 +87,18 @@ namespace Colyseus
                     // Send JSON options on request body
                     MemoryStream jsonBodyStream = new MemoryStream();
                     Json.Serialize(options, jsonBodyStream); //TODO: Replace GameDevWare serialization
-                    
+
                     req.uploadHandler = new UploadHandlerRaw(jsonBodyStream.ToArray())
                     {
                         contentType = "application/json"
                     };
                 }
-                
+
                 foreach (KeyValuePair<string, string> pair in _serverSettings.HeadersDictionary)
                 {
                     req.SetRequestHeader(pair.Key, pair.Value);
                 }
-                
+
                 if (headers != null)
                 {
                     foreach (KeyValuePair<string, string> header in headers)
@@ -106,7 +106,7 @@ namespace Colyseus
                         req.SetRequestHeader(header.Key, header.Value);
                     }
                 }
-                
+
                 req.downloadHandler = new DownloadHandlerBuffer();
                 await req.SendWebRequest();
 
@@ -128,13 +128,13 @@ namespace Colyseus
                         throw new Exception(req.error);
                     }
                 }
-                
+
                 return req.downloadHandler.text;
             };
         }
 
         public UriBuilder GetUriBuilder(string path, string query = "")
-		{
+        {
             string forwardSlash = "";
 
             if (!_serverSettings.WebRequestEndpoint.EndsWith("/"))
@@ -156,5 +156,5 @@ namespace Colyseus
 
             return GetUriBuilder(path, query).ToString();
         }
-	}
+    }
 }

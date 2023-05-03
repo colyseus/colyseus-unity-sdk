@@ -20,18 +20,19 @@ public class PlayerMovement : MonoBehaviour
             Debug.Log(message);
         });
         
-        // Set player's new position after synchronized the mouse click's position with the Colyseus server. 
-        _networkManager.GameRoom.State.OnChange += (changes) =>
+        // Set player's new position after synchronized the mouse click's position with the Colyseus server.
+        
+        _networkManager.GameRoom.State.OnChange(() =>
         {
             var player = _networkManager.GameRoom.State.players[_networkManager.GameRoom.SessionId];
             _targetPosition = new Vector2(player.x, player.y);
             _moving = true;
-        };
+        });
 
-        _networkManager.GameRoom.State.players.OnAdd += (key, player) =>
+        _networkManager.GameRoom.State.players.OnAdd((key, player) =>
         {
             Debug.Log($"Player {key} has joined the Game!");
-        };
+        });
     }
 
     private void Update()

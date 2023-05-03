@@ -51,6 +51,6 @@ public class NetworkManager : MonoBehaviour
 
     public void PlayerPosition(Vector2 position)
     {
-        GameRoom.Send("position", new { x = position.x, y = position.y });
+        _ = GameRoom.Send("position", new { x = position.x, y = position.y });
     }
 }

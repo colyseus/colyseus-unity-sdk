@@ -1,7 +1,7 @@
 {
-    "name": "LucidSight.Editor.Tests",
+    "name": "Colyseus.Editor.Tests",
     "references": [
-        "LucidSight.Runtime.ColyseusSDK"
+        "ColyseusSDK"
     ],
     "includePlatforms": [
         "Editor"

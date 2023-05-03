@@ -712,11 +712,15 @@ namespace Colyseus.Schema
 				}
                 else
                 {
-                    ISchemaCollection container = (ISchemaCollection) _ref;
+                    ISchemaCollection container = (ISchemaCollection) _ref;                    
 
                     if (change.Op == (byte) OPERATION.ADD &&
-                        change.PreviousValue == container.GetTypeDefaultValue())
+                        (
+                            change.PreviousValue == null ||
+                            change.PreviousValue == container.GetTypeDefaultValue()
+                        ))
                     {
+                        UnityEngine.Debug.Log("InvokeOnAdd => " + change.DynamicIndex+ " : " + change.Value);
                         container.InvokeOnAdd(change.Value, change.DynamicIndex);
                     }
                     else if (change.Op == (byte) OPERATION.DELETE)
@@ -740,7 +744,11 @@ namespace Colyseus.Schema
                         container.InvokeOnAdd(change.Value, change.DynamicIndex);
                     }
 
-                    if (change.Value != change.PreviousValue)
+                    //
+                    // FIXME: this implementation differs from other languages
+                    // "change.Value != null" is needed here because OnChange.Invoke crashes when casting (T)null.
+                    //
+                    if (change.Value != change.PreviousValue && change.Value != null)
                     {
                         container.InvokeOnChange(change.Value, change.DynamicIndex ?? change.Field);
                     }

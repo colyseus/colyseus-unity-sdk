@@ -1,13 +1,26 @@
-import Arena from "@colyseus/arena";
+import config from "@colyseus/tools";
+
+import { WebSocketTransport } from "@colyseus/ws-transport";
 import { monitor } from "@colyseus/monitor";
+
+import { RedisDriver } from "@colyseus/redis-driver";
+import { RedisPresence } from "@colyseus/redis-presence";
 
 /**
  * Import your Room files
  */
 import { MyRoom } from "./rooms/MyRoom";
 
-export default Arena({
+export default config({
     getId: () => "Your Colyseus App",
+
+    options: {
+        devMode: true,
+        driver: new RedisDriver(),
+        presence: new RedisPresence(),
+    },
+
+    initializeTransport: (options) => new WebSocketTransport(options),
 
     initializeGameServer: (gameServer) => {
         /**
@@ -22,7 +35,7 @@ export default Arena({
          * Bind your custom express routes here:
          */
         app.get("/", (req, res) => {
-            res.send("It's time to kick ass and chew bubblegum!");
+            res.send(`Instance ID => ${process.env.NODE_APP_INSTANCE ?? "NONE"}`);
         });
 
         /**
