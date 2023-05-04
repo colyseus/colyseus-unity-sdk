@@ -1,6 +1,6 @@
 {
 	"name": "io.colyseus.sdk",
-	"version": "0.14.21",
+	"version": "0.15.0",
 	"displayName": "Colyseus SDK",
 	"description": "Colyseus Multiplayer SDK for Unity",
 	"unity": "2019.1",
@@ -11,8 +11,8 @@
 		"url": "https://github.com/colyseus/colyseus-unity-sdk.git"
 	},
 	"author": {
-		"name": "Colyseus",
-		"email": "contact@lucidsight.com",
+		"name": "Endel Dreyer",
+		"email": "endel@colyseus.io",
 		"url": "https://colyseus.io/"
 	},
 	"keywords": [
