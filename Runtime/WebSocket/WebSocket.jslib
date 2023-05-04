@@ -1,5 +1,3 @@
-
-
 var LibraryWebSocket = {
 	$webSocketState: {
 		/*
@@ -81,6 +79,7 @@ var LibraryWebSocket = {
 		var id = webSocketState.lastId++;
 
 		webSocketState.instances[id] = {
+		  subprotocols: [],
 			url: urlStr,
 			ws: null
 		};
@@ -88,6 +87,19 @@ var LibraryWebSocket = {
 		return id;
 
 	},
+
+  /**
+   * Add subprotocol to instance
+   *
+   * @param instanceId Instance ID
+   * @param subprotocol Subprotocol name to add to instance
+   */
+  WebSocketAddSubProtocol: function(instanceId, subprotocol) {
+
+    var subprotocolStr = UTF8ToString(subprotocol);
+    webSocketState.instances[instanceId].subprotocols.push(subprotocolStr);
+
+  },
 
 	/**
 	 * Remove reference to WebSocket instance
@@ -127,7 +139,7 @@ var LibraryWebSocket = {
 		if (instance.ws !== null)
 			return -2;
 
-		instance.ws = new WebSocket(instance.url);
+		instance.ws = new WebSocket(instance.url, instance.subprotocols);
 
 		instance.ws.binaryType = 'arraybuffer';
 
