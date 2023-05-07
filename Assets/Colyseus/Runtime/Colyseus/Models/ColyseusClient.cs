@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using LucidSightTools;
 using UnityEngine;
 
 // ReSharper disable InconsistentNaming
@@ -309,7 +308,7 @@ namespace Colyseus
 
             async void DevModeCloseCallback()
             {
-	            LSLog.Log($"[Colyseus devMode]: Re-establishing connection with room id {targetRoom.RoomId}");
+                Debug.Log($"<color=yellow>[Colyseus devMode]:</color> Re-establishing connection with room id {targetRoom.RoomId}");
 	            int devModeRetryAttempt = 0;
 	            const int devModeMaxRetryCount = 8;
 
@@ -319,19 +318,19 @@ namespace Colyseus
 		            try
 		            {
 			            await ConsumeSeatReservation<T>(response, headers, targetRoom);
-			            LSLog.Log($"[Colyseus devMode]: Successfully re-established connection with room {targetRoom.RoomId}");
+                        Debug.Log($"<color=yellow>[Colyseus devMode]:</color> Successfully re-established connection with room {targetRoom.RoomId}");
 		            }
 		            catch (Exception)
 					{
 			            if (devModeRetryAttempt < devModeMaxRetryCount)
 			            {
-				            LSLog.Log($"[Colyseus devMode]: retrying... ({devModeRetryAttempt} out of {devModeMaxRetryCount})");
+                            Debug.Log($"<color=yellow>[Colyseus devMode]:</color> retrying... ({devModeRetryAttempt} out of {devModeMaxRetryCount})");
 				            await Task.Delay(2000);
 				            await retryConnection();
 			            }
 			            else
 			            {
-				            LSLog.Log($"[Colyseus devMode]: Failed to reconnect! Is your server running? Please check server logs!");
+                            Debug.Log($"<color=yellow>[Colyseus devMode]:</color> Failed to reconnect! Is your server running? Please check server logs!");
 			            }
 		            }
 	            }
@@ -394,7 +393,7 @@ namespace Colyseus
             }
 
             string json = await colyseusRequest.Request("POST", $"matchmake/{method}/{roomName}", options, headers);
-            LSLog.Log($"Server Response: {json}");
+            //Debug.Log($"Server Response: {json}");
 
             ColyseusMatchMakeResponse response = JsonUtility.FromJson<ColyseusMatchMakeResponse>(json);
             if (response == null)

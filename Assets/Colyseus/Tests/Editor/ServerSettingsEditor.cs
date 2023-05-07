@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using Colyseus;
 using UnityEngine;
 using UnityEditor;
@@ -14,36 +13,23 @@ public class ServerSettingsEditor : Editor
     private SerializedProperty requestHeaders;
     bool serverInfoExpanded = false;
 
-    private Texture colyseusIcon;
+    //private Texture colyseusIcon;
     private float buttonWidth = 250;
     private float sectionSpacer = 20;
 
-	private static string IconDirectory = Path.Combine("Runtime", "Editor Default Resources", "Icons", "ColyseusSettings");
-
-	void OnEnable()
+    void OnEnable()
     {
         url = serializedObject.FindProperty("colyseusServerAddress");
         port = serializedObject.FindProperty("colyseusServerPort");
         secureProto= serializedObject.FindProperty("useSecureProtocol");
         requestHeaders = serializedObject.FindProperty("_requestHeaders");
 
-		string fullAssetDirectory = Path.Combine(Application.dataPath, "Colyseus", IconDirectory);
-
-		GUIContent content = null;
-		if (Directory.Exists(fullAssetDirectory))
-		{
-			content = EditorGUIUtility.IconContent(fullAssetDirectory);
-		}
-		else
-		{
-			content = EditorGUIUtility.IconContent(Path.Combine("Packages", "io.colyseus.sdk", IconDirectory));
-		}
-
-		if (content != null)
-		{
-			colyseusIcon = content.image;
-		}
-	}
+        //
+        // TODO: Why loading icon never works?
+		// I've spent more than 2 hours here!
+        //
+        //colyseusIcon = EditorGUIUtility.IconContent("ColyseusSettings").image;
+    }
 
     public override void OnInspectorGUI()
     {
@@ -62,13 +48,13 @@ public class ServerSettingsEditor : Editor
 
         EditorGUILayout.Space(sectionSpacer);
         EditorGUILayout.LabelField("Additional Resources", EditorStyles.boldLabel);
-        if (GUILayout.Button("Colyseus Arena Dashboard", GUILayout.MaxWidth(buttonWidth)))
-        {
-            Application.OpenURL("https://console.colyseus.io/");
-        }
+        //if (GUILayout.Button("Colyseus Cloud Dashboard", GUILayout.MaxWidth(buttonWidth)))
+        //{
+        //    Application.OpenURL("https://cloud.colyseus.io/");
+        //}
         if (GUILayout.Button("Documentation", GUILayout.MaxWidth(buttonWidth)))
         {
-            Application.OpenURL("https://docs.colyseus.io/");
+            Application.OpenURL("https://docs.colyseus.io/?utm_source=unity-editor");
         }
         serializedObject.ApplyModifiedProperties();
     }

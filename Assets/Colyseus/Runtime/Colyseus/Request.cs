@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 using System.IO;
 using GameDevWare.Serialization;
-using LucidSightTools;
 
 namespace Colyseus
 {
@@ -60,7 +57,7 @@ namespace Colyseus
                     {
                          //We failed to make this call with a secure protocol, try with non-secure and if that works we'll stick with it
                          _serverSettings.useSecureProtocol = false;
-                         LSLog.LogError($"Failed to make request to {req.url} with secure protocol, trying again without!");
+                         Debug.LogError($"Failed to make request to {req.url} with secure protocol, trying again without!");
                          return await Request(uriMethod, uriPath, uriQuery, Token, data);
                     }
                     else
@@ -81,7 +78,7 @@ namespace Colyseus
             {
                 req.method = uriMethod;
                 req.url = GetWebRequestURL(uriPath);
-                LSLog.Log($"Requesting from URL: {req.url}");
+                //Debug.Log($"Requesting from URL: {req.url}");
                 if (options != null)
                 {
                     // Send JSON options on request body
@@ -120,7 +117,7 @@ namespace Colyseus
                     {
                         //We failed to make this call with a secure protocol, try with non-secure and if that works we'll stick with it
                         _serverSettings.useSecureProtocol = false;
-                        LSLog.LogError($"Failed to make request to {req.url} with secure protocol, trying again without!");
+                        Debug.LogError($"Failed to make request to {req.url} with secure protocol, trying again without!");
                         return await Request(uriMethod, uriPath, options, headers);
                     }
                     else

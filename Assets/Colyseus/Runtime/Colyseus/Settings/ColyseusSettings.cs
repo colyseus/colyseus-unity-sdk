@@ -7,11 +7,11 @@ namespace Colyseus
     /// <summary>
     ///     <see cref="ScriptableObject" /> containing relevant Colyseus settings
     /// </summary>
-    [CreateAssetMenu(fileName = "MyServerSettings", menuName = "Colyseus/Generate ColyseusSettings Scriptable Object", order = 1)]
+    [CreateAssetMenu(fileName = "MyServerSettings", menuName = "Colyseus/Server Settings Scriptable Object", order = 1)]
     [Serializable]
     public class ColyseusSettings : ScriptableObject
     {
- /// <summary>
+        /// <summary>
         ///     The server address
         /// </summary>
         public string colyseusServerAddress = "localhost";
