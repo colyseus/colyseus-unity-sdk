@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using LucidSightTools;
 using UnityEngine;
 // ReSharper disable InconsistentNaming
 
