@@ -299,9 +299,9 @@ namespace Colyseus
             queryString.Add("sessionId", room.SessionId);
 
             // forward reconnection token
-            if (room.ReconnectionToken != null)
+            if (response.reconnectionToken != null)
             {
-                queryString.Add("reconnectionToken", room.ReconnectionToken);
+                queryString.Add("reconnectionToken", response.reconnectionToken);
             }
 
             ColyseusRoom<T> targetRoom = previousRoom ?? room;
