@@ -9,6 +9,7 @@ namespace Colyseus
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class ColyseusManager<T> : MonoBehaviour
+        where T: Component
     {
         /// <summary>
         /// Reference to the Colyseus settings object.
@@ -82,7 +83,7 @@ namespace Colyseus
                 return;
             }
 
-            Instance = GetComponent<T>();
+            Instance = this as T;
         }
 
         /// <summary>
