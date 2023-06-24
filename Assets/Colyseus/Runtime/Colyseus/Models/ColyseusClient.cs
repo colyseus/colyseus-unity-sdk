@@ -441,14 +441,18 @@ namespace Colyseus
                 ? new Uri($"{Endpoint.Scheme}://{room.publicAddress}")
                 : Endpoint.Uri;
 
+            var basePath = endpoint.AbsolutePath;
+
+            // make sure to end path with backslash
+            if (basePath.Length > 0 && !basePath.EndsWith("/")) {
+                basePath += "/";
+            }
+
             UriBuilder uriBuilder = new UriBuilder(endpoint)
             {
-                Path = $"{room.processId}/{room.roomId}",
+                Path = $"{basePath}{room.processId}/{room.roomId}",
                 Query = string.Join("&", list.ToArray())
             };
-
-            // FIXME?: regression from https://github.com/colyseus/colyseus-unity-sdk/pull/184
-            // var uriBuilder = colyseusRequest.GetUriBuilder(path, string.Join("&", list.ToArray()));
 
             return new ColyseusConnection(uriBuilder.ToString(), headers);
         }
