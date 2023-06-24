@@ -306,7 +306,7 @@ namespace Colyseus
 
             ColyseusRoom<T> targetRoom = previousRoom ?? room;
 
-            async void DevModeCloseCallback()
+            Action devModeCloseCallback = async () =>
             {
                 Debug.Log($"<color=yellow>[Colyseus devMode]:</color> Re-establishing connection with room id {targetRoom.RoomId}");
 	            int devModeRetryAttempt = 0;
@@ -337,10 +337,15 @@ namespace Colyseus
 
 	            await Task.Delay(2000);
 	            await retryConnection();
-            }
+            };
 
-            targetRoom.SetConnection(CreateConnection(response.room, queryString, headers), targetRoom, response.devMode? DevModeCloseCallback
-	            : null);
+            targetRoom.SetConnection(
+                CreateConnection(response.room, queryString, headers),
+                targetRoom,
+                (response.devMode)
+                    ? devModeCloseCallback
+	            : null
+            );
 
             TaskCompletionSource<ColyseusRoom<T>> tcs = new TaskCompletionSource<ColyseusRoom<T>>();
 
@@ -458,3 +463,4 @@ namespace Colyseus
         }
     }
 }
+
