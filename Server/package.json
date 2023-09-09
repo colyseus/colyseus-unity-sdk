@@ -8,8 +8,7 @@
     "start": "tsx watch src/index.ts",
     "tsx": "tsx watch src/index.ts",
     "loadtest": "tsx loadtest/example.ts --room my_room --numClients 99",
-    "build": "npm run clean && tsc && node node_modules/copyfiles/copyfiles package.json ./lib && node node_modules/copyfiles/copyfiles arena.env ./lib",
-    "clean": "node node_modules/rimraf/bin lib",
+    "build": "tsc",
     "test": "mocha -r tsx ts-node/register test/**_test.ts --exit --timeout 15000"
   },
   "author": "",
@@ -26,7 +25,6 @@
     "@types/mocha": "^8.2.3",
     "copyfiles": "^2.4.1",
     "mocha": "^9.0.2",
-    "rimraf": "^2.7.1",
     "tsx": "^3.12.7",
     "typescript": "^5.0.4"
   },
