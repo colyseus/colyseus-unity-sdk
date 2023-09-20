@@ -232,7 +232,7 @@ namespace Colyseus.Schema
             {
                 for (int i = 0; i < items.Count; i++)
                 {
-                    __callbacks.InvokeOnAdd(i, items[i]);
+                    __callbacks.InvokeOnAdd(items[i], i);
                 }
             }
 
