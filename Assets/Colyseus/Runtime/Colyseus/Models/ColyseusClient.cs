@@ -17,49 +17,19 @@ namespace Colyseus
     public class ColyseusClient
     {
         /// <summary>
-        ///     Delegate function for when the <see cref="ColyseusClient" /> successfully connects to the
-        ///     <see cref="ColyseusRoom{T}" />.
+        ///     Authentication tools, see: https://docs.colyseus.io/authentication/
         /// </summary>
-        public delegate void ColyseusAddRoomEventHandler(IColyseusRoom room);
+        public Auth Auth;
 
         /// <summary>
         ///     Reference to the client's <see cref="UriBuilder" />
         /// </summary>
-        public UriBuilder Endpoint;
-
-		/// <summary>
-		/// The <see cref="ColyseusSettings"/> currently assigned to this client object
-		/// </summary>
-		private ColyseusSettings _colyseusSettings;
-
-		/// <summary>
-		///     Occurs when the <see cref="ColyseusClient" /> successfully connects to the <see cref="ColyseusRoom{T}" />.
-		/// </summary>
-		public static event ColyseusAddRoomEventHandler onAddRoom;
-
-		/// <summary>
-		/// The getter for the <see cref="ColyseusSettings"/> currently assigned to this client object
-		/// </summary>
-		public ColyseusSettings Settings
-        {
-	        get
-	        {
-		        return _colyseusSettings;
-	        }
-
-	        private set
-	        {
-		        _colyseusSettings = value;
-
-		        // Instantiate our ColyseusRequest object with the settings object
-				colyseusRequest = new ColyseusRequest(_colyseusSettings);
-	        }
-        }
+        private UriBuilder Endpoint;
 
         /// <summary>
 		/// Object to perform <see cref="UnityEngine.Networking.UnityWebRequest"/>s to the server.
 		/// </summary>
-        public ColyseusRequest colyseusRequest;
+        public HTTP Http;
 
 		/// <summary>
 		///     Initializes a new instance of the <see cref="ColyseusClient" /> class with
@@ -79,7 +49,8 @@ namespace Colyseus
 			settings.useSecureProtocol = string.Equals(Endpoint.Scheme, "wss") || string.Equals(Endpoint.Scheme, "https");
 
 			Settings = settings;
-		}
+            Auth = new Auth(this);
+        }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ColyseusClient"/> class with
@@ -87,22 +58,38 @@ namespace Colyseus
 		/// </summary>
 		/// <param name="settings">The settings you wish to use</param>
 		/// <param name="useWebSocketEndpoint">Determines whether the connection endpoint should use either web socket or http protocols.</param>
-		public ColyseusClient(ColyseusSettings settings, bool useWebSocketEndpoint)
+		public ColyseusClient(ColyseusSettings settings)
         {
-	        SetSettings(settings, useWebSocketEndpoint);
+            Settings = settings;
+            Auth = new Auth(this);
         }
 
-		public void SetSettings(ColyseusSettings settings, bool useWebSocketEndpoint)
-		{
-			Endpoint = new UriBuilder(useWebSocketEndpoint ? settings.WebSocketEndpoint : settings.WebRequestEndpoint);
+        /// <summary>
+        /// The getter for the <see cref="ColyseusSettings"/> currently assigned to this client object
+        /// </summary>
+        private ColyseusSettings _colyseusSettings;
+        public ColyseusSettings Settings
+        {
+            get
+            {
+                return _colyseusSettings;
+            }
 
-			Settings = settings;
-		}
+            set
+            {
+                _colyseusSettings = value;
+
+                Endpoint = new UriBuilder(_colyseusSettings.WebSocketEndpoint);
+
+                // Instantiate our ColyseusRequest object with the settings object
+                Http = new HTTP(_colyseusSettings);
+            }
+        }
 
         /// <summary>
         ///     Join or Create a <see cref="ColyseusRoom{T}" />
         /// </summary>
-        /// <param name="roomName">Name of the room</param>
+        /// <param name="roomName">Room identifier</param>
         /// <param name="options">Dictionary of options to pass to the room upon creation/joining</param>
         /// <param name="headers">Dictionary of headers to pass to the server when we create/join the room</param>
         /// <typeparam name="T">Type of <see cref="ColyseusRoom{T}" /> we want to join or create</typeparam>
@@ -116,7 +103,7 @@ namespace Colyseus
         /// <summary>
         ///     Create a <see cref="ColyseusRoom{T}" />
         /// </summary>
-        /// <param name="roomName">Name of the room</param>
+        /// <param name="roomName">Room identifier</param>
         /// <param name="options">Dictionary of options to pass to the room upon creation</param>
         /// <param name="headers">Dictionary of headers to pass to the server when we create the room</param>
         /// <typeparam name="T">Type of <see cref="ColyseusRoom{T}" /> we want to create</typeparam>
@@ -130,7 +117,7 @@ namespace Colyseus
         /// <summary>
         ///     Join a <see cref="ColyseusRoom{T}" />
         /// </summary>
-        /// <param name="roomName">Name of the room</param>
+        /// <param name="roomName">Room identifier</param>
         /// <param name="options">Dictionary of options to pass to the room upon joining</param>
         /// <param name="headers">Dictionary of headers to pass to the server when we join the room</param>
         /// <typeparam name="T">Type of <see cref="ColyseusRoom{T}" /> we want to join</typeparam>
@@ -176,7 +163,7 @@ namespace Colyseus
         /// <summary>
         ///     Join or Create a <see cref="ColyseusRoom{T}" />
         /// </summary>
-        /// <param name="roomName">Name of the room</param>
+        /// <param name="roomName">Room identifier</param>
         /// <param name="options">Dictionary of options to pass to the room upon creation/joining</param>
         /// <param name="headers">Dictionary of headers to pass to the server when we create/join the room</param>
         /// <returns><see cref="ColyseusRoom{T}" /> via async task</returns>
@@ -190,7 +177,7 @@ namespace Colyseus
         /// <summary>
         ///     Create a <see cref="ColyseusRoom{T}" />
         /// </summary>
-        /// <param name="roomName">Name of the room</param>
+        /// <param name="roomName">Room identifier</param>
         /// <param name="options">Dictionary of options to pass to the room upon creation</param>
         /// <param name="headers">Dictionary of headers to pass to the server when we create the room</param>
         /// <returns><see cref="ColyseusRoom{T}" /> via async task</returns>
@@ -203,7 +190,7 @@ namespace Colyseus
         /// <summary>
         ///     Join a <see cref="ColyseusRoom{T}" />
         /// </summary>
-        /// <param name="roomName">Name of the room</param>
+        /// <param name="roomName">Room identifier</param>
         /// <param name="options">Dictionary of options to pass to the room upon joining</param>
         /// <param name="headers">Dictionary of headers to pass to the server when we join the room</param>
         /// <returns><see cref="ColyseusRoom{T}" /> via async task</returns>
@@ -244,31 +231,23 @@ namespace Colyseus
         /// <summary>
         ///     Get all available rooms
         /// </summary>
-        /// <param name="roomName">Name of the room</param>
+        /// <param name="roomName">Room identifier</param>
         /// <param name="headers">Dictionary of headers to pass to the server</param>
         /// <returns><see cref="ColyseusRoomAvailable" /> array via async task</returns>
-        public async Task<ColyseusRoomAvailable[]> GetAvailableRooms(string roomName = "",
-            Dictionary<string, string> headers = null)
+        public async Task<ColyseusRoomAvailable[]> GetAvailableRooms(string roomName = "")
         {
-            return await GetAvailableRooms<ColyseusRoomAvailable>(roomName, headers);
+            return await GetAvailableRooms<ColyseusRoomAvailable>(roomName);
         }
 
         /// <summary>
-        ///     Get all available rooms of type <typeparamref name="T" />
+        ///     Get all available rooms with provided custom type <typeparamref name="T" />
         /// </summary>
         /// <param name="roomName">Name of the room</param>
-        /// <param name="headers">Dictionary of headers to pass to the server</param>
         /// <returns><see cref="CSACSARoomAvailableCollection{T}" /> array via async task</returns>
-        public async Task<T[]> GetAvailableRooms<T>(string roomName = "", Dictionary<string, string> headers = null)
+        public async Task<T[]> GetAvailableRooms<T>(string roomName = "")
         {
-            if (headers == null)
-            {
-                headers = new Dictionary<string, string>();
-            }
+            string json = await Http.Request("GET", $"matchmake/{roomName}");
 
-            string json =
-                await colyseusRequest.Request("GET", $"matchmake/{roomName}", null,
-                    headers); //req.downloadHandler.text;
             if (json.StartsWith("[", StringComparison.CurrentCulture))
             {
                 json = "{\"rooms\":" + json + "}";
@@ -364,8 +343,6 @@ namespace Colyseus
             targetRoom.OnError += OnError;
             targetRoom.OnJoin += OnJoin;
 
-            onAddRoom?.Invoke(targetRoom);
-
 #pragma warning disable 4014
             targetRoom.Connect();
 #pragma warning restore 4014
@@ -377,7 +354,7 @@ namespace Colyseus
         ///     Create a match making request
         /// </summary>
         /// <param name="method">The type of request we're making (join, create, etc)</param>
-        /// <param name="roomName">The name of the room we're trying to match</param>
+        /// <param name="roomName">Room identifierroom we're trying to match</param>
         /// <param name="options">Dictionary of options to use in the match making process</param>
         /// <param name="headers">Dictionary of headers to pass to the server</param>
         /// <typeparam name="T">Type of <see cref="ColyseusRoom{T}" /> we want to match with</typeparam>
@@ -397,9 +374,9 @@ namespace Colyseus
                 headers = new Dictionary<string, string>();
             }
 
-            string json = await colyseusRequest.Request("POST", $"matchmake/{method}/{roomName}", options, headers);
+            string json = await Http.Request("POST", $"matchmake/{method}/{roomName}", options, headers);
             //Debug.Log($"Server Response: {json}");
-
+                
             ColyseusMatchMakeResponse response = JsonUtility.FromJson<ColyseusMatchMakeResponse>(json);
             if (response == null)
             {

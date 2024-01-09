@@ -58,7 +58,7 @@ namespace Colyseus
         /// <summary>
         /// Convert the user-defined <see cref="_requestHeaders"/> into a dictionary to be used in a <see cref="UnityEngine.Networking.UnityWebRequest"/>
         /// </summary>
-        public Dictionary<string, string> HeadersDictionary
+        public Dictionary<string, string> Headers
         {
             get
             {
@@ -118,7 +118,7 @@ namespace Colyseus
         {
 	        UriBuilder webRequestEndpointBuilder = new UriBuilder(GetBaseEndpoint(GetWebRequestEndpointScheme()));
 
-	        webRequestEndpointBuilder.Port = DetermineServerPort();
+	        webRequestEndpointBuilder.Port = GetPort();
 
 	        return webRequestEndpointBuilder.ToString();
         }
@@ -127,7 +127,7 @@ namespace Colyseus
         {
 	        UriBuilder webSocketEndpointBuilder = new UriBuilder(GetBaseEndpoint(GetWebSocketEndpointScheme()));
 
-	        webSocketEndpointBuilder.Port = DetermineServerPort();
+	        webSocketEndpointBuilder.Port = GetPort();
 
 	        return webSocketEndpointBuilder.ToString();
         }
@@ -137,17 +137,17 @@ namespace Colyseus
 	        return $"{scheme}://{colyseusServerAddress}";
         }
 
-        private string GetWebSocketEndpointScheme()
+        public string GetWebSocketEndpointScheme()
         {
 	        return (useSecureProtocol ? "wss" : "ws");
         }
 
-        private string GetWebRequestEndpointScheme()
+        public string GetWebRequestEndpointScheme()
         {
 	        return (useSecureProtocol ? "https" : "http");
         }
 
-        public int DetermineServerPort()
+        public int GetPort()
         {
 	        if (ShouldIncludeServerPort() && int.TryParse(colyseusServerPort, out int serverPort))
 	        {
