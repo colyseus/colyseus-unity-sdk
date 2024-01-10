@@ -3,235 +3,252 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using GameDevWare.Serialization;
-using System.Reflection;
 
 namespace Colyseus
 {
-    public interface IAuthData
+	public interface IAuthData
 	{
-        string GetToken();
-        object GetUser();
-        Type GetUserType();
-    }
+		string Token { get; }
+		IndexedDictionary<string, object> RawUser { get; set; }
+		Type UserType { get; }
+	}
 
-    [Serializable]
-    public class AuthData<T> : IAuthData
+	[Serializable]
+	public class AuthData<T> : IAuthData
 	{
-        public string token;
-        public T user;
+		public string token;
+		public T user;
 
-        public string GetToken()
-		{
-            return token;
-		}
+		private IndexedDictionary<string, object> rawUser;
 
-        public object GetUser()
+		public AuthData() { }
+		public AuthData(string _token, IndexedDictionary<string, object> userData)
 		{
-            return GetUser<object>();
-		}
+			token = _token;
+			rawUser = userData;
 
-		public T1 GetUser<T1>()
-		{
-            if (user is T1)
-            {
-                return (T1)(object)user;
-            }
-            else if (user is IndexedDictionary<string, object> userDict)
+			if (typeof(T) == typeof(IndexedDictionary<string, object>))
 			{
-                Type targetType = typeof(T1);
-				T1 instance = (T1)Activator.CreateInstance(targetType);
-
-                for (var i = 0; i < userDict.Keys.Count; i++)
-                {
-                    var field = targetType.GetField(userDict.Keys[i]);
-                    if (field != null)
-					{
-                        try
-						{
-                            field.SetValue(instance, Convert.ChangeType(userDict.Values[i], field.FieldType));
-                        } catch (Exception e)
-						{
-                            Debug.LogWarning("Colyseus.Auth: cannot convert " + targetType.ToString() + " property '" + field.Name + "' from " + userDict.Values[i].GetType() + " to " + field.FieldType + " (" + e.Message + ")");
-						}
-                    }
-                }
-				return instance;
+				user = (T)(object)rawUser;
 			}
 			else
 			{
-				throw new InvalidCastException($"Cannot convert '{typeof(T1)}' from '{user.GetType()}'");
+				Type targetType = typeof(T);
+				T instance = (T)Activator.CreateInstance(targetType);
+
+				for (var i = 0; i < rawUser.Keys.Count; i++)
+				{
+					var field = targetType.GetField(rawUser.Keys[i]);
+					if (field != null)
+					{
+						try
+						{
+							field.SetValue(instance, Convert.ChangeType(rawUser.Values[i], field.FieldType));
+						}
+						catch (Exception e)
+						{
+							Debug.LogWarning("Colyseus.Auth: cannot convert " + targetType.ToString() + " property '" + field.Name + "' from " + rawUser.Values[i].GetType() + " to " + field.FieldType + " (" + e.Message + ")");
+						}
+					}
+				}
+
+				user = instance;
 			}
 		}
 
-        public Type GetUserType()
-        {
-            return typeof(T);
-        }
-    }
-
-	public delegate void OnAuthDataChange(IAuthData authData);
-
-    /// <summary>
-    ///     Colyseus.Auth
-    /// </summary>
-    /// <remarks>
-    ///     Colyseus Authentication Module Tools.
-	///     See https://docs.colyseus.io/authentication/module/
-    /// </remarks>
-    public class Auth
-    {
-        public static string PATH = "auth";
-        public static string TOKEN_CACHE_KEY = "AuthToken";
-        
-        private ColyseusClient _client;
-        private List<IColyseusMessageHandler> OnChangeHandlers;
-
-        public Auth(ColyseusClient client)
-        {
-            _client = client;
-        }
-
-        public Action OnChange<T>(Action<T> callback)
+		public string Token
 		{
-            var handler = new ColyseusMessageHandler<T> { Action = callback };
-
-            OnChangeHandlers.Add(handler);
-
-            return () => OnChangeHandlers.Remove(handler);
+			get => token;
 		}
 
-        public async Task<AuthData<T>> RegisterWithEmailAndPassword<T>(string email, string password, Dictionary<string, object> options = null)
-        {
-            var response = ConvertAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/register", new Dictionary<string, object>
-            {
-                { "email", email },
-                { "password", password },
-                { "options", options },
-            }));
+		public IndexedDictionary<string, object> RawUser
+		{
+			get
+			{
+				// TODO: refactor here...
+				if (rawUser == null && typeof(T) == typeof(IndexedDictionary<string, object>))
+				{
+					rawUser = (IndexedDictionary<string, object>)(object)user;
+				}
+				return rawUser;
+			}
+			set => rawUser = value;
+		}
+
+		public Type UserType
+		{
+			get => typeof(T);
+		}
+	}
+
+	public interface IAuthChangeHandler
+	{
+		Type Type { get; }
+		Type UserType { get; set; }
+		void Invoke(object message);
+	}
+
+	public class AuthChangeHandler<T> : IAuthChangeHandler
+	{
+		private Type userType;
+		public Action<T> Action;
+		public void Invoke(object authData) { Action.Invoke((T)authData); }
+		public Type Type { get => typeof(T); }
+		public Type UserType { get => userType; set => userType = value; }
+	}
+
+	/// <summary>
+	///     Colyseus.Auth
+	/// </summary>
+	/// <remarks>
+	///     Colyseus Authentication Module Tools.
+	///     See https://docs.colyseus.io/authentication/module/
+	/// </remarks>
+	public class Auth
+	{
+		public static string PATH = "auth";
+		public static string TOKEN_CACHE_KEY = "AuthToken";
+
+		private ColyseusClient _client;
+		private List<IAuthChangeHandler> OnChangeHandlers = new List<IAuthChangeHandler>();
+
+		public Auth(ColyseusClient client)
+		{
+			_client = client;
+		}
+
+		public Action OnChange<T>(Action<AuthData<T>> callback)
+		{
+			var handler = new AuthChangeHandler<AuthData<T>>
+			{
+				Action = callback,
+				UserType = typeof(T)
+			};
+
+			OnChangeHandlers.Add(handler);
+
+			return () => OnChangeHandlers.Remove(handler);
+		}
+
+		public async Task<AuthData<T>> RegisterWithEmailAndPassword<T>(string email, string password, Dictionary<string, object> options = null)
+		{
+			var response = getAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/register", new Dictionary<string, object>
+			{
+				{ "email", email },
+				{ "password", password },
+				{ "options", options },
+			}));
 
 			emitChange(response);
 
-            return response;
-        }
-
-        public async Task<IAuthData> RegisterWithEmailAndPassword(string email, string password, Dictionary<string, object> options = null)
-		{
-            return await RegisterWithEmailAndPassword<IndexedDictionary<string, object>>(email, password, options);
+			return response;
 		}
 
-        public async Task<AuthData<T>> SignInWithEmailAndPassword<T>(string email, string password)
-        {
-            var response = ConvertAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/login", new Dictionary<string, object>
-            {
-                { "email", email },
-                { "password", password },
-            }));
-
-            emitChange(response);
-
-            return response;
-        }
-
-        public async Task<IAuthData> SignInWithEmailAndPassword(string email, string password)
+		public async Task<IAuthData> RegisterWithEmailAndPassword(string email, string password, Dictionary<string, object> options = null)
 		{
-            return await SignInWithEmailAndPassword<IndexedDictionary<string, object>>(email, password);
+			return await RegisterWithEmailAndPassword<IndexedDictionary<string, object>>(email, password, options);
 		}
 
-        public async Task<AuthData<T>> SignInAnonymously<T>(Dictionary<string, object> options = null)
-        {
-            var response = ConvertAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/anonymous", options));
-
-             emitChange(response);
-
-            return response;
-        }
-
-        public async Task<IAuthData> SignInAnonymously(Dictionary<string, object> options = null)
+		public async Task<AuthData<T>> SignInWithEmailAndPassword<T>(string email, string password)
 		{
-            return await SignInAnonymously<IndexedDictionary<string, object>>(options); 
-		}
-
-        public async Task<AuthData<T>> SignInWithProvider<T>(string providerName, Dictionary<string, object> settings = null)
-        {
-            await Task.Run(() => {/* Satisfy the compiler async/await. This method is not implemented yet. */});
-
-            //
-            // Implementation reference: https://github.com/colyseus/colyseus.js/blob/1f2208d4ff49e858a737e4e7d1581148de196cce/src/Auth.ts#L112C26-L161
-            // 
-            throw new Exception("Not implemented. See implementation reference on JavaScript SDK");
-        }
-        public async Task<IAuthData> SignInWithProvider(string providerName, Dictionary<string, object> settings = null)
-		{
-            return await SignInWithProvider<IndexedDictionary<string, object>>(providerName, settings);
-		}
-
-        public async Task<string> SendResetPasswordEmail(string email, string password)
-        {
-            return await _client.Http.Request("POST", $"{PATH}/login", new Dictionary<string, object>
-            {
-                { "email", email },
-                { "password", password },
-            });
-        }
-
-        public void SignOut()
-        {
-            emitChange(new AuthData<object> { token = null, user = null, });
-		}
-
-        private void emitChange(IAuthData authData)
-		{
-            _client.Http.AuthToken = authData.GetToken();
-
-            if (!string.IsNullOrEmpty(_client.Http.AuthToken))
+			var response = getAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/login", new Dictionary<string, object>
 			{
-                PlayerPrefs.SetString(TOKEN_CACHE_KEY, authData.GetToken());
-            } else
-			{
-                PlayerPrefs.DeleteKey(TOKEN_CACHE_KEY);
-            }
+				{ "email", email },
+				{ "password", password },
+			}));
 
-            OnChangeHandlers.ForEach((handler) =>
-            {
-                handler.Invoke(authData);
-            });
+			emitChange(response);
+
+			return response;
 		}
 
-        private AuthData<T> ConvertAuthData<T>(AuthData<IndexedDictionary<string, object>> authData)
+		public async Task<IAuthData> SignInWithEmailAndPassword(string email, string password)
 		{
-            if (authData is AuthData<T>)
+			return await SignInWithEmailAndPassword<IndexedDictionary<string, object>>(email, password);
+		}
+
+		public async Task<AuthData<T>> SignInAnonymously<T>(Dictionary<string, object> options = null)
+		{
+			var response = getAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/anonymous", options));
+
+			emitChange(response);
+
+			return response;
+		}
+
+		public async Task<IAuthData> SignInAnonymously(Dictionary<string, object> options = null)
+		{
+			return await SignInAnonymously<IndexedDictionary<string, object>>(options);
+		}
+
+		public async Task<AuthData<T>> SignInWithProvider<T>(string providerName, Dictionary<string, object> settings = null)
+		{
+			await Task.Run(() => {/* Satisfy the compiler async/await. This method is not implemented yet. */});
+
+			//
+			// Implementation reference: https://github.com/colyseus/colyseus.js/blob/1f2208d4ff49e858a737e4e7d1581148de196cce/src/Auth.ts#L112C26-L161
+			//
+			throw new Exception("Not implemented. See implementation reference on JavaScript SDK");
+		}
+		public async Task<IAuthData> SignInWithProvider(string providerName, Dictionary<string, object> settings = null)
+		{
+			return await SignInWithProvider<IndexedDictionary<string, object>>(providerName, settings);
+		}
+
+		public async Task<string> SendResetPasswordEmail(string email, string password)
+		{
+			return await _client.Http.Request("POST", $"{PATH}/login", new Dictionary<string, object>
 			{
-                return authData;
+				{ "email", email },
+				{ "password", password },
+			});
+		}
 
-			} else
+		public void SignOut()
+		{
+			emitChange(new AuthData<object> { token = null, user = null, });
+		}
+
+		private void emitChange(IAuthData authData)
+		{
+			_client.Http.AuthToken = authData.Token;
+
+			if (!string.IsNullOrEmpty(_client.Http.AuthToken))
 			{
-                var user = authData.user;
-                Type targetType = typeof(T);
-                T instance = (T)Activator.CreateInstance(targetType);
+				PlayerPrefs.SetString(TOKEN_CACHE_KEY, authData.Token);
+			}
+			else
+			{
+				PlayerPrefs.DeleteKey(TOKEN_CACHE_KEY);
+			}
 
-                for (var i = 0; i < user.Keys.Count; i++)
-                {
-                    var field = targetType.GetField(user.Keys[i]);
-                    if (field != null)
-                    {
-                        try
-                        {
-                            field.SetValue(instance, Convert.ChangeType(user.Values[i], field.FieldType));
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogWarning("Colyseus.Auth: cannot convert " + targetType.ToString() + " property '" + field.Name + "' from " + user.Values[i].GetType() + " to " + field.FieldType + " (" + e.Message + ")");
-                        }
-                    }
-                }
-                return new AuthData<T>
-                {
-                    user = instance,
-                    token = authData.token,
-                };
-            }
-        }
+			OnChangeHandlers.ForEach((handler) =>
+			{
+				if (authData.GetType() == handler.Type)
+				{
+					handler.Invoke(authData);
+				}
+				else if (authData.UserType == typeof(IndexedDictionary<string, object>))
+				{
+					// convert AuthData<handler.UserType>
+					object instance = Activator.CreateInstance(handler.Type, authData.Token, authData.RawUser);
+					handler.Invoke(instance);
+				}
+			});
+		}
 
-    }
+		private AuthData<T> getAuthData<T>(AuthData<IndexedDictionary<string, object>> authData)
+		{
+			if (typeof(T) == typeof(IndexedDictionary<string, object>))
+			{
+				return (AuthData<T>)(object)authData;
+			}
+			else
+			{
+				return new AuthData<T>(authData.token, authData.RawUser);
+			}
+		}
+
+	}
 }
 

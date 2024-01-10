@@ -33,32 +33,41 @@ public class AuthTest
 	public async Task RegisterWithEmailAndPassword()
 	{
 		var uniqueEmail = $"endel{Time.time.ToString().Replace(".", "")}@colyseus.io";
-		string token = "OnChange was not called";
+
+		string tokenFromCallback = "OnChange was not called";
+		string emailFromCallback = "";
+		string nameFromCallback = "";
 
 		client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
 		{
-			token = authData.token;
+			tokenFromCallback = authData.token;
 			if (authData.user != null)
 			{
-				Debug.Log("email => " + authData.user.email);
-				Debug.Log("name => " + authData.user.name);
+				emailFromCallback = authData.user.email;
+				nameFromCallback = authData.user.name;
 			}
 		});
 
 		//
 		// Registering for the first time
 		//
-		var responseToken = "";
+		Colyseus.IAuthData response = null;
 		try
 		{
-			var registerResponse = await client.Auth.RegisterWithEmailAndPassword(uniqueEmail, "123456");
-			responseToken = registerResponse.GetToken();
+			response = await client.Auth.RegisterWithEmailAndPassword(uniqueEmail, "123456");
 		} catch (Colyseus.HttpException e)
 		{
 			Assert.Fail(e.Message + $"({e.StatusCode})");
 		}
-		Assert.True(responseToken.Length > 0);
-		Assert.AreEqual(responseToken, token);
+		Assert.True(response.Token.Length > 0);
+		Assert.AreEqual(response.Token, tokenFromCallback);
+
+		object responseEmail = "";
+		object responseName = "";
+		response.RawUser.TryGetValue("email", out responseEmail);
+		response.RawUser.TryGetValue("name", out responseName);
+		Assert.AreEqual(responseEmail, emailFromCallback);
+		Assert.AreEqual(responseName, nameFromCallback);
 
 		//
 		// Trying to register a second time
@@ -85,8 +94,6 @@ public class AuthTest
 
 		var loginResponse = await client.Auth.SignInWithEmailAndPassword<User>(uniqueEmail, "123456");
 		Assert.AreEqual(loginResponse.user.email, uniqueEmail);
-		Debug.Log(loginResponse.user.name);
-		Debug.Log(uniqueEmail.Split("@")[0]);
 		Assert.AreEqual(loginResponse.user.name, uniqueEmail.Split("@")[0]);
 	}
 
