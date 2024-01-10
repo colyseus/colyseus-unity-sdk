@@ -128,7 +128,7 @@ namespace Colyseus
         ///     Initializes a new instance of the <see cref="ColyseusRoom{T}" /> class.
         ///     It synchronizes state automatically with the server and send and receive messaes.
         /// </summary>
-        /// <param name="name">The name of the room</param>
+        /// <param name="name">The Room identifier</param>
         public ColyseusRoom(string name)
         {
             Name = name;

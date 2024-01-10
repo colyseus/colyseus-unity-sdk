@@ -16,4 +16,18 @@ namespace Colyseus
 			Code = code;
 		}
 	}
+
+	public class HttpException : Exception
+	{
+		/// <summary>
+		/// The error code the server returned
+		/// </summary>
+		public int StatusCode;
+
+		public HttpException(int statusCode, string message) : base(message)
+		{
+			StatusCode = statusCode;
+		}
+	}
+
 }
