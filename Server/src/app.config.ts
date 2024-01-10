@@ -10,6 +10,7 @@ import { monitor } from "@colyseus/monitor";
  * Import your Room files
  */
 import { MyRoom } from "./rooms/MyRoom";
+import auth from "./config/auth";
 
 export default config({
     getId: () => "Your Colyseus App",
@@ -44,6 +45,9 @@ export default config({
          * Read more: https://docs.colyseus.io/tools/monitor/
          */
         app.use("/colyseus", monitor());
+
+        // Bind auth routes
+        app.use(auth.prefix, auth.routes());
     },
 
 
