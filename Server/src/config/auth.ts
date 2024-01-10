@@ -20,4 +20,12 @@ auth.settings.onRegisterWithEmailAndPassword = async (email, password) => {
   return user;
 };
 
+auth.settings.onRegisterAnonymously = async (options) => {
+  return {
+    anonymousId: Math.round(Math.random() * 1000),
+    anonymous: true,
+    ...options
+  };
+};
+
 export default auth;

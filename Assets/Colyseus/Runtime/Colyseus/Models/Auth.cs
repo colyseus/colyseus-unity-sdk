@@ -31,7 +31,7 @@ namespace Colyseus
 			{
 				user = (T)(object)rawUser;
 			}
-			else
+			else if (userData != null)
 			{
 				Type targetType = typeof(T);
 				T instance = (T)Activator.CreateInstance(targetType);
@@ -85,7 +85,7 @@ namespace Colyseus
 	{
 		Type Type { get; }
 		Type UserType { get; set; }
-		void Invoke(object message);
+		void Invoke(object authData);
 	}
 
 	public class AuthChangeHandler<T> : IAuthChangeHandler
@@ -232,6 +232,11 @@ namespace Colyseus
 				{
 					// convert AuthData<handler.UserType>
 					object instance = Activator.CreateInstance(handler.Type, authData.Token, authData.RawUser);
+					handler.Invoke(instance);
+				}
+				else if (authData.RawUser == null)
+				{
+					object instance = Activator.CreateInstance(handler.Type, authData.Token, null);
 					handler.Invoke(instance);
 				}
 			});

@@ -97,4 +97,76 @@ public class AuthTest
 		Assert.AreEqual(loginResponse.user.name, uniqueEmail.Split("@")[0]);
 	}
 
+	[Test]
+	public async Task SignInAnonymously()
+	{
+		string tokenFromCallback = "OnChange was not called";
+		bool anonymousFromCallback = false;
+		int anonymousIdFromCallback = 0;
+
+		client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
+		{
+			tokenFromCallback = authData.token;
+			if (authData.user != null)
+			{
+				anonymousFromCallback = authData.user.anonymous;
+				anonymousIdFromCallback = authData.user.anonymousId;
+			}
+		});
+
+		//
+		// Registering for the first time
+		//
+		Colyseus.IAuthData response = null;
+		try
+		{
+			response = await client.Auth.SignInAnonymously();
+		}
+		catch (Colyseus.HttpException e)
+		{
+			Assert.Fail(e.Message + $"({e.StatusCode})");
+		}
+		Assert.True(response.Token.Length > 0);
+		Assert.AreEqual(response.Token, tokenFromCallback);
+
+		object responseAnonymous = false;
+		object responseAnonymousId = -1;
+		response.RawUser.TryGetValue("anonymous", out responseAnonymous);
+		response.RawUser.TryGetValue("anonymousId", out responseAnonymousId);
+		Assert.AreEqual(responseAnonymous, anonymousFromCallback);
+		Assert.AreEqual(responseAnonymousId, anonymousIdFromCallback);
+	}
+
+	[Test]
+	public async Task SignOut()
+	{
+		string tokenFromCallback = "OnChange was not called";
+		bool anonymousFromCallback = false;
+		int anonymousIdFromCallback = 0;
+		int onChangeCallCount = 0;
+		int onChangeCallWithNullUser = 0;
+
+		client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
+		{
+			onChangeCallCount++;
+			tokenFromCallback = authData.token;
+			if (authData.user != null)
+			{
+				anonymousFromCallback = authData.user.anonymous;
+				anonymousIdFromCallback = authData.user.anonymousId;
+			}
+			else
+			{
+				onChangeCallWithNullUser++;
+			}
+		});
+
+		await client.Auth.SignInAnonymously();
+		Assert.AreEqual(1, onChangeCallCount);
+
+		client.Auth.SignOut();
+		Assert.AreEqual(2, onChangeCallCount);
+		Assert.AreEqual(1, onChangeCallWithNullUser);
+	}
+
 }
