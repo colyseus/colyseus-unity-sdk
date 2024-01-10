@@ -115,6 +115,13 @@ namespace Colyseus
 		public Auth(ColyseusClient client)
 		{
 			_client = client;
+			Token = PlayerPrefs.GetString(TOKEN_CACHE_KEY);
+		}
+
+		public string Token
+		{
+			get => _client.Http.AuthToken;
+			set => _client.Http.AuthToken = value;
 		}
 
 		public Action OnChange<T>(Action<AuthData<T>> callback)
@@ -211,9 +218,9 @@ namespace Colyseus
 
 		private void emitChange(IAuthData authData)
 		{
-			_client.Http.AuthToken = authData.Token;
+			Token = authData.Token;
 
-			if (!string.IsNullOrEmpty(_client.Http.AuthToken))
+			if (!string.IsNullOrEmpty(Token))
 			{
 				PlayerPrefs.SetString(TOKEN_CACHE_KEY, authData.Token);
 			}

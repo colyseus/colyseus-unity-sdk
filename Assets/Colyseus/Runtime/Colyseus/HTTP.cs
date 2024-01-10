@@ -19,7 +19,7 @@ namespace Colyseus
     /// </summary>
     public class HTTP
     {
-        public string AuthToken = PlayerPrefs.GetString(Auth.TOKEN_CACHE_KEY);
+        public string AuthToken;
 
         private ColyseusSettings _settings;
 

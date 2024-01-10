@@ -61,6 +61,7 @@ public class AuthTest
 		}
 		Assert.True(response.Token.Length > 0);
 		Assert.AreEqual(response.Token, tokenFromCallback);
+		Assert.AreEqual(tokenFromCallback, client.Auth.Token);
 
 		object responseEmail = "";
 		object responseName = "";
@@ -128,6 +129,7 @@ public class AuthTest
 		}
 		Assert.True(response.Token.Length > 0);
 		Assert.AreEqual(response.Token, tokenFromCallback);
+		Assert.AreEqual(tokenFromCallback, client.Auth.Token);
 
 		object responseAnonymous = false;
 		object responseAnonymousId = -1;
@@ -162,9 +164,11 @@ public class AuthTest
 		});
 
 		await client.Auth.SignInAnonymously();
+		Assert.AreEqual(tokenFromCallback, client.Auth.Token);
 		Assert.AreEqual(1, onChangeCallCount);
 
 		client.Auth.SignOut();
+		Assert.AreEqual(null, client.Auth.Token);
 		Assert.AreEqual(2, onChangeCallCount);
 		Assert.AreEqual(1, onChangeCallWithNullUser);
 	}
