@@ -15,11 +15,15 @@ public class AuthTest
 		public bool anonymous;
 	}
 
-	private Colyseus.ColyseusClient client = new Colyseus.ColyseusClient("http://localhost:2567");
+	private Colyseus.ColyseusClient client;
 
 	[SetUp]
 	public void Init()
 	{
+		// Initialize without a token on each test 
+		client = new Colyseus.ColyseusClient("http://localhost:2567");
+		client.Auth.Token = null;
+
 		// Make sure auth token is not cached
 		PlayerPrefs.DeleteAll();
 	}
@@ -27,6 +31,45 @@ public class AuthTest
 	[TearDown]
 	public void Dispose()
 	{
+	}
+
+	[Test]
+	public async Task GetUserData()
+	{
+		var uniqueEmail = $"endel{Time.time.ToString().Replace(".", "")}@colyseus.io";
+
+		string tokenFromCallback = "OnChange was not called";
+		string emailFromCallback = "";
+		string nameFromCallback = "";
+
+		_ = client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
+		{
+			tokenFromCallback = authData.token;
+			if (authData.user != null)
+			{
+				emailFromCallback = authData.user.email;
+				nameFromCallback = authData.user.name;
+			}
+		});
+
+		//
+		// Registering for the first time
+		//
+		Colyseus.IAuthData response = null;
+		try
+		{
+			response = await client.Auth.RegisterWithEmailAndPassword(uniqueEmail, "123456");
+		}
+		catch (Colyseus.HttpException e)
+		{
+			Assert.Fail(e.Message + $"({e.StatusCode})");
+		}
+
+		Assert.AreEqual(tokenFromCallback, client.Auth.Token);
+
+		var user = await client.Auth.GetUserData<User>();
+		Assert.AreEqual(user.email, emailFromCallback);
+		Assert.AreEqual(user.name, nameFromCallback);
 	}
 
 	[Test]
@@ -38,7 +81,7 @@ public class AuthTest
 		string emailFromCallback = "";
 		string nameFromCallback = "";
 
-		client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
+		_ = client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
 		{
 			tokenFromCallback = authData.token;
 			if (authData.user != null)
@@ -105,7 +148,7 @@ public class AuthTest
 		bool anonymousFromCallback = false;
 		int anonymousIdFromCallback = 0;
 
-		client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
+		_ = client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
 		{
 			tokenFromCallback = authData.token;
 			if (authData.user != null)
@@ -148,7 +191,7 @@ public class AuthTest
 		int onChangeCallCount = 0;
 		int onChangeCallWithNullUser = 0;
 
-		client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
+		_ = client.Auth.OnChange((Colyseus.AuthData<User> authData) =>
 		{
 			onChangeCallCount++;
 			tokenFromCallback = authData.token;
@@ -165,12 +208,13 @@ public class AuthTest
 
 		await client.Auth.SignInAnonymously();
 		Assert.AreEqual(tokenFromCallback, client.Auth.Token);
-		Assert.AreEqual(1, onChangeCallCount);
+		Assert.AreEqual(1, onChangeCallWithNullUser);
+		Assert.AreEqual(2, onChangeCallCount);
 
 		client.Auth.SignOut();
 		Assert.AreEqual(null, client.Auth.Token);
-		Assert.AreEqual(2, onChangeCallCount);
-		Assert.AreEqual(1, onChangeCallWithNullUser);
+		Assert.AreEqual(3, onChangeCallCount);
+		Assert.AreEqual(2, onChangeCallWithNullUser);
 	}
 
 }

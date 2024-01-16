@@ -63,7 +63,7 @@ jobs:
       run: mkdir Release
     - name: Generate Unity Package
       id: build-package
-      uses: pCYSl5EDgo/create-unitypackage@v1.1.1
+      uses: pCYSl5EDgo/create-unitypackage@v1.2.3
       with:
         package-path: 'Colyseus_Plugin.unitypackage'
         include-files: metaList

@@ -33,26 +33,7 @@ namespace Colyseus
 			}
 			else if (userData != null)
 			{
-				Type targetType = typeof(T);
-				T instance = (T)Activator.CreateInstance(targetType);
-
-				for (var i = 0; i < rawUser.Keys.Count; i++)
-				{
-					var field = targetType.GetField(rawUser.Keys[i]);
-					if (field != null)
-					{
-						try
-						{
-							field.SetValue(instance, Convert.ChangeType(rawUser.Values[i], field.FieldType));
-						}
-						catch (Exception e)
-						{
-							Debug.LogWarning("Colyseus.Auth: cannot convert " + targetType.ToString() + " property '" + field.Name + "' from " + rawUser.Values[i].GetType() + " to " + field.FieldType + " (" + e.Message + ")");
-						}
-					}
-				}
-
-				user = instance;
+				user = ConvertType(userData);
 			}
 		}
 
@@ -78,6 +59,29 @@ namespace Colyseus
 		public Type UserType
 		{
 			get => typeof(T);
+		}
+
+		public static T ConvertType(IndexedDictionary<string, object> rawUser)
+		{
+			Type targetType = typeof(T);
+			T instance = (T)Activator.CreateInstance(targetType);
+
+			for (var i = 0; i < rawUser.Keys.Count; i++)
+			{
+				var field = targetType.GetField(rawUser.Keys[i]);
+				if (field != null)
+				{
+					try
+					{
+						field.SetValue(instance, Convert.ChangeType(rawUser.Values[i], field.FieldType));
+					}
+					catch (Exception e)
+					{
+						Debug.LogWarning("Colyseus.Auth: cannot convert " + targetType.ToString() + " property '" + field.Name + "' from " + rawUser.Values[i].GetType() + " to " + field.FieldType + " (" + e.Message + ")");
+					}
+				}
+			}
+			return instance;
 		}
 	}
 
@@ -111,6 +115,7 @@ namespace Colyseus
 
 		private ColyseusClient _client;
 		private List<IAuthChangeHandler> OnChangeHandlers = new List<IAuthChangeHandler>();
+		private bool initialized = false;
 
 		public Auth(ColyseusClient client)
 		{
@@ -124,7 +129,7 @@ namespace Colyseus
 			set => _client.Http.AuthToken = value;
 		}
 
-		public Action OnChange<T>(Action<AuthData<T>> callback)
+		public async Task<Action> OnChange<T>(Action<AuthData<T>> callback)
 		{
 			var handler = new AuthChangeHandler<AuthData<T>>
 			{
@@ -134,7 +139,34 @@ namespace Colyseus
 
 			OnChangeHandlers.Add(handler);
 
+			if (!initialized)
+			{
+				initialized = true;
+				try
+				{
+					emitChange(new AuthData<T> {
+						token = Token,
+						user = await GetUserData<T>()
+					});
+				} catch (Exception _)
+				{
+					emitChange(new AuthData<object> { user = null, token = null });
+				}
+			}
+
 			return () => OnChangeHandlers.Remove(handler);
+		}
+
+		public async Task<T> GetUserData<T>()
+		{
+			if (string.IsNullOrEmpty(Token))
+			{
+				throw new Exception("missing Auth.Token");
+			}
+			else
+			{
+				return getAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("GET", $"{PATH}/userdata")).user;
+			}
 		}
 
 		public async Task<AuthData<T>> RegisterWithEmailAndPassword<T>(string email, string password, Dictionary<string, object> options = null)
@@ -213,7 +245,7 @@ namespace Colyseus
 
 		public void SignOut()
 		{
-			emitChange(new AuthData<object> { token = null, user = null, });
+			emitChange(new AuthData<object> { token = null, user = null});
 		}
 
 		private void emitChange(IAuthData authData)
@@ -245,6 +277,10 @@ namespace Colyseus
 				{
 					object instance = Activator.CreateInstance(handler.Type, authData.Token, null);
 					handler.Invoke(instance);
+				}
+				else
+				{
+					Debug.Log("Not triggering...");
 				}
 			});
 		}

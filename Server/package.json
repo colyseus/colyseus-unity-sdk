@@ -29,6 +29,7 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "@colyseus/auth": "^0.15.8",
     "@colyseus/core": "^0.15.0",
     "@colyseus/monitor": "^0.15.0",
     "@colyseus/redis-driver": "^0.15.0",
