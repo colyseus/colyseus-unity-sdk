@@ -2,6 +2,7 @@ import config from "@colyseus/tools";
 
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { monitor } from "@colyseus/monitor";
+import { playground } from "@colyseus/playground";
 
 // import { RedisDriver } from "@colyseus/redis-driver";
 // import { RedisPresence } from "@colyseus/redis-presence";
@@ -13,8 +14,6 @@ import { MyRoom } from "./rooms/MyRoom";
 import auth from "./config/auth";
 
 export default config({
-    getId: () => "Your Colyseus App",
-
     options: {
         // devMode: true,
         // driver: new RedisDriver(),
@@ -45,6 +44,9 @@ export default config({
          * Read more: https://docs.colyseus.io/tools/monitor/
          */
         app.use("/colyseus", monitor());
+
+        // Bind "playground"
+        app.use("/playground", playground);
 
         // Bind auth routes
         app.use(auth.prefix, auth.routes());

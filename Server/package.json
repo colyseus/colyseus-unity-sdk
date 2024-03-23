@@ -19,6 +19,7 @@
   "homepage": "https://github.com/colyseus/create-colyseus#readme",
   "devDependencies": {
     "@colyseus/loadtest": "^0.15.0",
+    "@colyseus/playground": "^0.15.0",
     "@colyseus/testing": "^0.15.0",
     "@types/cors": "^2.8.6",
     "@types/express": "^4.17.1",
