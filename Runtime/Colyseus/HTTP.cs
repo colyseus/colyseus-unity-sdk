@@ -143,7 +143,7 @@ namespace Colyseus
                                 throw new HttpException((int)req.responseCode, errorMessage);
                             }
 						}
-                        
+
                         throw new HttpException((int)req.responseCode, errorMessage);
                     }
                 }
@@ -154,7 +154,7 @@ namespace Colyseus
 
         public string GetRequestURL(string pathWithQueryString)
         {
-            var splittedPath = pathWithQueryString.Split("?");
+            var splittedPath = pathWithQueryString.Split('?');
             var path = splittedPath[0];
             var query = (splittedPath.Length > 1) ? splittedPath[1] : "";
 
