@@ -29,7 +29,7 @@ public class NetworkManager : MonoBehaviour
         get
         {
             // Initialize Colyseus client, if the client has not been initiated yet or input values from the Menu have been changed.
-            if (_client == null || !_client.Endpoint.Uri.ToString().Contains(_menuManager.HostAddress))
+            if (_client == null || !_client.Settings.WebRequestEndpoint.Contains(_menuManager.HostAddress))
             {
                 Initialize();
             }
