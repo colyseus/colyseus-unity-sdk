@@ -21,6 +21,14 @@
 
 ## Colyseus SDK Development
 
+Support major platforms, including:
+
+- WebGL
+- iOS
+- Android
+- Mac
+- Windows
+
 ### Unit tests
 
 Open Window → General → Test Runner.
