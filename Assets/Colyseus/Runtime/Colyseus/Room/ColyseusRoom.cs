@@ -503,7 +503,7 @@ namespace Colyseus
             {
                 Patch(bytes, 1);
             }
-            else if (code == ColyseusProtocol.ROOM_DATA)
+            else if (code == ColyseusProtocol.ROOM_DATA || ColyseusProtocol.ROOM_DATA_BYTES)
             {
                 IColyseusMessageHandler handler = null;
                 object type;
@@ -523,14 +523,24 @@ namespace Colyseus
 
                 if (handler != null)
                 {
-                    //
-                    // MsgPack deserialization can be optimized:
-                    // https://github.com/deniszykov/msgpack-unity3d/issues/23
-                    //
-                    object message = bytes.Length > it.Offset
-                        ? MsgPack.Deserialize(handler.Type,
-                            new MemoryStream(bytes, it.Offset, bytes.Length - it.Offset, false))
-                        : null;
+                    object message = null;
+
+                    if ( code == ColyseusProtocol.ROOM_DATA )
+                    {
+                        //
+                        // MsgPack deserialization can be optimized:
+                        // https://github.com/deniszykov/msgpack-unity3d/issues/23
+                        //
+                        message = bytes.Length > it.Offset
+                            ? MsgPack.Deserialize(handler.Type,
+                                new MemoryStream(bytes, it.Offset, bytes.Length - it.Offset, false))
+                            : null;
+                    }
+                    else if ( code == ColyseusProtocol.ROOM_DATA_BYTES )
+                    {
+                        message = new byte[bytes.Length - it.Offset];
+                        Buffer.BlockCopy(bytes, it.Offset, (byte[])message, 0, bytes.Length - it.Offset);
+                    }
 
                     handler.Invoke(message);
                 }
