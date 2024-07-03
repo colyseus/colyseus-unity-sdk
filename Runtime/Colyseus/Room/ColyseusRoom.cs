@@ -503,7 +503,7 @@ namespace Colyseus
             {
                 Patch(bytes, 1);
             }
-            else if (code == ColyseusProtocol.ROOM_DATA || ColyseusProtocol.ROOM_DATA_BYTES)
+            else if (code == ColyseusProtocol.ROOM_DATA || code == ColyseusProtocol.ROOM_DATA_BYTES)
             {
                 IColyseusMessageHandler handler = null;
                 object type;
