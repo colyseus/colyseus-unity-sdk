@@ -129,6 +129,7 @@ namespace Colyseus.Schema
             ArraySchema<T> clone = new ArraySchema<T>(items)
             {
                 __callbacks = __callbacks,
+                indexes = indexes
             };
             return clone;
         }
