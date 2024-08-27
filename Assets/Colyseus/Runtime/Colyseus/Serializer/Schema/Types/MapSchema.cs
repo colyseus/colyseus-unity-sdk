@@ -146,6 +146,7 @@ namespace Colyseus.Schema
             MapSchema<T> clone = new MapSchema<T>(items)
             {
                 __callbacks = __callbacks,
+                Indexes = Indexes
             };
             return clone;
         }
