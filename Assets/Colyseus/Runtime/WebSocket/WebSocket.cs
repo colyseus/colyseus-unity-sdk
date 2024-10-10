@@ -496,12 +496,12 @@ namespace NativeWebSocket
                 finally
                 {
                     Monitor.Exit(m_Socket);
-                }
 
-                // Note that we've finished sending.
-                lock (OutgoingMessageLock)
-                {
-                    isSending = false;
+					// Note that we've finished sending.
+					lock (OutgoingMessageLock)
+					{
+						isSending = false;
+					}
                 }
 
                 // Handle any queued messages.
