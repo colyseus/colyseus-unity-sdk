@@ -9,53 +9,40 @@ namespace Colyseus
     ///     An instance of ISerializer specifically for <see cref="Schema" /> based serialization
     /// </summary>
     /// <typeparam name="T">A child of <see cref="Schema" /></typeparam>
-    public class ColyseusSchemaSerializer<T> : IColyseusSerializer<T>
+    public class ColyseusSchemaSerializer<T> : IColyseusSerializer<T> where T: Schema.Schema
     {
         /// <summary>
         ///     A reference to the <see cref="Iterator" />
         /// </summary>
-        protected Iterator it = new Iterator();
+        protected Iterator It = new Iterator();
 
-        /// <summary>
-        ///     Used for tracking all references
-        /// </summary>
-        protected ColyseusReferenceTracker refs = new ColyseusReferenceTracker();
-
-        /// <summary>
-        ///     The current state of this Serializer
-        /// </summary>
-        protected T state;
-
-        public ColyseusSchemaSerializer()
-        {
-            state = Activator.CreateInstance<T>();
-        }
+        protected Decoder<T> Decoder = new Decoder<T>();
 
         /// <inheritdoc />
         public void SetState(byte[] data, int offset = 0)
         {
-            it.Offset = offset;
-            (state as Schema.Schema)?.Decode(data, it, refs);
+            It.Offset = offset;
+            Decoder.Decode(data, It);
         }
 
         /// <inheritdoc />
         public T GetState()
         {
-            return state;
+            return Decoder.State;
         }
 
         /// <inheritdoc />
         public void Patch(byte[] data, int offset = 0)
         {
-            it.Offset = offset;
-            (state as Schema.Schema)?.Decode(data, it, refs);
+            It.Offset = offset;
+            Decoder.Decode(data, It);
         }
 
         /// <inheritdoc />
         public void Teardown()
         {
             // Clear all stored references.
-            refs.Clear();
+            Decoder.Teardown();
         }
 
         /// <inheritdoc />
@@ -68,10 +55,12 @@ namespace Colyseus
                                                                               typeof(Schema.Schema).IsAssignableFrom(
                                                                                   targetType));
 
-            ColyseusReflection reflection = new ColyseusReflection();
-            Iterator it = new Iterator {Offset = offset};
+            Iterator it = new Iterator { Offset = offset };
 
-            reflection.Decode(bytes, it);
+            var reflectionDecoder = new Decoder<ColyseusReflection>();
+            reflectionDecoder.Decode(bytes, it);
+
+            var reflection = reflectionDecoder.State;
 
             for (int i = 0; i < reflection.types.Count; i++)
             {
@@ -79,7 +68,7 @@ namespace Colyseus
 
                 if (schemaType != null)
                 {
-                    ColyseusContext.GetInstance().SetTypeId(schemaType, reflection.types[i].id);   
+                    Decoder.Context.SetTypeId(schemaType, reflection.types[i].id);   
                 } 
                 else 
                 {

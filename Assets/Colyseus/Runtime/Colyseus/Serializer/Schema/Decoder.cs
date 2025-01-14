@@ -1,398 +1,450 @@
 using System;
-using System.Text;
-using MiscUtil.Conversion;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 
 namespace Colyseus.Schema
 {
-    /// <summary>
-    ///     Utility class for decoding values from the server
-    /// </summary>
-    public class ColyseusDecoder
+    public delegate void TriggerChangesDelegate(ref List<DataChange> changes);
+
+    public class Decoder<T> where T : Schema
     {
-        /// <summary>
-        ///     The bit converter used to decode data
-        /// </summary>
-        public static LittleEndianBitConverter bitConverter = new LittleEndianBitConverter();
+        public ColyseusReferenceTracker Refs = new ColyseusReferenceTracker();
+        public TypeContext Context = new TypeContext();
+        public T State;
+        public TriggerChangesDelegate TriggerChanges;
 
-        /// <summary>
-        ///     Singleton instance
-        /// </summary>
-        protected static ColyseusDecoder Instance = new ColyseusDecoder();
-
-        /// <summary>
-        ///     Getter function for the singleton <see cref="Instance" />
-        /// </summary>
-        /// <returns>The singleton <see cref="Instance" /></returns>
-        public static ColyseusDecoder GetInstance()
-        {
-            return Instance;
+        public Decoder()
+		{
+            State = Activator.CreateInstance<T>();
+            TriggerChanges = _TriggerChanges;
         }
 
         /// <summary>
-        ///     Decodes incoming data into an <see cref="object" /> based off of the <paramref name="type" /> provided
+        ///     Decode incoming data
         /// </summary>
-        /// <param name="type">What type of <see cref="object" /> we expect this data to be.
-        ///     <para>Will determine the Decode method used</para>
+        /// <param name="bytes">The incoming data</param>
+        /// <param name="it"><see cref="Iterator" /> used to  If null, will create a new one</param>
+        /// <param name="refs">
+        ///     <see cref="ColyseusReferenceTracker" /> for all refs found through the decoding process. If null, will
+        ///     create a new one
         /// </param>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns>A decoded <see cref="object" /> that has been decoded with a <paramref name="type" /> specified method</returns>
-        public object DecodePrimitiveType(string type, byte[] bytes, Iterator it)
+        /// <exception cref="Exception">If no decoding fails</exception>
+        public void Decode(byte[] bytes, Iterator it = null)
         {
-            if (type == "string")
+            if (it == null)
             {
-                return DecodeString(bytes, it);
+                it = new Iterator();
             }
 
-            if (type == "number")
+            if (Refs == null)
             {
-                return DecodeNumber(bytes, it);
+                Refs = new ColyseusReferenceTracker();
             }
 
-            if (type == "int8")
+            int totalBytes = bytes.Length;
+
+            int refId = 0;
+            IRef _ref = State;
+
+            Refs.Add(refId, _ref);
+
+            List<DataChange> allChanges = new List<DataChange>();
+
+            while (it.Offset < totalBytes)
             {
-                return DecodeInt8(bytes, it);
+                byte _byte = bytes[it.Offset++];
+
+                if (_byte == (byte)SPEC.SWITCH_TO_STRUCTURE)
+                {
+                    refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+                    _ref = Refs.Get(refId);
+
+                    //
+                    // Trying to access a reference that haven't been decoded yet.
+                    //
+                    if (_ref == null)
+                    {
+                        throw new Exception("refId not found: " + refId);
+                    }
+
+                    // create empty list of changes for this refId.
+                    //allChanges = new List<DataChange>();
+                    //allChanges[(object) refId] = allChanges;
+
+                    continue;
+                }
+
+                bool isSchema = _ref is Schema;
+
+                byte operation = (byte)(isSchema
+                    ? (_byte >> 6) << 6 // "compressed" index + operation
+                    : _byte); // "uncompressed" index + operation (array/map items)
+
+                if (operation == (byte)OPERATION.CLEAR)
+                {
+                    ((ISchemaCollection)_ref).Clear(ref allChanges, ref Refs);
+                    continue;
+                }
+
+                int fieldIndex;
+                string fieldName = null;
+                string fieldType = null;
+
+                System.Type childType = null;
+
+                if (isSchema)
+                {
+                    fieldIndex = _byte % (operation == 0 ? 255 : operation); // FIXME: JS allows (0 || 255)
+                    ((Schema)_ref).fieldsByIndex.TryGetValue(fieldIndex, out fieldName);
+
+                    // fieldType = ((Schema)_ref).fieldTypes[fieldName];
+                    ((Schema)_ref).fieldTypes.TryGetValue(fieldName ?? "", out fieldType);
+                    ((Schema)_ref).fieldChildTypes.TryGetValue(fieldName ?? "", out childType);
+                }
+                else
+                {
+                    fieldName = ""; // FIXME
+
+                    fieldIndex = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+                    if (((ISchemaCollection)_ref).HasSchemaChild)
+                    {
+                        fieldType = "ref";
+                        childType = ((ISchemaCollection)_ref).GetChildType();
+                    }
+                    else
+                    {
+                        fieldType = ((ISchemaCollection)_ref).ChildPrimitiveType;
+                    }
+                }
+
+                object value = null;
+                object previousValue = null;
+                object dynamicIndex = null;
+
+                if (!isSchema)
+                {
+                    previousValue = _ref.GetByIndex(fieldIndex);
+
+                    if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
+                    {
+                        // MapSchema dynamic index.
+                        dynamicIndex = ((ISchemaCollection)_ref).GetItems() is OrderedDictionary
+                            ? (object)Utils.Decode.DecodeString(bytes, it)
+                            : fieldIndex;
+
+                        ((ISchemaCollection)_ref).SetIndex(fieldIndex, dynamicIndex);
+                    }
+                    else
+                    {
+                        dynamicIndex = ((ISchemaCollection)_ref).GetIndex(fieldIndex);
+                    }
+                }
+                else if (fieldName != null) // FIXME: duplicate check
+                {
+                    previousValue = ((Schema)_ref)[fieldName];
+                }
+
+                //
+                // Delete operations
+                //
+                if ((operation & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE)
+                {
+                    if (operation != (byte)OPERATION.DELETE_AND_ADD)
+                    {
+                        _ref.DeleteByIndex(fieldIndex);
+                    }
+
+                    // Flag `refId` for garbage collection.
+                    if (previousValue != null && previousValue is IRef)
+                    {
+                        Refs.Remove(((IRef)previousValue).__refId);
+                    }
+
+                    value = null;
+                }
+
+                if (fieldName == null)
+                {
+                    //
+                    // keep skipping next bytes until reaches a known structure
+                    // by local decoder.
+                    //
+                    Iterator nextIterator = new Iterator { Offset = it.Offset };
+
+                    while (it.Offset < totalBytes)
+                    {
+                        if (Utils.Decode.SwitchStructureCheck(bytes, it))
+                        {
+                            nextIterator.Offset = it.Offset + 1;
+                            if (Refs.Has(Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, nextIterator))))
+                            {
+                                break;
+                            }
+                        }
+
+                        it.Offset++;
+                    }
+
+                    continue;
+                }
+
+                if (operation == (byte)OPERATION.DELETE)
+                {
+                    //
+                    // FIXME: refactor me.
+                    // Don't do anything.
+                    //
+                }
+                else if (fieldType == "ref")
+                {
+                    var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+                    value = Refs.Get(__refId);
+
+                    if (operation != (byte)OPERATION.REPLACE)
+                    {
+                        System.Type concreteChildType = GetSchemaType(bytes, it, childType);
+
+                        if (value == null)
+                        {
+                            value = CreateTypeInstance(concreteChildType);
+                            ((IRef)value).__refId = __refId;
+
+                            if (previousValue != null)
+                            {
+                                ((Schema)value).MoveEventHandlers((Schema)previousValue);
+
+                                if (
+                                    ((IRef)previousValue).__refId > 0 &&
+                                    __refId != ((IRef)previousValue).__refId
+                                )
+                                {
+                                    Refs.Remove(((IRef)previousValue).__refId);
+                                }
+                            }
+                        }
+
+                        Refs.Add(__refId, (IRef)value, value != previousValue);
+                    }
+                }
+                else if (childType == null)
+                {
+                    // primitive values
+                    value = Utils.Decode.DecodePrimitiveType(fieldType, bytes, it);
+                }
+                else
+                {
+                    var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+
+                    ISchemaCollection valueRef = Refs.Has(__refId)
+                        ? (ISchemaCollection)previousValue
+                        : (ISchemaCollection)Activator.CreateInstance(childType);
+
+                    value = valueRef.Clone();
+                    ((ISchemaCollection)value).__refId = __refId;
+
+                    // keep reference to nested childPrimitiveType.
+                    string childPrimitiveType;
+                    ((Schema)_ref).fieldChildPrimitiveTypes.TryGetValue(fieldName, out childPrimitiveType);
+                    ((ISchemaCollection)value).ChildPrimitiveType = childPrimitiveType;
+
+                    if (previousValue != null)
+                    {
+                        ((ISchemaCollection)value).MoveEventHandlers((ISchemaCollection)previousValue);
+
+                        if (
+                            ((IRef)previousValue).__refId > 0 &&
+                            __refId != ((IRef)previousValue).__refId
+                        )
+                        {
+                            Refs.Remove(((IRef)previousValue).__refId);
+
+                            var items = ((ISchemaCollection)previousValue).GetItems();
+
+                            foreach (object key in items.Keys)
+                            {
+                                allChanges.Add(new DataChange
+                                {
+                                    RefId = __refId,
+                                    DynamicIndex = key,
+                                    Op = (byte)OPERATION.DELETE,
+                                    Value = null,
+                                    PreviousValue = items[key]
+                                });
+                            }
+                        }
+                    }
+
+                    Refs.Add(__refId, (IRef)value, valueRef != previousValue);
+                }
+
+                if (value != null)
+                {
+                    if (_ref is Schema)
+                    {
+                        ((Schema)_ref)[fieldName] = value;
+                    }
+                    else if (_ref is ISchemaCollection)
+                    {
+                        ((ISchemaCollection)_ref).SetByIndex(fieldIndex, dynamicIndex, value);
+                    }
+                }
+
+                if (previousValue != value)
+                {
+                    allChanges.Add(new DataChange
+                    {
+                        RefId = refId,
+                        Op = operation,
+                        Field = fieldName,
+                        DynamicIndex = dynamicIndex,
+                        Value = value,
+                        PreviousValue = previousValue
+                    });
+                }
             }
 
-            if (type == "uint8")
-            {
-                return DecodeUint8(bytes, it);
-            }
+            TriggerChanges?.Invoke(ref allChanges);
 
-            if (type == "int16")
-            {
-                return DecodeInt16(bytes, it);
-            }
-
-            if (type == "uint16")
-            {
-                return DecodeUint16(bytes, it);
-            }
-
-            if (type == "int32")
-            {
-                return DecodeInt32(bytes, it);
-            }
-
-            if (type == "uint32")
-            {
-                return DecodeUint32(bytes, it);
-            }
-
-            if (type == "int64")
-            {
-                return DecodeInt64(bytes, it);
-            }
-
-            if (type == "uint64")
-            {
-                return DecodeUint64(bytes, it);
-            }
-
-            if (type == "float32")
-            {
-                return DecodeFloat32(bytes, it);
-            }
-
-            if (type == "float64")
-            {
-                return DecodeFloat64(bytes, it);
-            }
-
-            if (type == "boolean")
-            {
-                return DecodeBoolean(bytes, it);
-            }
-
-            return null;
+            Refs.GarbageCollection();
         }
 
         /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a <see cref="float" />
+        ///     Determine what type of <see cref="Schema" /> this is
         /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a <see cref="float" /></returns>
-        public float DecodeNumber(byte[] bytes, Iterator it)
+        /// <param name="bytes">Incoming data</param>
+        /// <param name="it">
+        ///     The <see cref="Iterator" /> used to <see cref="Decoder.DecodeNumber" /> the <paramref name="bytes" />
+        /// </param>
+        /// <param name="defaultType">
+        ///     The default <see cref="Schema" /> type, if one cant be determined from the
+        ///     <paramref name="bytes" />
+        /// </param>
+        /// <returns>The parsed <see cref="System.Type" /> if found, <paramref name="defaultType" /> if not</returns>
+        protected System.Type GetSchemaType(byte[] bytes, Iterator it, System.Type defaultType)
         {
-            byte prefix = bytes[it.Offset++];
+            System.Type type = defaultType;
 
-            if (prefix < 0x80)
+            if (it.Offset < bytes.Length && bytes[it.Offset] == (byte)SPEC.TYPE_ID)
             {
-                // positive fixint
-                return prefix;
+                it.Offset++;
+                int typeId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+                type = Context.Get(typeId);
             }
 
-            if (prefix == 0xca)
-            {
-                // float 32
-                return DecodeFloat32(bytes, it);
-            }
-
-            if (prefix == 0xcb)
-            {
-                // float 64
-                return (float) DecodeFloat64(bytes, it);
-            }
-
-            if (prefix == 0xcc)
-            {
-                // uint 8
-                return DecodeUint8(bytes, it);
-            }
-
-            if (prefix == 0xcd)
-            {
-                // uint 16
-                return DecodeUint16(bytes, it);
-            }
-
-            if (prefix == 0xce)
-            {
-                // uint 32
-                return DecodeUint32(bytes, it);
-            }
-
-            if (prefix == 0xcf)
-            {
-                // uint 64
-                return DecodeUint64(bytes, it);
-            }
-
-            if (prefix == 0xd0)
-            {
-                // int 8
-                return DecodeInt8(bytes, it);
-            }
-
-            if (prefix == 0xd1)
-            {
-                // int 16
-                return DecodeInt16(bytes, it);
-            }
-
-            if (prefix == 0xd2)
-            {
-                // int 32
-                return DecodeInt32(bytes, it);
-            }
-
-            if (prefix == 0xd3)
-            {
-                // int 64
-                return DecodeInt64(bytes, it);
-            }
-
-            if (prefix > 0xdf)
-            {
-                // negative fixint
-                return (0xff - prefix + 1) * -1;
-            }
-
-            return float.NaN;
+            return type;
         }
 
         /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into an 8-bit <see cref="int" />
+        ///     Create an instance of the provided <paramref name="type" />
         /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into an 8-bit <see cref="int" /></returns>
-        public sbyte DecodeInt8(byte[] bytes, Iterator it)
+        /// <param name="type">The <see cref="System.Type" /> to create an instance of</param>
+        /// <returns></returns>
+        protected object CreateTypeInstance(System.Type type)
         {
-            return Convert.ToSByte((DecodeUint8(bytes, it) << 24) >> 24);
+            return Activator.CreateInstance(type);
         }
 
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into an 8-bit <see cref="uint" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into an 8-bit <see cref="uint" /></returns>
-        public byte DecodeUint8(byte[] bytes, Iterator it)
-        {
-            return bytes[it.Offset++];
+        internal void Teardown()
+		{
+            Refs.Clear();
         }
 
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a 16-bit <see cref="int" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a 16-bit <see cref="int" /></returns>
-        public short DecodeInt16(byte[] bytes, Iterator it)
+        protected void _TriggerChanges(ref List<DataChange> allChanges)
         {
-            short value = bitConverter.ToInt16(bytes, it.Offset);
-            it.Offset += 2;
-            return value;
-        }
+            var uniqueRefIds = new HashSet<int>();
 
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a 16-bit <see cref="uint" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a 16-bit <see cref="uint" /></returns>
-        public ushort DecodeUint16(byte[] bytes, Iterator it)
-        {
-            ushort value = bitConverter.ToUInt16(bytes, it.Offset);
-            it.Offset += 2;
-            return value;
-        }
-
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a 32-bit <see cref="int" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a 32-bit <see cref="int" /></returns>
-        public int DecodeInt32(byte[] bytes, Iterator it)
-        {
-            int value = bitConverter.ToInt32(bytes, it.Offset);
-            it.Offset += 4;
-            return value;
-        }
-
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a 32-bit <see cref="uint" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a 32-bit <see cref="uint" /></returns>
-        public uint DecodeUint32(byte[] bytes, Iterator it)
-        {
-            uint value = bitConverter.ToUInt32(bytes, it.Offset);
-            it.Offset += 4;
-            return value;
-        }
-
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a 32-bit <see cref="float" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a 32-bit <see cref="float" /></returns>
-        public float DecodeFloat32(byte[] bytes, Iterator it)
-        {
-            float value = bitConverter.ToSingle(bytes, it.Offset);
-            it.Offset += 4;
-            return value;
-        }
-
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a 64-bit <see cref="float" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a 64-bit <see cref="float" /></returns>
-        public double DecodeFloat64(byte[] bytes, Iterator it)
-        {
-            double value = bitConverter.ToDouble(bytes, it.Offset);
-            it.Offset += 8;
-            return value;
-        }
-
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a 64-bit <see cref="int" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a 64-bit <see cref="int" /></returns>
-        public long DecodeInt64(byte[] bytes, Iterator it)
-        {
-            long value = bitConverter.ToInt64(bytes, it.Offset);
-            it.Offset += 8;
-            return value;
-        }
-
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a 64-bit <see cref="uint" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a 64-bit <see cref="uint" /></returns>
-        public ulong DecodeUint64(byte[] bytes, Iterator it)
-        {
-            ulong value = bitConverter.ToUInt64(bytes, it.Offset);
-            it.Offset += 8;
-            return value;
-        }
-
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a <see cref="bool" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a <see cref="bool" /></returns>
-        public bool DecodeBoolean(byte[] bytes, Iterator it)
-        {
-            return DecodeUint8(bytes, it) > 0;
-        }
-
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a <see cref="string" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a <see cref="string" /></returns>
-        public string DecodeString(byte[] bytes, Iterator it)
-        {
-            int prefix = bytes[it.Offset++];
-
-            int length;
-            if (prefix < 0xc0)
+            foreach (DataChange change in allChanges)
             {
-                // fixstr
-                length = prefix & 0x1f;
-            }
-            else if (prefix == 0xd9)
-            {
-                length = (int) DecodeUint8(bytes, it);
-            }
-            else if (prefix == 0xda)
-            {
-                length = DecodeUint16(bytes, it);
-            }
-            else if (prefix == 0xdb)
-            {
-                length = (int) DecodeUint32(bytes, it);
-            }
-            else
-            {
-                length = 0;
-            }
+                var refId = change.RefId;
+                var _ref = Refs.Get(refId);
 
-            string str = Encoding.UTF8.GetString(bytes, it.Offset, length);
-            it.Offset += length;
+                //
+                // trigger onRemove on child structure.
+                //
+                if (
+                    (change.Op & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE &&
+                    change.PreviousValue is Schema
+                )
+                {
+                    ((Schema)change.PreviousValue).__callbacks?.InvokeOnRemove();
+                }
 
-            return str;
+                // no callbacks defined, skip this structure!
+                if (!_ref.HasCallbacks())
+                {
+                    continue;
+                }
+
+                if (_ref is Schema)
+				{
+                    var __callbacks = ((Schema)_ref).__callbacks;
+
+                    if (!uniqueRefIds.Contains(refId))
+					{
+						try
+						{
+                            // trigger onChange
+                            __callbacks.InvokeOnChange();
+
+						}
+						catch (Exception e)
+						{
+                            UnityEngine.Debug.LogError(e.Message);
+						}
+					}
+
+                    if (__callbacks.HasPropertyCallback(change.Field))
+					{
+						((Schema)_ref).TriggerFieldChange(change);
+                    }
+				}
+                else
+                {
+                    ISchemaCollection container = (ISchemaCollection) _ref;                    
+
+                    if (change.Op == (byte) OPERATION.ADD &&
+                        (
+                            change.PreviousValue == null ||
+                            change.PreviousValue == container.GetTypeDefaultValue()
+                        ))
+                    {
+                        UnityEngine.Debug.Log("InvokeOnAdd => " + change.DynamicIndex+ " : " + change.Value);
+                        container.InvokeOnAdd(change.Value, change.DynamicIndex);
+                    }
+                    else if (change.Op == (byte) OPERATION.DELETE)
+                    {
+                        //
+                        // FIXME: `previousValue` should always be available.
+                        // ADD + DELETE operations are still encoding DELETE operation.
+                        //
+                        if (change.PreviousValue != container.GetTypeDefaultValue())
+                        {
+                            container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex ?? change.Field);
+                        }
+                    }
+                    else if (change.Op == (byte) OPERATION.DELETE_AND_ADD)
+                    {
+                        if (change.PreviousValue != container.GetTypeDefaultValue())
+                        {
+                            container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex);
+                        }
+
+                        container.InvokeOnAdd(change.Value, change.DynamicIndex);
+                    }
+
+                    //
+                    // FIXME: this implementation differs from other languages
+                    // "change.Value != null" is needed here because OnChange.Invoke crashes when casting (T)null.
+                    //
+                    if (change.Value != change.PreviousValue && change.Value != null)
+                    {
+                        container.InvokeOnChange(change.Value, change.DynamicIndex ?? change.Field);
+                    }
+                }
+
+                uniqueRefIds.Add(refId);
+            }
         }
 
-        /// <summary>
-        ///     Checks if
-        ///     <code>bytes[it.Offset] == (byte)SPEC.SWITCH_TO_STRUCTURE</code>
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns>
-        ///     True if the current <see cref="Iterator.Offset" /> works with this array of <paramref name="bytes" />, false
-        ///     otherwise
-        /// </returns>
-        public bool SwitchStructureCheck(byte[] bytes, Iterator it)
-        {
-            return bytes[it.Offset] == (byte) SPEC.SWITCH_TO_STRUCTURE;
-        }
-
-        /// <summary>
-        ///     Checks if the incoming <paramref name="bytes" /> is a number
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns>True if <paramref name="bytes" /> can be resolved into a number, false otherwise</returns>
-        public bool NumberCheck(byte[] bytes, Iterator it)
-        {
-            byte prefix = bytes[it.Offset];
-            return prefix < 0x80 || prefix >= 0xca && prefix <= 0xd3;
-        }
-    }
+	}
 }
