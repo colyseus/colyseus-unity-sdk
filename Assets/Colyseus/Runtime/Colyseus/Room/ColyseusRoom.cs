@@ -101,7 +101,7 @@ namespace Colyseus
         /// <summary>
         ///     Reference to the Serializer this room uses, determined and then generated based on the <see cref="SerializerId" />
         /// </summary>
-        protected IColyseusSerializer<T> Serializer;
+        internal IColyseusSerializer<T> Serializer;
 
         /// <summary>
         ///     ID to determine which kind of serializer this room uses (<see cref="ColyseusSchemaSerializer{T}" /> or

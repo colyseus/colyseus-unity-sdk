@@ -11,12 +11,12 @@ namespace Colyseus
     /// <typeparam name="T">A child of <see cref="Schema" /></typeparam>
     public class ColyseusSchemaSerializer<T> : IColyseusSerializer<T> where T: Schema.Schema
     {
+        public Decoder<T> Decoder = new Decoder<T>();
+
         /// <summary>
         ///     A reference to the <see cref="Iterator" />
         /// </summary>
         protected Iterator It = new Iterator();
-
-        protected Decoder<T> Decoder = new Decoder<T>();
 
         /// <inheritdoc />
         public void SetState(byte[] data, int offset = 0)

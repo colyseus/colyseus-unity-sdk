@@ -10,8 +10,6 @@ namespace Colyseus.Schema
     /// <typeparam name="T">The type of object in this array</typeparam>
     public class ArraySchema<T> : ISchemaCollection
     {
-        public CollectionSchemaCallbacks<int, T> __callbacks = null;
-
         /// <summary>
         ///     Map of dynamic indices for quick access of <see cref="items" />
         /// </summary>
@@ -115,8 +113,8 @@ namespace Colyseus.Schema
         /// <param name="refs">Passed in for garbage collection, if needed</param>
         public void Clear(ref List<DataChange> changes, ref ColyseusReferenceTracker refs)
         {
-            CollectionSchemaCallbacks<int, T>.RemoveChildRefs(this, ref changes, ref refs);
-            indexes.Clear();
+			Callbacks.RemoveChildRefs(this, ref changes, ref refs);
+			indexes.Clear();
             items.Clear();
         }
 
@@ -128,7 +126,6 @@ namespace Colyseus.Schema
         {
             ArraySchema<T> clone = new ArraySchema<T>(items)
             {
-                __callbacks = __callbacks,
                 indexes = indexes
             };
             return clone;
@@ -218,67 +215,6 @@ namespace Colyseus.Schema
         {
             this.items = (Dictionary<int, T>) items;
         }
-
-        /// <summary>
-        ///     Attaches a callback that is triggered whenever a new item is received from the server
-        /// </summary>
-        /// <returns>An Action that, when called, removes the registered callback</returns>
-        public Action OnAdd(KeyValueEventHandler<int, T> handler, bool triggerAll = true)
-        {
-            if (__callbacks == null) __callbacks = new CollectionSchemaCallbacks<int, T>();
-
-            __callbacks.OnAdd += handler;
-
-            if (triggerAll)
-            {
-                for (int i = 0; i < items.Count; i++)
-                {
-                    __callbacks.InvokeOnAdd(items[i], i);
-                }
-            }
-
-            return () => __callbacks.OnAdd -= handler;
-        }
-
-        /// <summary>
-        ///     Attaches a callback that is triggered whenever a new item is received from the server
-        /// </summary>
-		/// <returns>An Action that, when called, removes the registered callback</returns>
-        public Action OnChange(KeyValueEventHandler<int, T> handler)
-        {
-            if (__callbacks == null) __callbacks = new CollectionSchemaCallbacks<int, T>();
-
-            __callbacks.OnChange += handler;
-
-            return () => __callbacks.OnChange -= handler;
-        }
-
-        /// <summary>
-        ///     Attaches a callback that is triggered whenever a new item is received from the server
-        /// </summary>
-		/// <returns>An Action that, when called, removes the registered callback</returns>
-        public Action OnRemove(KeyValueEventHandler<int, T> handler)
-        {
-            if (__callbacks == null) __callbacks = new CollectionSchemaCallbacks<int, T>();
-
-            __callbacks.OnRemove += handler;
-
-            return () => __callbacks.OnRemove -= handler;
-        }
-
-        /// <summary>
-        ///     Clone the Event Handlers from another <see cref="IRef" /> into this <see cref="ArraySchema{T}" />
-        /// </summary>
-        /// <param name="previousInstance">The <see cref="IRef" /> with the EventHandlers to copy</param>
-        public void MoveEventHandlers(IRef previousInstance)
-        {
-            __callbacks = ((ArraySchema<T>)previousInstance).__callbacks;
-        }
-
-        public bool HasCallbacks() { return __callbacks != null; }
-        public void InvokeOnAdd(object item, object index) { __callbacks?.InvokeOnAdd(item, index); }
-        public void InvokeOnChange(object item, object index) { __callbacks?.InvokeOnChange(item, index); }
-        public void InvokeOnRemove(object item, object index) { __callbacks?.InvokeOnRemove(item, index); }
 
         /// <summary>
         ///     Function to iterate over <see cref="items" /> and perform an <see cref="Action{T}" /> upon each entry

@@ -26,6 +26,11 @@ namespace Colyseus.Schema
         public Dictionary<int, IRef> refs = new Dictionary<int, IRef>();
 
         /// <summary>
+        ///     List of callbacks by refId 
+        /// </summary>
+		public Dictionary<int, Dictionary<object, List<Delegate>>> callbacks = new Dictionary<int, Dictionary<object, List<Delegate>>>();
+
+        /// <summary>
         ///     Add a new reference to be tracked
         /// </summary>
         /// <param name="refId">The ID of the reference</param>
@@ -58,9 +63,7 @@ namespace Colyseus.Schema
         /// <returns>The reference with that <paramref name="refId" /> in <see cref="refs" />, if it exists</returns>
         public IRef Get(int refId)
         {
-            IRef _ref = null;
-
-            refs.TryGetValue(refId, out _ref);
+            refs.TryGetValue(refId, out var _ref);
 
             return _ref;
         }
@@ -134,6 +137,7 @@ namespace Colyseus.Schema
 
                     refs.Remove(refId);
                     refCounts.Remove(refId);
+					callbacks.Remove(refId);
                 }
             }
 

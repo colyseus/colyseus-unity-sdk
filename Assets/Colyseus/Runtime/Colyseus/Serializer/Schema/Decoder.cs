@@ -11,12 +11,13 @@ namespace Colyseus.Schema
         public ColyseusReferenceTracker Refs = new ColyseusReferenceTracker();
         public TypeContext Context = new TypeContext();
         public T State;
-        public TriggerChangesDelegate TriggerChanges;
 
-        public Decoder()
+        public TriggerChangesDelegate TriggerChanges;
+		protected List<DataChange> AllChanges = new List<DataChange>();
+
+		public Decoder()
 		{
             State = Activator.CreateInstance<T>();
-            TriggerChanges = _TriggerChanges;
         }
 
         /// <summary>
@@ -36,11 +37,6 @@ namespace Colyseus.Schema
                 it = new Iterator();
             }
 
-            if (Refs == null)
-            {
-                Refs = new ColyseusReferenceTracker();
-            }
-
             int totalBytes = bytes.Length;
 
             int refId = 0;
@@ -48,9 +44,9 @@ namespace Colyseus.Schema
 
             Refs.Add(refId, _ref);
 
-            List<DataChange> allChanges = new List<DataChange>();
+			AllChanges.Clear();
 
-            while (it.Offset < totalBytes)
+			while (it.Offset < totalBytes)
             {
                 byte _byte = bytes[it.Offset++];
 
@@ -68,8 +64,8 @@ namespace Colyseus.Schema
                     }
 
                     // create empty list of changes for this refId.
-                    //allChanges = new List<DataChange>();
-                    //allChanges[(object) refId] = allChanges;
+                    //AllChanges = new List<DataChange>();
+                    //AllChanges[(object) refId] = allChanges;
 
                     continue;
                 }
@@ -82,7 +78,7 @@ namespace Colyseus.Schema
 
                 if (operation == (byte)OPERATION.CLEAR)
                 {
-                    ((ISchemaCollection)_ref).Clear(ref allChanges, ref Refs);
+					((ISchemaCollection)_ref).Clear(ref AllChanges, ref Refs);
                     continue;
                 }
 
@@ -211,7 +207,7 @@ namespace Colyseus.Schema
 
                             if (previousValue != null)
                             {
-                                ((Schema)value).MoveEventHandlers((Schema)previousValue);
+                                // ((Schema)value).MoveEventHandlers((Schema)previousValue);
 
                                 if (
                                     ((IRef)previousValue).__refId > 0 &&
@@ -236,8 +232,8 @@ namespace Colyseus.Schema
                     var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
 
                     ISchemaCollection valueRef = Refs.Has(__refId)
-                        ? (ISchemaCollection)previousValue
-                        : (ISchemaCollection)Activator.CreateInstance(childType);
+						? (ISchemaCollection)previousValue ?? (ISchemaCollection)Refs.Get(__refId)
+						: (ISchemaCollection)Activator.CreateInstance(childType);
 
                     value = valueRef.Clone();
                     ((ISchemaCollection)value).__refId = __refId;
@@ -249,7 +245,7 @@ namespace Colyseus.Schema
 
                     if (previousValue != null)
                     {
-                        ((ISchemaCollection)value).MoveEventHandlers((ISchemaCollection)previousValue);
+                        // ((ISchemaCollection)value).MoveEventHandlers((ISchemaCollection)previousValue);
 
                         if (
                             ((IRef)previousValue).__refId > 0 &&
@@ -262,7 +258,7 @@ namespace Colyseus.Schema
 
                             foreach (object key in items.Keys)
                             {
-                                allChanges.Add(new DataChange
+                                AllChanges.Add(new DataChange
                                 {
                                     RefId = __refId,
                                     DynamicIndex = key,
@@ -291,7 +287,7 @@ namespace Colyseus.Schema
 
                 if (previousValue != value)
                 {
-                    allChanges.Add(new DataChange
+                    AllChanges.Add(new DataChange
                     {
                         RefId = refId,
                         Op = operation,
@@ -303,7 +299,7 @@ namespace Colyseus.Schema
                 }
             }
 
-            TriggerChanges?.Invoke(ref allChanges);
+            TriggerChanges?.Invoke(ref AllChanges);
 
             Refs.GarbageCollection();
         }
@@ -347,103 +343,6 @@ namespace Colyseus.Schema
         internal void Teardown()
 		{
             Refs.Clear();
-        }
-
-        protected void _TriggerChanges(ref List<DataChange> allChanges)
-        {
-            var uniqueRefIds = new HashSet<int>();
-
-            foreach (DataChange change in allChanges)
-            {
-                var refId = change.RefId;
-                var _ref = Refs.Get(refId);
-
-                //
-                // trigger onRemove on child structure.
-                //
-                if (
-                    (change.Op & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE &&
-                    change.PreviousValue is Schema
-                )
-                {
-                    ((Schema)change.PreviousValue).__callbacks?.InvokeOnRemove();
-                }
-
-                // no callbacks defined, skip this structure!
-                if (!_ref.HasCallbacks())
-                {
-                    continue;
-                }
-
-                if (_ref is Schema)
-				{
-                    var __callbacks = ((Schema)_ref).__callbacks;
-
-                    if (!uniqueRefIds.Contains(refId))
-					{
-						try
-						{
-                            // trigger onChange
-                            __callbacks.InvokeOnChange();
-
-						}
-						catch (Exception e)
-						{
-                            UnityEngine.Debug.LogError(e.Message);
-						}
-					}
-
-                    if (__callbacks.HasPropertyCallback(change.Field))
-					{
-						((Schema)_ref).TriggerFieldChange(change);
-                    }
-				}
-                else
-                {
-                    ISchemaCollection container = (ISchemaCollection) _ref;                    
-
-                    if (change.Op == (byte) OPERATION.ADD &&
-                        (
-                            change.PreviousValue == null ||
-                            change.PreviousValue == container.GetTypeDefaultValue()
-                        ))
-                    {
-                        UnityEngine.Debug.Log("InvokeOnAdd => " + change.DynamicIndex+ " : " + change.Value);
-                        container.InvokeOnAdd(change.Value, change.DynamicIndex);
-                    }
-                    else if (change.Op == (byte) OPERATION.DELETE)
-                    {
-                        //
-                        // FIXME: `previousValue` should always be available.
-                        // ADD + DELETE operations are still encoding DELETE operation.
-                        //
-                        if (change.PreviousValue != container.GetTypeDefaultValue())
-                        {
-                            container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex ?? change.Field);
-                        }
-                    }
-                    else if (change.Op == (byte) OPERATION.DELETE_AND_ADD)
-                    {
-                        if (change.PreviousValue != container.GetTypeDefaultValue())
-                        {
-                            container.InvokeOnRemove(change.PreviousValue, change.DynamicIndex);
-                        }
-
-                        container.InvokeOnAdd(change.Value, change.DynamicIndex);
-                    }
-
-                    //
-                    // FIXME: this implementation differs from other languages
-                    // "change.Value != null" is needed here because OnChange.Invoke crashes when casting (T)null.
-                    //
-                    if (change.Value != change.PreviousValue && change.Value != null)
-                    {
-                        container.InvokeOnChange(change.Value, change.DynamicIndex ?? change.Field);
-                    }
-                }
-
-                uniqueRefIds.Add(refId);
-            }
         }
 
 	}
