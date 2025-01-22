@@ -37,6 +37,8 @@ namespace Colyseus.Schema
 	{
 		protected Decoder<TState> Decoder;
 
+		protected HashSet<int> UniqueRefIds = new HashSet<int>();
+
 		public StateCallbackStrategy(Decoder<TState> decoder)
 		{
 			Decoder = decoder;
@@ -180,7 +182,7 @@ namespace Colyseus.Schema
 
 		protected void TriggerChanges(ref List<DataChange> allChanges)
 		{
-			var uniqueRefIds = new HashSet<int>();
+			UniqueRefIds.Clear();
 
 			foreach (DataChange change in allChanges)
 			{
@@ -219,7 +221,7 @@ namespace Colyseus.Schema
 					// Handle Schema instance
 					//
 
-					if (!uniqueRefIds.Contains(refId))
+					if (!UniqueRefIds.Contains(refId))
 					{
 						// trigger onChange
 						callbacks.TryGetValue(OPERATION.REPLACE, out var replaceCallbacks);
@@ -291,13 +293,12 @@ namespace Colyseus.Schema
 							}
 						}
 
-
 					}
 					else if (
 						(change.Op & (byte)OPERATION.ADD) == (byte)OPERATION.ADD &&
 						(
 							change.PreviousValue == null ||
-							change.PreviousValue == container.GetTypeDefaultValue()
+							Equals(change.PreviousValue, container.GetTypeDefaultValue())
 						)
 					)
 					{
@@ -326,7 +327,7 @@ namespace Colyseus.Schema
 					}
 				}
 
-				uniqueRefIds.Add(refId);
+				UniqueRefIds.Add(refId);
 			}
 		}
 	}

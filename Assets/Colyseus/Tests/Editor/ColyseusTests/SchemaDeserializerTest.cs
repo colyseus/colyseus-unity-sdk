@@ -165,15 +165,23 @@ public class SchemaDeserializerTest
 
 		var callbacks = Colyseus.Schema.Callbacks.Get(decoder);
 
-		callbacks.OnAdd(state => state.mapOfSchemas, (key, value) => Debug.Log("OnAdd, mapOfSchemas => " + key));
-		callbacks.OnAdd(state => state.mapOfNumbers, (key, value) => Debug.Log("OnAdd, mapOfNumbers => " + key));
-		callbacks.OnAdd(state => state.mapOfStrings, (key, value) => Debug.Log("OnAdd, mapOfStrings => " + key));
-		callbacks.OnAdd(state => state.mapOfInt32, (key, value) => Debug.Log("OnAdd, mapOfInt32 => " + key));
+		var mapOfSchemasAdd = 0;
+		var mapOfNumbersAdd = 0;
+		var mapOfStringsAdd = 0;
+		var mapOfIntAdd = 0;
+		callbacks.OnAdd(state => state.mapOfSchemas, (key, value) => mapOfSchemasAdd++);
+		callbacks.OnAdd(state => state.mapOfNumbers, (key, value) => mapOfNumbersAdd++);
+		callbacks.OnAdd(state => state.mapOfStrings, (key, value) => mapOfStringsAdd++);
+		callbacks.OnAdd(state => state.mapOfInt32, (key, value) => mapOfIntAdd++);
 
-		callbacks.OnRemove(state => state.mapOfSchemas, (key, value) => Debug.Log("OnRemove, mapOfSchemas => " + key));
-		callbacks.OnRemove(state => state.mapOfNumbers, (key, value) => Debug.Log("OnRemove, mapOfNumbers => " + key));
-		callbacks.OnRemove(state => state.mapOfStrings, (key, value) => Debug.Log("OnRemove, mapOfStrings => " + key));
-		callbacks.OnRemove(state => state.mapOfInt32, (key, value) => Debug.Log("OnRemove, mapOfInt32 => " + key));
+		var mapOfSchemasRemove = 0;
+		var mapOfNumbersRemove = 0;
+		var mapOfStringsRemove = 0;
+		var mapOfIntRemove = 0;
+		callbacks.OnRemove(state => state.mapOfSchemas, (key, value) => mapOfSchemasRemove++);
+		callbacks.OnRemove(state => state.mapOfNumbers, (key, value) => mapOfNumbersRemove++);
+		callbacks.OnRemove(state => state.mapOfStrings, (key, value) => mapOfStringsRemove++);
+		callbacks.OnRemove(state => state.mapOfInt32, (key, value) => mapOfIntRemove++);
 
 		decoder.Decode(bytes);
 
@@ -200,6 +208,11 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(state.mapOfInt32["two"], -1000);
 		Assert.AreEqual(state.mapOfInt32["three"], 2000);
 
+		Assert.AreEqual(mapOfSchemasAdd, 3);
+		Assert.AreEqual(mapOfNumbersAdd, 3);
+		Assert.AreEqual(mapOfStringsAdd, 3);
+		Assert.AreEqual(mapOfIntAdd, 3);
+
 		byte[] deleteBytes = { 255, 2, 64, 1, 64, 2, 255, 1, 64, 1, 64, 2, 255, 3, 64, 1, 64, 2, 255, 4, 64, 1, 64, 2 };
 		decoder.Decode(deleteBytes);
 
@@ -207,6 +220,11 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(state.mapOfNumbers.Count, 1);
 		Assert.AreEqual(state.mapOfStrings.Count, 1);
 		Assert.AreEqual(state.mapOfInt32.Count, 1);
+
+		Assert.AreEqual(mapOfSchemasRemove, 2);
+		Assert.AreEqual(mapOfNumbersRemove, 2);
+		Assert.AreEqual(mapOfStringsRemove, 2);
+		Assert.AreEqual(mapOfIntRemove, 2);
 	}
 
 	[Test]

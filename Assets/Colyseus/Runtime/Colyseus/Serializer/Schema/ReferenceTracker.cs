@@ -26,7 +26,7 @@ namespace Colyseus.Schema
         public Dictionary<int, IRef> refs = new Dictionary<int, IRef>();
 
         /// <summary>
-        ///     List of callbacks by refId 
+        ///     List of callbacks by refId
         /// </summary>
 		public Dictionary<int, Dictionary<object, List<Delegate>>> callbacks = new Dictionary<int, Dictionary<object, List<Delegate>>>();
 
