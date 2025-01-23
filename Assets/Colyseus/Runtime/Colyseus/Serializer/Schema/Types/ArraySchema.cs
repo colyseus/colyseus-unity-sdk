@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Colyseus.Schema
 {
@@ -8,26 +9,21 @@ namespace Colyseus.Schema
     ///     A <see cref="Schema" /> array of <typeparamref name="T" /> type objects
     /// </summary>
     /// <typeparam name="T">The type of object in this array</typeparam>
-    public class ArraySchema<T> : ISchemaCollection
+    public class ArraySchema<T> : IArraySchema
     {
-        /// <summary>
-        ///     Map of dynamic indices for quick access of <see cref="items" />
-        /// </summary>
-        protected Dictionary<int, int> indexes = new Dictionary<int, int>();
-
         /// <summary>
         ///     The contents of the <see cref="ArraySchema{T}" />
         /// </summary>
-        public Dictionary<int, T> items;
+        public List<T> items;
 
         public ArraySchema()
         {
-            items = new Dictionary<int, T>();
+            items = new List<T>();
         }
 
-        public ArraySchema(Dictionary<int, T> items = null)
+        public ArraySchema(List<T> items = null)
         {
-            this.items = items ?? new Dictionary<int, T>();
+            this.items = items ?? new List<T>();
         }
 
         /// <summary>
@@ -35,48 +31,34 @@ namespace Colyseus.Schema
         /// </summary>
         public T this[int index]
         {
-            get { return GetByVirtualIndex(index); }
+            get { return items[index]; }
             set { items[index] = value; }
         }
 
         /// <inheritdoc />
         public int __refId { get; set; }
 
-        /// <summary>
-        ///     Set the <see cref="indexes" /> value
-        /// </summary>
-        /// <param name="index">The field index</param>
-        /// <param name="dynamicIndex">The new dynamic Index value, cast to <see cref="int" /></param>
-        public void SetIndex(int index, object dynamicIndex)
-        {
-            indexes[index] = (int) dynamicIndex;
-        }
-
-        /// <summary>
-        ///     Set an Item by it's <paramref name="dynamicIndex" />
-        /// </summary>
-        /// <param name="index">Unused, only here to satisfy <see cref="IRef" /> parameters</param>
-        /// <param name="dynamicIndex">
-        ///     The index, cast to <see cref="int" />, in <see cref="items" /> that will be set to
-        ///     <paramref name="value" />
-        /// </param>
-        /// <param name="value">The new object to put into <see cref="items" /></param>
-        public void SetByIndex(int index, object dynamicIndex, object value)
-        {
-            items[(int) dynamicIndex] = (T) value;
-        }
-
-        /// <summary>
-        ///     Get the dynamic index value from <see cref="indexes" />
-        /// </summary>
-        /// <param name="index">The location of the dynamic index to return</param>
-        /// <returns>The dynamic index from <see cref="indexes" />, if it exists. -1 if it does not</returns>
-        public object GetIndex(int index)
-        {
-            return indexes.ContainsKey(index)
-                ? indexes[index]
-                : -1;
-        }
+		public void SetByIndex(int index, object value, byte operation)
+		{
+			if (
+				index == 0 &&
+				operation == (byte)OPERATION.ADD &&
+				items.Count > 0
+			)
+			{
+				// handle decoding unshift
+				items.Insert(0, (T) value);
+			}
+			else if (operation == (byte)OPERATION.DELETE_AND_MOVE)
+			{
+				items.RemoveAt(index);
+				items.Insert(index, (T) value);
+			}
+			else
+			{
+				items.Insert(index, (T) value);
+			}
+		}
 
         /// <summary>
         ///     Get an item out of the <see cref="ArraySchema{T}" /> by it's index
@@ -85,16 +67,12 @@ namespace Colyseus.Schema
         /// <returns>An object of type <typeparamref name="T" /> if it exists</returns>
         public object GetByIndex(int index)
         {
-            int dynamicIndex = (int) GetIndex(index);
-
-            if (dynamicIndex != -1)
-            {
-                T value;
-                items.TryGetValue(dynamicIndex, out value);
-                return value;
-            }
-
-            return null;
+			try
+			{
+				return items[index];
+			} catch (ArgumentOutOfRangeException) {
+				return null;
+			}
         }
 
         /// <summary>
@@ -103,20 +81,23 @@ namespace Colyseus.Schema
         /// <param name="index">The index of the item</param>
         public void DeleteByIndex(int index)
         {
-            items.Remove((int) GetIndex(index));
-            indexes.Remove(index);
-        }
+			items.RemoveAt(index);
+		}
 
         /// <summary>
         ///     Clear all items and indices
         /// </summary>
         /// <param name="refs">Passed in for garbage collection, if needed</param>
-        public void Clear(ref List<DataChange> changes, ref ColyseusReferenceTracker refs)
+        public void Clear(List<DataChange> changes, ColyseusReferenceTracker refs)
         {
-			Callbacks.RemoveChildRefs(this, ref changes, ref refs);
-			indexes.Clear();
+			Callbacks.RemoveChildRefs(this, changes, refs);
             items.Clear();
         }
+
+		public void Reverse()
+		{
+			items.Reverse();
+		}
 
         /// <summary>
         ///     Clone this <see cref="ArraySchema{T}" />
@@ -124,10 +105,7 @@ namespace Colyseus.Schema
         /// <returns>A copy of this <see cref="ArraySchema{T}" /></returns>
         public ISchemaCollection Clone()
         {
-            ArraySchema<T> clone = new ArraySchema<T>(items)
-            {
-                indexes = indexes
-            };
+            ArraySchema<T> clone = new ArraySchema<T>(items);
             return clone;
         }
 
@@ -151,16 +129,6 @@ namespace Colyseus.Schema
         public object GetTypeDefaultValue()
         {
             return default(T);
-        }
-
-        /// <summary>
-        ///     Determine if this <see cref="ArraySchema{T}" /> contains <paramref name="key" />
-        /// </summary>
-        /// <param name="key">The key in <see cref="items" /> that will be cast to <see cref="int" /> and checked for</param>
-        /// <returns>True if <see cref="items" /> contains the <paramref name="key" />, false if not</returns>
-        public bool ContainsKey(object key)
-        {
-            return items.ContainsKey((int) key);
         }
 
         /// <summary>
@@ -199,7 +167,7 @@ namespace Colyseus.Schema
         /// <returns>
         ///     <see cref="items" />
         /// </returns>
-        public IDictionary GetItems()
+        public IEnumerable GetItems()
         {
             return items;
         }
@@ -213,41 +181,29 @@ namespace Colyseus.Schema
         /// </param>
         public void SetItems(object items)
         {
-            this.items = (Dictionary<int, T>) items;
-        }
+			this.items = (List<T>)items;
+		}
 
         /// <summary>
         ///     Function to iterate over <see cref="items" /> and perform an <see cref="Action{T}" /> upon each entry
         /// </summary>
         /// <param name="action">The <see cref="Action" /> to perform</param>
-        public void ForEach(Action<T> action)
+        public void ForEach(Action<int, T> action)
         {
-            foreach (KeyValuePair<int, T> item in items)
-            {
-                action(item.Value);
-            }
+			int i = 0;
+			items.ForEach((value) => {
+				action(i, value);
+				i++;
+			});
         }
 
-        /// <summary>
-        ///     Get an object by the dynamic index stored in <see cref="indexes" /> at <paramref name="index" />
-        /// </summary>
-        /// <param name="index">The index of the object to get</param>
-        /// <returns>The item at the dynamic index connected to the <paramref name="index" /> provided</returns>
-        protected T GetByVirtualIndex(int index)
+        public void ForEach(Action<object, object> action)
         {
-            //
-            // TODO: should be O(1)
-            //
-            List<int> keys = new List<int>(items.Keys);
-
-            int dynamicIndex = index < keys.Count
-                ? keys[index]
-                : -1;
-
-            T value;
-            items.TryGetValue(dynamicIndex, out value);
-
-            return value;
+			int i = 0;
+			items.ForEach((value) => {
+				action(i, value);
+				i++;
+			});
         }
-    }
+	}
 }

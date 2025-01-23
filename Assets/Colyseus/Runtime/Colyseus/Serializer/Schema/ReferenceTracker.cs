@@ -125,14 +125,13 @@ namespace Colyseus.Schema
                     }
                     else if (_ref is ISchemaCollection && ((ISchemaCollection) _ref).HasSchemaChild)
                     {
-                        IDictionary items = ((ISchemaCollection) _ref).GetItems();
-                        foreach (IRef item in items.Values)
-                        {
-                            if (Remove(item.__refId))
-                            {
-                                totalDeletedRefs++;
-                            }
-                        }
+						((ISchemaCollection)_ref).ForEach((key, value) =>
+						{
+							if (Remove(((IRef)value).__refId))
+							{
+								totalDeletedRefs++;
+							}
+						});
                     }
 
                     refs.Remove(refId);

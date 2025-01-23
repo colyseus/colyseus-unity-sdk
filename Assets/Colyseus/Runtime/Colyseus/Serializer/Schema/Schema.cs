@@ -113,8 +113,16 @@ namespace Colyseus.Schema
 		ADD = 128,
 		REPLACE = 0,
 		DELETE = 64,
+		DELETE_AND_MOVE = 96, // ArraySchema
 		DELETE_AND_ADD = 192,
-		CLEAR = 10
+		CLEAR = 10,
+
+		/**
+		 * ArraySchema operations
+		 */
+		REVERSE = 15,
+		DELETE_BY_REFID = 33,
+		ADD_BY_REFID = 129,
 	}
 
 	/// <summary>
@@ -165,19 +173,30 @@ namespace Colyseus.Schema
 		int Count { get; }
 		object this[object key] { get; set; }
 
-		IDictionary GetItems();
+		IEnumerable GetItems();
+		void ForEach(Action<object, object> action);
 		void SetItems(object items);
-		void Clear(ref List<DataChange> changes, ref ColyseusReferenceTracker refs);
+		void Clear(List<DataChange> changes, ColyseusReferenceTracker refs);
 
 		System.Type GetChildType();
 		object GetTypeDefaultValue();
-		bool ContainsKey(object key);
 
+		ISchemaCollection Clone();
+	}
+
+	[SuppressMessage("ReSharper", "MissingXmlDoc")]
+	public interface IArraySchema : ISchemaCollection
+	{
+		void SetByIndex(int index, object value, byte operation);
+		void Reverse();
+	}
+
+	[SuppressMessage("ReSharper", "MissingXmlDoc")]
+	public interface IMapSchema : ISchemaCollection
+	{
 		void SetIndex(int index, object dynamicIndex);
 		object GetIndex(int index);
 		void SetByIndex(int index, object dynamicIndex, object value);
-
-		ISchemaCollection Clone();
 	}
 
 	/// <summary>
@@ -271,8 +290,7 @@ namespace Colyseus.Schema
 		/// <returns>The <see cref="object" /> at that index (if it exists)</returns>
 		public object GetByIndex(int index)
 		{
-			string fieldName;
-			fieldsByIndex.TryGetValue(index, out fieldName);
+			fieldsByIndex.TryGetValue(index, out var fieldName);
 			return this[fieldName];
 		}
 
@@ -282,8 +300,7 @@ namespace Colyseus.Schema
 		/// <param name="index">Index of the field to remove</param>
 		public void DeleteByIndex(int index)
 		{
-			string fieldName;
-			fieldsByIndex.TryGetValue(index, out fieldName);
+			fieldsByIndex.TryGetValue(index, out var fieldName);
 			this[fieldName] = null;
 		}
 

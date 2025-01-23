@@ -347,29 +347,28 @@ namespace Colyseus.Schema
 			return new StateCallbackStrategy<T>(decoder);
 		}
 
-		internal static void RemoveChildRefs(ISchemaCollection collection, ref List<DataChange> changes, ref ColyseusReferenceTracker refs)
+		internal static void RemoveChildRefs(ISchemaCollection collection, List<DataChange> changes, ColyseusReferenceTracker refs)
 		{
 			if (refs == null) {
 				return;
 			}
 
-			foreach (DictionaryEntry item in collection.GetItems())
-			{
+			collection.ForEach((key, value) => {
 				changes.Add(new DataChange
 				{
 					RefId = collection.__refId,
 					Op = (byte)OPERATION.DELETE,
 					//Field = item.Key,
-					DynamicIndex = item.Key,
+					DynamicIndex = key,
 					Value = null,
-					PreviousValue = item.Value
+					PreviousValue = value
 				});
 
 				if (collection.HasSchemaChild)
 				{
-					refs.Remove((item.Value as IRef).__refId);
+					refs.Remove((value as IRef).__refId);
 				}
-			}
+			});
 		}
 	}
 }

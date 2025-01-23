@@ -9,7 +9,7 @@ namespace Colyseus.Schema
     ///     A <see cref="Schema" /> dictionary of <typeparamref name="T" /> type objects
     /// </summary>
     /// <typeparam name="T">The type of object in this map</typeparam>
-    public class MapSchema<T> : ISchemaCollection
+    public class MapSchema<T> : IMapSchema
     {
         protected Dictionary<int, string> Indexes = new Dictionary<int, string>();
 
@@ -208,7 +208,7 @@ namespace Colyseus.Schema
         /// <returns>
         ///     <see cref="items" />
         /// </returns>
-        public IDictionary GetItems()
+        public IEnumerable GetItems()
         {
             return items;
         }
@@ -217,12 +217,17 @@ namespace Colyseus.Schema
         ///     Clear all items and indices
         /// </summary>
         /// <param name="refs">Passed in for garbage collection, if needed</param>
-        public void Clear(ref List<DataChange> changes, ref ColyseusReferenceTracker refs)
+        public void Clear(List<DataChange> changes, ColyseusReferenceTracker refs)
         {
-			Callbacks.RemoveChildRefs(this, ref changes, ref refs);
+			Callbacks.RemoveChildRefs(this, changes, refs);
 			Indexes.Clear();
             items.Clear();
         }
+
+		public void Reverse()
+		{
+			throw new NotImplementedException();
+		}
 
         /// <summary>
         ///     Getter for the amount of <see cref="items" /> in this <see cref="MapSchema{T}" />
@@ -283,16 +288,6 @@ namespace Colyseus.Schema
         }
 
         /// <summary>
-        ///     Determine if this <see cref="MapSchema{T}" /> contains <paramref name="key" />
-        /// </summary>
-        /// <param name="key">The key in <see cref="items" /> that will be checked for</param>
-        /// <returns>True if <see cref="items" /> contains the <paramref name="key" />, false if not</returns>
-        public bool ContainsKey(string key)
-        {
-            return items.Contains(key);
-        }
-
-        /// <summary>
         ///     Add a new item to <see cref="items" />
         /// </summary>
         /// <param name="key">The field name</param>
@@ -338,5 +333,14 @@ namespace Colyseus.Schema
                 action((string) item.Key, (T) item.Value);
             }
         }
+
+        public void ForEach(Action<object, object> action)
+        {
+            foreach (DictionaryEntry item in items)
+            {
+                action(item.Key, item.Value);
+            }
+        }
+
     }
 }

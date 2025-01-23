@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Net.Configuration;
 
 namespace Colyseus.Schema
 {
@@ -48,10 +49,10 @@ namespace Colyseus.Schema
 
 			while (it.Offset < totalBytes)
             {
-                byte _byte = bytes[it.Offset++];
-
-                if (_byte == (byte)SPEC.SWITCH_TO_STRUCTURE)
+                if (bytes[it.Offset] == (byte)SPEC.SWITCH_TO_STRUCTURE)
                 {
+					it.Offset++;
+
                     refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
                     _ref = Refs.Get(refId);
 
@@ -63,240 +64,48 @@ namespace Colyseus.Schema
                         throw new Exception("refId not found: " + refId);
                     }
 
-                    // create empty list of changes for this refId.
-                    //AllChanges = new List<DataChange>();
-                    //AllChanges[(object) refId] = allChanges;
-
                     continue;
                 }
 
-                bool isSchema = _ref is Schema;
+				bool isSchemaDefinitionMismatch;
 
-                byte operation = (byte)(isSchema
-                    ? (_byte >> 6) << 6 // "compressed" index + operation
-                    : _byte); // "uncompressed" index + operation (array/map items)
+				if (_ref is Schema)
+				{
+					isSchemaDefinitionMismatch = !DecodeSchema(bytes, it, (Schema)_ref);
+				}
+				else if (_ref is IMapSchema)
+				{
+					isSchemaDefinitionMismatch = !DecodeMapSchema(bytes, it, (IMapSchema)_ref);
+				}
+				else
+				{
+					isSchemaDefinitionMismatch = !DecodeArraySchema(bytes, it, (IArraySchema)_ref);
+				}
 
-                if (operation == (byte)OPERATION.CLEAR)
-                {
-					((ISchemaCollection)_ref).Clear(ref AllChanges, ref Refs);
-                    continue;
-                }
+				if (isSchemaDefinitionMismatch)
+				{
+					//
+					// keep skipping next bytes until reaches a known structure
+					// by local decoder.
+					//
+					Iterator nextIterator = new Iterator { Offset = it.Offset };
 
-                int fieldIndex;
-                string fieldName = null;
-                string fieldType = null;
+					while (it.Offset < totalBytes)
+					{
+						if (Utils.Decode.SwitchStructureCheck(bytes, it))
+						{
+							nextIterator.Offset = it.Offset + 1;
+							if (Refs.Has(Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, nextIterator))))
+							{
+								break;
+							}
+						}
 
-                System.Type childType = null;
+						it.Offset++;
+					}
 
-                if (isSchema)
-                {
-                    fieldIndex = _byte % (operation == 0 ? 255 : operation); // FIXME: JS allows (0 || 255)
-                    ((Schema)_ref).fieldsByIndex.TryGetValue(fieldIndex, out fieldName);
-
-                    // fieldType = ((Schema)_ref).fieldTypes[fieldName];
-                    ((Schema)_ref).fieldTypes.TryGetValue(fieldName ?? "", out fieldType);
-                    ((Schema)_ref).fieldChildTypes.TryGetValue(fieldName ?? "", out childType);
-                }
-                else
-                {
-                    fieldName = ""; // FIXME
-
-                    fieldIndex = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
-                    if (((ISchemaCollection)_ref).HasSchemaChild)
-                    {
-                        fieldType = "ref";
-                        childType = ((ISchemaCollection)_ref).GetChildType();
-                    }
-                    else
-                    {
-                        fieldType = ((ISchemaCollection)_ref).ChildPrimitiveType;
-                    }
-                }
-
-                object value = null;
-                object previousValue = null;
-                object dynamicIndex = null;
-
-                if (!isSchema)
-                {
-                    previousValue = _ref.GetByIndex(fieldIndex);
-
-                    if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
-                    {
-                        // MapSchema dynamic index.
-                        dynamicIndex = ((ISchemaCollection)_ref).GetItems() is OrderedDictionary
-                            ? (object)Utils.Decode.DecodeString(bytes, it)
-                            : fieldIndex;
-
-                        ((ISchemaCollection)_ref).SetIndex(fieldIndex, dynamicIndex);
-                    }
-                    else
-                    {
-                        dynamicIndex = ((ISchemaCollection)_ref).GetIndex(fieldIndex);
-                    }
-                }
-                else if (fieldName != null) // FIXME: duplicate check
-                {
-                    previousValue = ((Schema)_ref)[fieldName];
-                }
-
-                //
-                // Delete operations
-                //
-                if ((operation & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE)
-                {
-                    if (operation != (byte)OPERATION.DELETE_AND_ADD)
-                    {
-                        _ref.DeleteByIndex(fieldIndex);
-                    }
-
-                    // Flag `refId` for garbage collection.
-                    if (previousValue != null && previousValue is IRef)
-                    {
-                        Refs.Remove(((IRef)previousValue).__refId);
-                    }
-
-                    value = null;
-                }
-
-                if (fieldName == null)
-                {
-                    //
-                    // keep skipping next bytes until reaches a known structure
-                    // by local decoder.
-                    //
-                    Iterator nextIterator = new Iterator { Offset = it.Offset };
-
-                    while (it.Offset < totalBytes)
-                    {
-                        if (Utils.Decode.SwitchStructureCheck(bytes, it))
-                        {
-                            nextIterator.Offset = it.Offset + 1;
-                            if (Refs.Has(Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, nextIterator))))
-                            {
-                                break;
-                            }
-                        }
-
-                        it.Offset++;
-                    }
-
-                    continue;
-                }
-
-                if (operation == (byte)OPERATION.DELETE)
-                {
-                    //
-                    // FIXME: refactor me.
-                    // Don't do anything.
-                    //
-                }
-                else if (fieldType == "ref")
-                {
-                    var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
-                    value = Refs.Get(__refId);
-
-                    if (operation != (byte)OPERATION.REPLACE)
-                    {
-                        System.Type concreteChildType = GetSchemaType(bytes, it, childType);
-
-                        if (value == null)
-                        {
-                            value = CreateTypeInstance(concreteChildType);
-                            ((IRef)value).__refId = __refId;
-
-                            if (previousValue != null)
-                            {
-                                // ((Schema)value).MoveEventHandlers((Schema)previousValue);
-
-                                if (
-                                    ((IRef)previousValue).__refId > 0 &&
-                                    __refId != ((IRef)previousValue).__refId
-                                )
-                                {
-                                    Refs.Remove(((IRef)previousValue).__refId);
-                                }
-                            }
-                        }
-
-                        Refs.Add(__refId, (IRef)value, value != previousValue);
-                    }
-                }
-                else if (childType == null)
-                {
-                    // primitive values
-                    value = Utils.Decode.DecodePrimitiveType(fieldType, bytes, it);
-                }
-                else
-                {
-                    var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
-
-                    ISchemaCollection valueRef = Refs.Has(__refId)
-						? (ISchemaCollection)previousValue ?? (ISchemaCollection)Refs.Get(__refId)
-						: (ISchemaCollection)Activator.CreateInstance(childType);
-
-                    value = valueRef.Clone();
-                    ((ISchemaCollection)value).__refId = __refId;
-
-                    // keep reference to nested childPrimitiveType.
-                    string childPrimitiveType;
-                    ((Schema)_ref).fieldChildPrimitiveTypes.TryGetValue(fieldName, out childPrimitiveType);
-                    ((ISchemaCollection)value).ChildPrimitiveType = childPrimitiveType;
-
-                    if (previousValue != null)
-                    {
-                        // ((ISchemaCollection)value).MoveEventHandlers((ISchemaCollection)previousValue);
-
-                        if (
-                            ((IRef)previousValue).__refId > 0 &&
-                            __refId != ((IRef)previousValue).__refId
-                        )
-                        {
-                            Refs.Remove(((IRef)previousValue).__refId);
-
-                            var items = ((ISchemaCollection)previousValue).GetItems();
-
-                            foreach (object key in items.Keys)
-                            {
-                                AllChanges.Add(new DataChange
-                                {
-                                    RefId = __refId,
-                                    DynamicIndex = key,
-                                    Op = (byte)OPERATION.DELETE,
-                                    Value = null,
-                                    PreviousValue = items[key]
-                                });
-                            }
-                        }
-                    }
-
-                    Refs.Add(__refId, (IRef)value, valueRef != previousValue);
-                }
-
-                if (value != null)
-                {
-                    if (_ref is Schema)
-                    {
-                        ((Schema)_ref)[fieldName] = value;
-                    }
-                    else if (_ref is ISchemaCollection)
-                    {
-                        ((ISchemaCollection)_ref).SetByIndex(fieldIndex, dynamicIndex, value);
-                    }
-                }
-
-                if (previousValue != value)
-                {
-                    AllChanges.Add(new DataChange
-                    {
-                        RefId = refId,
-                        Op = operation,
-                        Field = fieldName,
-                        DynamicIndex = dynamicIndex,
-                        Value = value,
-                        PreviousValue = previousValue
-                    });
-                }
+					continue;
+				}
             }
 
             TriggerChanges?.Invoke(ref AllChanges);
@@ -304,19 +113,366 @@ namespace Colyseus.Schema
             Refs.GarbageCollection();
         }
 
-        /// <summary>
-        ///     Determine what type of <see cref="Schema" /> this is
-        /// </summary>
-        /// <param name="bytes">Incoming data</param>
-        /// <param name="it">
-        ///     The <see cref="Iterator" /> used to <see cref="Decoder.DecodeNumber" /> the <paramref name="bytes" />
-        /// </param>
-        /// <param name="defaultType">
-        ///     The default <see cref="Schema" /> type, if one cant be determined from the
-        ///     <paramref name="bytes" />
-        /// </param>
-        /// <returns>The parsed <see cref="System.Type" /> if found, <paramref name="defaultType" /> if not</returns>
-        protected System.Type GetSchemaType(byte[] bytes, Iterator it, System.Type defaultType)
+		protected void DecodeValue(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType, System.Type childType, byte operation, out object value, out object previousValue)
+		{
+			previousValue = _ref.GetByIndex(fieldIndex);
+
+			//
+			// Delete operations
+			//
+			if ((operation & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE)
+			{
+				if (operation != (byte)OPERATION.DELETE_AND_ADD)
+				{
+					_ref.DeleteByIndex(fieldIndex);
+				}
+
+				// Flag `refId` for garbage collection.
+				if (previousValue != null && previousValue is IRef)
+				{
+					Refs.Remove(((IRef)previousValue).__refId);
+				}
+
+				value = null;
+			}
+
+			if (operation == (byte)OPERATION.DELETE)
+			{
+				//
+				// FIXME: refactor me.
+				// Don't do anything.
+				//
+				value = null;
+
+			}
+			else if (fieldType == "ref")
+			{
+				var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+				value = Refs.Get(__refId);
+
+				if (operation != (byte)OPERATION.REPLACE)
+				{
+					System.Type concreteChildType = GetSchemaType(bytes, it, childType);
+
+					if (value == null)
+					{
+						value = CreateTypeInstance(concreteChildType);
+						((IRef)value).__refId = __refId;
+
+						if (previousValue != null)
+						{
+							if (
+								((IRef)previousValue).__refId > 0 &&
+								__refId != ((IRef)previousValue).__refId
+							)
+							{
+								Refs.Remove(((IRef)previousValue).__refId);
+							}
+						}
+					}
+
+					Refs.Add(__refId, (IRef)value, value != previousValue);
+				}
+			}
+			else if (childType == null)
+			{
+				// primitive values
+				value = Utils.Decode.DecodePrimitiveType(fieldType, bytes, it);
+			}
+			else
+			{
+				var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+
+				ISchemaCollection valueRef = Refs.Has(__refId)
+					? (ISchemaCollection)previousValue ?? (ISchemaCollection)Refs.Get(__refId)
+					: (ISchemaCollection)Activator.CreateInstance(childType);
+
+				value = valueRef.Clone();
+				((ISchemaCollection)value).__refId = __refId;
+
+				// keep reference to nested childPrimitiveType.
+				string childPrimitiveType;
+				((Schema)_ref).fieldsByIndex.TryGetValue(fieldIndex, out var fieldName);
+				((Schema)_ref).fieldChildPrimitiveTypes.TryGetValue(fieldName, out childPrimitiveType);
+				((ISchemaCollection)value).ChildPrimitiveType = childPrimitiveType;
+
+				if (previousValue != null)
+				{
+					if (
+						((IRef)previousValue).__refId > 0 &&
+						__refId != ((IRef)previousValue).__refId
+					)
+					{
+						Refs.Remove(((IRef)previousValue).__refId);
+
+						((ISchemaCollection)previousValue).ForEach((key, value) => {
+							AllChanges.Add(new DataChange
+							{
+								RefId = __refId,
+								DynamicIndex = key,
+								Op = (byte)OPERATION.DELETE,
+								Value = null,
+								PreviousValue = value
+							});
+						});
+					}
+				}
+
+				Refs.Add(__refId, (IRef)value, valueRef != previousValue);
+			}
+		}
+
+		protected bool DecodeSchema(byte[] bytes, Iterator it, Schema refSchema)
+		{
+			byte firstByte = bytes[it.Offset++];
+			byte operation = (byte) ((firstByte >> 6) << 6); // "compressed" index + operation
+
+			int fieldIndex = firstByte % (operation == 0 ? 255 : operation); // FIXME: JS allows (0 || 255);
+
+			refSchema.fieldsByIndex.TryGetValue(fieldIndex, out var fieldName);
+			refSchema.fieldTypes.TryGetValue(fieldName ?? "", out var fieldType);
+			refSchema.fieldChildTypes.TryGetValue(fieldName ?? "", out var childType);
+
+			if (fieldName == null)
+			{
+				return false;
+			}
+
+			DecodeValue(
+				bytes,
+				it,
+				refSchema,
+				fieldIndex,
+				fieldType,
+				childType,
+				operation,
+				out var value,
+				out var previousValue
+			);
+
+			if (value != null)
+			{
+				refSchema[fieldName] = value;
+			}
+
+			if (previousValue != value)
+			{
+				AllChanges.Add(new DataChange
+				{
+					RefId = refSchema.__refId,
+					Op = operation,
+					Field = fieldName,
+					Value = value,
+					PreviousValue = previousValue
+				});
+			}
+
+			return true;
+		}
+
+		protected bool DecodeMapSchema (byte[] bytes, Iterator it, IMapSchema refMap)
+		{
+			byte operation = bytes[it.Offset++];
+
+			if (operation == (byte)OPERATION.CLEAR)
+			{
+				refMap.Clear(AllChanges, Refs);
+				return true;
+			}
+
+			int fieldIndex = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+			string fieldType;
+			System.Type childType = null;
+
+			if (refMap.HasSchemaChild)
+			{
+				fieldType = "ref";
+				childType = refMap.GetChildType();
+			}
+			else
+			{
+				fieldType = refMap.ChildPrimitiveType;
+			}
+
+			string dynamicIndex;
+
+			if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
+			{
+				// MapSchema dynamic index.
+				dynamicIndex = Utils.Decode.DecodeString(bytes, it);
+				refMap.SetIndex(fieldIndex, dynamicIndex);
+			}
+			else
+			{
+				dynamicIndex = (string)refMap.GetIndex(fieldIndex);
+			}
+
+			DecodeValue(
+				bytes,
+				it,
+				refMap,
+				fieldIndex,
+				fieldType,
+				childType,
+				operation,
+				out var value,
+				out var previousValue
+			);
+
+			if (value != null)
+			{
+				refMap.SetByIndex(fieldIndex, dynamicIndex, value);
+			}
+
+			if (previousValue != value)
+			{
+				AllChanges.Add(new DataChange
+				{
+					RefId = refMap.__refId,
+					Op = operation,
+					Field = null,
+					DynamicIndex = dynamicIndex,
+					Value = value,
+					PreviousValue = previousValue
+				});
+			}
+			return true;
+		}
+
+		protected bool DecodeArraySchema(byte[] bytes, Iterator it, IArraySchema refArray)
+		{
+			byte operation = bytes[it.Offset++];
+			int index;
+
+			if (operation == (byte)OPERATION.CLEAR)
+			{
+				refArray.Clear(AllChanges, Refs);
+				return true;
+
+			}
+			else if (operation == (byte)OPERATION.REVERSE)
+			{
+				refArray.Reverse();
+				return true;
+
+			}
+			else if (operation == (byte)OPERATION.DELETE_BY_REFID)
+			{
+				// TODO: refactor here, try to follow same flow as below
+				int refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+				object itemByRefId = Refs.Get(refId);
+				int i = 0;
+				index = -1;
+				foreach (var item in refArray.GetItems())
+				{
+					if (item == itemByRefId)
+					{
+						index = i;
+						break;
+					}
+					i++;
+				}
+				refArray.DeleteByIndex(index);
+				AllChanges.Add(new DataChange
+				{
+					RefId = refArray.__refId,
+					Op = (byte) OPERATION.DELETE,
+					Field = "",
+					DynamicIndex = index,
+					Value = null,
+					PreviousValue = itemByRefId
+				});
+				return true;
+
+			}
+			else if (operation == (byte)OPERATION.ADD_BY_REFID)
+			{
+				int refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+				IRef itemByRefId = Refs.Get(refId);
+				if (itemByRefId == null)
+				{
+					int i = 0;
+					index = -1;
+					foreach (var item in refArray.GetItems())
+					{
+						if (item == itemByRefId)
+						{
+							index = i;
+							break;
+						}
+						i++;
+					}
+				}
+				else
+				{
+					index = refArray.Count;
+				}
+
+			}
+			else
+			{
+				index = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+
+			}
+
+			string fieldType;
+			System.Type childType = null;
+
+			if (refArray.HasSchemaChild)
+			{
+				fieldType = "ref";
+				childType = refArray.GetChildType();
+			}
+			else
+			{
+				fieldType = refArray.ChildPrimitiveType;
+			}
+
+			DecodeValue(
+				bytes,
+				it,
+				refArray,
+				index,
+				fieldType,
+				childType,
+				operation,
+				out var value,
+				out var previousValue
+			);
+
+			if (value != null)
+			{
+				refArray.SetByIndex(index, value, operation);
+			}
+
+			if (previousValue != value)
+			{
+				AllChanges.Add(new DataChange
+				{
+					RefId = refArray.__refId,
+					Op = operation,
+					Field = null,
+					DynamicIndex = index,
+					Value = value,
+					PreviousValue = previousValue
+				});
+			}
+			return true;
+		}
+
+		/// <summary>
+		///     Determine what type of <see cref="Schema" /> this is
+		/// </summary>
+		/// <param name="bytes">Incoming data</param>
+		/// <param name="it">
+		///     The <see cref="Iterator" /> used to <see cref="Decoder.DecodeNumber" /> the <paramref name="bytes" />
+		/// </param>
+		/// <param name="defaultType">
+		///     The default <see cref="Schema" /> type, if one cant be determined from the
+		///     <paramref name="bytes" />
+		/// </param>
+		/// <returns>The parsed <see cref="System.Type" /> if found, <paramref name="defaultType" /> if not</returns>
+		protected System.Type GetSchemaType(byte[] bytes, Iterator it, System.Type defaultType)
         {
             System.Type type = defaultType;
 

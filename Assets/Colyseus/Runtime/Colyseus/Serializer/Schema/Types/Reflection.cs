@@ -37,23 +37,29 @@ namespace Colyseus.Schema
         public float id;
 
         /// <summary>
+        ///     The ID of which structure this <see cref="Schema" /> extends
+        /// </summary>
+        [Type(1, "number")]
+        public float extendsId = -1;
+
+        /// <summary>
         ///     An <see cref="ArraySchema{T}" /> of <see cref="ReflectionField" />
         /// </summary>
-        [Type(1, "array", typeof(ArraySchema<ReflectionField>))]
-        public ArraySchema<ReflectionField> fields = new ArraySchema<ReflectionField>();
+        [Type(2, "array", typeof(ArraySchema<ReflectionField>))]
+        public ArraySchema<ReflectionField> fields;
     }
 
     /// <summary>
     ///     Top level reflection container for an <see cref="ArraySchema{T}" />
     /// </summary>
     [Preserve]
-    public class ColyseusReflection : Schema
+    public class Reflection : Schema
     {
         /// <summary>
         ///     An <see cref="ArraySchema{T}" /> of <see cref="ReflectionType" />
         /// </summary>
         [Type(0, "array", typeof(ArraySchema<ReflectionType>))]
-        public ArraySchema<ReflectionType> types = new ArraySchema<ReflectionType>();
+        public ArraySchema<ReflectionType> types;
 
         [Type(1, "number")]
         public float rootType = -1;
