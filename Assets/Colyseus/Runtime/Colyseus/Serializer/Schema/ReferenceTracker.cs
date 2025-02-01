@@ -150,6 +150,7 @@ namespace Colyseus.Schema
         {
             refs.Clear();
             refCounts.Clear();
+            callbacks.Clear();
             deletedRefs.Clear();
         }
     }
