@@ -407,4 +407,62 @@ public class SchemaDeserializerTest
 
 	}
 
+	[Test]
+	public void CallbacksTest()
+	{
+		var decoder = new Colyseus.Schema.Decoder<SchemaTest.Callbacks.CallbacksState>();
+		var state = decoder.State;
+		var callbacks = Colyseus.Schema.Callbacks.Get(decoder);
+
+		var onListenContainer = 0;
+		var onPlayerAdd = 0;
+		var onPlayerRemove = 0;
+		var onItemAdd = 0;
+		var onItemRemove = 0;
+
+		callbacks.Listen(state => state.container, (container, _) =>
+		{
+			onListenContainer++;
+
+			callbacks.OnAdd(container, container => container.playersMap, (sessionId, player) =>
+			{
+				onPlayerAdd++;
+
+				callbacks.OnAdd(player, player => player.items, (key, item) =>
+				{
+					onItemAdd++;
+				});
+
+				callbacks.OnRemove(player, player => player.items, (key, item) =>
+				{
+					onItemRemove++;
+				});
+			});
+
+			callbacks.OnRemove(container, container => container.playersMap, (sessionId, player) =>
+			{
+				onPlayerRemove++;
+			});
+		});
+
+		// (initial)
+		decoder.Decode(new byte[] { 128, 1, 255, 1, 128, 2, 255, 2 });
+
+		// (1st encode)
+		decoder.Decode(new byte[] { 255, 1, 255, 2, 128, 0, 163, 111, 110, 101, 3, 128, 1, 163, 116, 119, 111, 9, 255, 2, 255, 3, 128, 4, 129, 5, 255, 4, 128, 1, 129, 2, 130, 3, 255, 5, 128, 0, 166, 105, 116, 101, 109, 45, 49, 6, 128, 1, 166, 105, 116, 101, 109, 45, 50, 7, 128, 2, 166, 105, 116, 101, 109, 45, 51, 8, 255, 6, 128, 166, 73, 116, 101, 109, 32, 49, 129, 1, 255, 7, 128, 166, 73, 116, 101, 109, 32, 50, 129, 2, 255, 8, 128, 166, 73, 116, 101, 109, 32, 51, 129, 3, 255, 9, 128, 10, 129, 11, 255, 10, 128, 1, 129, 2, 130, 3, 255, 11, 128, 0, 166, 105, 116, 101, 109, 45, 49, 12, 128, 1, 166, 105, 116, 101, 109, 45, 50, 13, 128, 2, 166, 105, 116, 101, 109, 45, 51, 14, 255, 12, 128, 166, 73, 116, 101, 109, 32, 49, 129, 1, 255, 13, 128, 166, 73, 116, 101, 109, 32, 50, 129, 2, 255, 14, 128, 166, 73, 116, 101, 109, 32, 51, 129, 3 });
+
+		// (2nd encode)
+		decoder.Decode(new byte[] { 255, 1, 255, 2, 64, 1, 128, 2, 165, 116, 104, 114, 101, 101, 16, 255, 2, 255, 3, 255, 4, 255, 5, 64, 0, 64, 1, 128, 3, 166, 105, 116, 101, 109, 45, 52, 15, 255, 8, 255, 5, 255, 5, 255, 15, 128, 166, 73, 116, 101, 109, 32, 52, 129, 4, 255, 2, 255, 16, 128, 17, 129, 18, 255, 17, 128, 1, 129, 2, 130, 3, 255, 18, 128, 0, 166, 105, 116, 101, 109, 45, 49, 19, 128, 1, 166, 105, 116, 101, 109, 45, 50, 20, 128, 2, 166, 105, 116, 101, 109, 45, 51, 21, 255, 19, 128, 166, 73, 116, 101, 109, 32, 49, 129, 1, 255, 20, 128, 166, 73, 116, 101, 109, 32, 50, 129, 2, 255, 21, 128, 166, 73, 116, 101, 109, 32, 51, 129, 3 });
+
+		// (new container)
+		decoder.Decode(new byte[] { 128, 22, 255, 2, 255, 5, 255, 5, 255, 2, 255, 0, 255, 22, 128, 23, 255, 23, 128, 0, 164, 108, 97, 115, 116, 24, 255, 24, 128, 25, 129, 26, 255, 25, 128, 10, 129, 10, 130, 10, 255, 26, 128, 0, 163, 111, 110, 101, 27, 255, 27, 128, 166, 73, 116, 101, 109, 32, 49, 129, 1 });
+
+		Assert.AreEqual(2, onListenContainer);
+		Assert.AreEqual(4, onPlayerAdd);
+		Assert.AreEqual(1, onPlayerRemove);
+
+		Assert.AreEqual(11, onItemAdd);
+		Assert.AreEqual(2, onItemRemove);
+	}
+
 }

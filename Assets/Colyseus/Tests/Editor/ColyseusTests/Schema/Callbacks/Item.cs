@@ -8,8 +8,11 @@
 using Colyseus.Schema;
 
 namespace SchemaTest.Callbacks {
-	public partial class CallbacksState : Schema {
-		[Type(0, "ref", typeof(Container))]
-		public Container container = null;
+	public partial class Item : Schema {
+		[Type(0, "string")]
+		public string name = default(string);
+
+		[Type(1, "number")]
+		public float value = default(float);
 	}
 }

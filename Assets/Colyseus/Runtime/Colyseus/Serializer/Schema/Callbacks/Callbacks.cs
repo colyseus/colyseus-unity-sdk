@@ -39,6 +39,8 @@ namespace Colyseus.Schema
 
 		protected HashSet<int> UniqueRefIds = new HashSet<int>();
 
+		protected bool isTriggering = false;
+
 		public StateCallbackStrategy(Decoder<TState> decoder)
 		{
 			Decoder = decoder;
@@ -60,7 +62,7 @@ namespace Colyseus.Schema
 			return () => handlers[operationOrProperty].Remove(handler);
 		}
 
-		protected Action AddCallbackOrWaitCollectionAvailable<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, TReturn>> propertyExpression, OPERATION operation, Delegate handler)
+		protected Action AddCallbackOrWaitCollectionAvailable<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, TReturn>> propertyExpression, OPERATION operation, Delegate handler, bool immediate = true)
 			where TInstance : Schema
 			where TReturn : IRef
 		{
@@ -83,7 +85,9 @@ namespace Colyseus.Schema
 				//
 				// Call immediately if collection is already available, if it's an ADD operation.
 				//
-				if (operation == OPERATION.ADD) {
+				immediate = immediate && isTriggering == false;
+
+				if (operation == OPERATION.ADD && immediate) {
 					((ISchemaCollection)instance[propertyName]).ForEach((key, value) => {
 						handler.DynamicInvoke(key, value);
 					});
@@ -93,21 +97,23 @@ namespace Colyseus.Schema
 			}
 		}
 
-		public Action Listen<TReturn>(Expression<Func<TState, TReturn>> propertyExpression, PropertyChangeEventHandler<TReturn> handler)
+		public Action Listen<TReturn>(Expression<Func<TState, TReturn>> propertyExpression, PropertyChangeEventHandler<TReturn> handler, bool immediate = true)
 		{
-			return Listen(Decoder.State, propertyExpression, handler);
+			return Listen(Decoder.State, propertyExpression, handler, immediate);
 		}
 
-		public Action Listen<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, TReturn>> propertyExpression, PropertyChangeEventHandler<TReturn> handler)
+		public Action Listen<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, TReturn>> propertyExpression, PropertyChangeEventHandler<TReturn> handler, bool immediate = true)
 			where TInstance : Schema
 		{
 			var memberExpression = (MemberExpression)propertyExpression.Body;
 			var propertyName = memberExpression.Member.Name;
 
+			immediate = immediate && isTriggering == false;
+
 			//
 			// Call handler immediately if property is already available.
 			//
-			if (instance[propertyName] != null && !instance[propertyName].Equals(default(TReturn)))
+			if (immediate && instance[propertyName] != null && !instance[propertyName].Equals(default(TReturn)))
 			{
 				handler((TReturn)instance[propertyName], default(TReturn));
 			}
@@ -121,26 +127,26 @@ namespace Colyseus.Schema
 			return AddCallback(instance.__refId, OPERATION.REPLACE, handler);
 		}
 
-		public Action OnAdd<TReturn>(Expression<Func<TState, ArraySchema<TReturn>>> propertyExpression, KeyValueEventHandler<int, TReturn> handler)
+		public Action OnAdd<TReturn>(Expression<Func<TState, ArraySchema<TReturn>>> propertyExpression, KeyValueEventHandler<int, TReturn> handler, bool immediate = true)
 		{
-			return OnAdd(Decoder.State, propertyExpression, handler);
+			return OnAdd(Decoder.State, propertyExpression, handler, immediate);
 		}
 
-		public Action OnAdd<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, ArraySchema<TReturn>>> propertyExpression, KeyValueEventHandler<int, TReturn> handler)
+		public Action OnAdd<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, ArraySchema<TReturn>>> propertyExpression, KeyValueEventHandler<int, TReturn> handler, bool immediate = true)
 			where TInstance : Schema
 		{
-			return AddCallbackOrWaitCollectionAvailable(instance, propertyExpression, OPERATION.ADD, handler);
+			return AddCallbackOrWaitCollectionAvailable(instance, propertyExpression, OPERATION.ADD, handler, immediate);
 		}
 
-		public Action OnAdd<TReturn>(Expression<Func<TState, MapSchema<TReturn>>> propertyExpression, KeyValueEventHandler<string, TReturn> handler)
+		public Action OnAdd<TReturn>(Expression<Func<TState, MapSchema<TReturn>>> propertyExpression, KeyValueEventHandler<string, TReturn> handler, bool immediate = true)
 		{
-			return OnAdd(Decoder.State, propertyExpression, handler);
+			return OnAdd(Decoder.State, propertyExpression, handler, immediate);
 		}
 
-		public Action OnAdd<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, MapSchema<TReturn>>> propertyExpression, KeyValueEventHandler<string, TReturn> handler)
+		public Action OnAdd<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, MapSchema<TReturn>>> propertyExpression, KeyValueEventHandler<string, TReturn> handler, bool immediate = true)
 			where TInstance : Schema
 		{
-			return AddCallbackOrWaitCollectionAvailable(instance, propertyExpression, OPERATION.ADD, handler);
+			return AddCallbackOrWaitCollectionAvailable(instance, propertyExpression, OPERATION.ADD, handler, immediate);
 		}
 
 		public Action OnRemove<TReturn>(Expression<Func<TState, ArraySchema<TReturn>>> propertyExpression, KeyValueEventHandler<int, TReturn> handler)
@@ -173,7 +179,7 @@ namespace Colyseus.Schema
 		/// <param name="instance"></param>
 		/// <param name="target"></param>
 		/// <returns></returns>
-		public Action BindTo<T>(Schema from, T to)
+		public Action BindTo<T>(Schema from, T to, bool immediate = true)
 		{
 			var action = (Action)(() =>
 			{
@@ -197,7 +203,9 @@ namespace Colyseus.Schema
 					}
 				}
 			});
-			action();
+			if (immediate) {
+				action();
+			}
 			return AddCallback(from.__refId, to, action);
 		}
 
@@ -269,11 +277,15 @@ namespace Colyseus.Schema
 						{
 							try
 							{
+								isTriggering = true;
 								callback.DynamicInvoke(change.Value, change.PreviousValue);
 							}
 							catch (Exception e)
 							{
 								UnityEngine.Debug.LogError(e.Message);
+							} finally
+							{
+								isTriggering = false;
 							}
 						}
 					}
@@ -307,10 +319,12 @@ namespace Colyseus.Schema
 							callbacks.TryGetValue(OPERATION.ADD, out var addCallbacks);
 							if (addCallbacks != null)
 							{
+								isTriggering = true;
 								foreach (var callback in addCallbacks)
 								{
 									callback.DynamicInvoke(change.DynamicIndex, change.Value);
 								}
+								isTriggering = false;
 							}
 						}
 
@@ -327,10 +341,12 @@ namespace Colyseus.Schema
 						callbacks.TryGetValue(OPERATION.ADD, out var addCallbacks);
 						if (addCallbacks != null)
 						{
+							isTriggering = true;
 							foreach (var callback in addCallbacks)
 							{
 								callback.DynamicInvoke(change.DynamicIndex ?? change.Field, change.Value);
 							}
+							isTriggering = false;
 						}
 					}
 
