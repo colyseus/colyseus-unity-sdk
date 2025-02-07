@@ -74,14 +74,22 @@ public class SchemaDeserializerTest
 
 		var callbacks = Colyseus.Schema.Callbacks.Get(decoder);
 
-		callbacks.OnAdd(state => state.arrayOfSchemas, (key, value) => Debug.Log("onAdd, arrayOfSchemas => " + value));
-		callbacks.OnAdd(state => state.arrayOfNumbers, (key, value) => Debug.Log("onAdd, arrayOfNumbers => " + value));
-		callbacks.OnAdd(state => state.arrayOfStrings, (key, value) => Debug.Log("onAdd, arrayOfStrings => " + value));
-		callbacks.OnAdd(state => state.arrayOfInt32, (key, value) => Debug.Log("onAdd, arrayOfInt32 => " + value));
-
 		decoder.Decode(bytes);
 
-		Debug.Log("Decoded 1st time!");
+		var arrayOfSchemasOnAdd = 0;
+		var arrayOfNumbersOnAdd = 0;
+		var arrayOfStringsOnAdd = 0;
+		var arrayOfInt32OnAdd = 0;
+
+		callbacks.OnAdd(state => state.arrayOfSchemas, (key, value) => arrayOfSchemasOnAdd++);
+		callbacks.OnAdd(state => state.arrayOfNumbers, (key, value) => arrayOfNumbersOnAdd++);
+		callbacks.OnAdd(state => state.arrayOfStrings, (key, value) => arrayOfStringsOnAdd++);
+		callbacks.OnAdd(state => state.arrayOfInt32, (key, value) => arrayOfInt32OnAdd++);
+
+		Assert.AreEqual(2, arrayOfSchemasOnAdd);
+		Assert.AreEqual(4, arrayOfNumbersOnAdd);
+		Assert.AreEqual(3, arrayOfStringsOnAdd);
+		Assert.AreEqual(3, arrayOfInt32OnAdd);
 
 		Assert.AreEqual(2, state.arrayOfSchemas.Count);
 		Assert.AreEqual(100, state.arrayOfSchemas[0].x);
@@ -105,20 +113,28 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(3520, state.arrayOfInt32[1]);
 		Assert.AreEqual(-3000, state.arrayOfInt32[2]);
 
-		callbacks.OnRemove(state => state.arrayOfSchemas, (key, value) => Debug.Log("onRemove, arrayOfSchemas => " + key));
-		callbacks.OnRemove(state => state.arrayOfNumbers, (key, value) => Debug.Log("onRemove, arrayOfNumbers => " + key));
-		callbacks.OnRemove(state => state.arrayOfStrings, (key, value) => Debug.Log("onRemove, arrayOfStrings => " + key));
-		callbacks.OnRemove(state => state.arrayOfInt32, (key, value) => Debug.Log("onRemove, arrayOfInt32 => " + key));
+		var arrayOfSchemasOnRemove = 0;
+		var arrayOfNumbersOnRemove = 0;
+		var arrayOfStringsOnRemove = 0;
+		var arrayOfInt32OnRemove = 0;
+
+		callbacks.OnRemove(state => state.arrayOfSchemas, (key, value) => arrayOfSchemasOnRemove++);
+		callbacks.OnRemove(state => state.arrayOfNumbers, (key, value) => arrayOfNumbersOnRemove++);
+		callbacks.OnRemove(state => state.arrayOfStrings, (key, value) => arrayOfStringsOnRemove++);
+		callbacks.OnRemove(state => state.arrayOfInt32, (key, value) => arrayOfInt32OnRemove++);
 
 		byte[] popBytes = { 255, 1, 64, 1, 255, 2, 64, 3, 64, 2, 64, 1, 255, 4, 64, 2, 64, 1, 255, 3, 64, 2, 64, 1 };
 		decoder.Decode(popBytes);
-		Debug.Log("Decoded 2nd time!");
 
 		Assert.AreEqual(1, state.arrayOfSchemas.Count);
 		Assert.AreEqual(1, state.arrayOfNumbers.Count);
 		Assert.AreEqual(1, state.arrayOfStrings.Count);
 		Assert.AreEqual(1, state.arrayOfInt32.Count);
-		Debug.Log("FINISHED");
+
+		Assert.AreEqual(1, arrayOfSchemasOnRemove);
+		Assert.AreEqual(3, arrayOfNumbersOnRemove);
+		Assert.AreEqual(2, arrayOfStringsOnRemove);
+		Assert.AreEqual(2, arrayOfInt32OnRemove);
 	}
 
 	[Test]

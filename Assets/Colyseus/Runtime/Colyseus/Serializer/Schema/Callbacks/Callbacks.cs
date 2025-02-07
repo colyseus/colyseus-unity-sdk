@@ -79,6 +79,16 @@ namespace Colyseus.Schema
 				});
 				return removeOnAdd;
 			} else {
+
+				//
+				// Call immediately if collection is already available, if it's an ADD operation.
+				//
+				if (operation == OPERATION.ADD) {
+					((ISchemaCollection)instance[propertyName]).ForEach((key, value) => {
+						handler.DynamicInvoke(key, value);
+					});
+				}
+
 				return AddCallback(((IRef)instance[propertyName]).__refId, operation, handler);
 			}
 		}
@@ -93,6 +103,15 @@ namespace Colyseus.Schema
 		{
 			var memberExpression = (MemberExpression)propertyExpression.Body;
 			var propertyName = memberExpression.Member.Name;
+
+			//
+			// Call handler immediately if property is already available.
+			//
+			if (instance[propertyName] != null && !instance[propertyName].Equals(default(TReturn)))
+			{
+				handler((TReturn)instance[propertyName], default(TReturn));
+			}
+
 			return AddCallback(instance.__refId, propertyName, handler);
 		}
 
@@ -156,7 +175,7 @@ namespace Colyseus.Schema
 		/// <returns></returns>
 		public Action BindTo<T>(Schema from, T to)
 		{
-			return AddCallback(from.__refId, to, (Action)(() =>
+			var action = (Action)(() =>
 			{
 				var toType = typeof(T);
 				foreach (var field in from.fieldsByIndex)
@@ -177,7 +196,9 @@ namespace Colyseus.Schema
 						}
 					}
 				}
-			}));
+			});
+			action();
+			return AddCallback(from.__refId, to, action);
 		}
 
 		protected void TriggerChanges(ref List<DataChange> allChanges)
