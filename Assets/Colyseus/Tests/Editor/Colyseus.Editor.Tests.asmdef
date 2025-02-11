@@ -1,7 +1,9 @@
 {
     "name": "Colyseus.Editor.Tests",
+    "rootNamespace": "",
     "references": [
-        "ColyseusSDK"
+        "ColyseusSDK",
+        "UniTask"
     ],
     "includePlatforms": [
         "Editor"

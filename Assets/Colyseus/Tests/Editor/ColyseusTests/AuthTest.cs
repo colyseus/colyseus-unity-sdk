@@ -1,5 +1,5 @@
 
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
@@ -34,7 +34,7 @@ public class AuthTest
 	}
 
 	[Test]
-	public async Task GetUserData()
+	public async UniTask GetUserData()
 	{
 		var uniqueEmail = $"endel{Time.time.ToString().Replace(".", "")}@colyseus.io";
 
@@ -73,7 +73,7 @@ public class AuthTest
 	}
 
 	[Test]
-	public async Task RegisterWithEmailAndPassword()
+	public async UniTask RegisterWithEmailAndPassword()
 	{
 		var uniqueEmail = $"endel{Time.time.ToString().Replace(".", "")}@colyseus.io";
 
@@ -142,7 +142,7 @@ public class AuthTest
 	}
 
 	[Test]
-	public async Task SignInAnonymously()
+	public async UniTask SignInAnonymously()
 	{
 		string tokenFromCallback = "OnChange was not called";
 		bool anonymousFromCallback = false;
@@ -183,7 +183,7 @@ public class AuthTest
 	}
 
 	[Test]
-	public async Task SignOut()
+	public async UniTask SignOut()
 	{
 		string tokenFromCallback = "OnChange was not called";
 		bool anonymousFromCallback = false;

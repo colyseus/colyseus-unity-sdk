@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 using System.IO;
@@ -28,52 +28,52 @@ namespace Colyseus
             _settings = settings;
         }
 
-        public async Task<string> Get(string uriPath, Dictionary<string, string> headers = null)
+        public async UniTask<string> Get(string uriPath, Dictionary<string, string> headers = null)
         {
             return await Request("GET", uriPath, null, headers);
         }
 
-        public async Task<T> Get<T>(string uriPath, Dictionary<string, string> headers = null)
+        public async UniTask<T> Get<T>(string uriPath, Dictionary<string, string> headers = null)
         {
             return await Request<T>("GET", uriPath, null, headers);
         }
 
-        public async Task<string> Post(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
+        public async UniTask<string> Post(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
 		{
             return await Request("POST", uriPath, jsonBody, headers);
 		}
 
-        public async Task<T> Post<T>(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
+        public async UniTask<T> Post<T>(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
         {
             return await Request<T>("POST", uriPath, jsonBody, headers);
         }
 
-        public async Task<string> Delete(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
+        public async UniTask<string> Delete(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
         {
             return await Request("DELETE", uriPath, jsonBody, headers);
         }
 
-        public async Task<T> Delete<T>(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
+        public async UniTask<T> Delete<T>(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
         {
             return await Request<T>("DELETE", uriPath, jsonBody, headers);
         }
 
-        public async Task<string> Put(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
+        public async UniTask<string> Put(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
         {
             return await Request("PUT", uriPath, jsonBody, headers);
         }
 
-        public async Task<T> Put<T>(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
+        public async UniTask<T> Put<T>(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
         {
             return await Request<T>("PUT", uriPath, jsonBody, headers);
         }
 
-        public async Task<T> Request<T>(string uriMethod, string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
+        public async UniTask<T> Request<T>(string uriMethod, string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
 		{
             return Json.Deserialize<T>(await Request(uriMethod, uriPath, jsonBody, headers));
         }
 
-        public async Task<string> Request(string uriMethod, string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
+        public async UniTask<string> Request(string uriMethod, string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
         {
             using (UnityWebRequest req = new UnityWebRequest())
             {

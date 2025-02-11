@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using NativeWebSocket;
 // ReSharper disable InconsistentNaming
 
@@ -47,7 +47,7 @@ namespace Colyseus
                 DispatchMessageQueue();
 
                 // Switch context
-                await Task.Yield();
+                await UniTask.Yield();
             }
         }
 #endif

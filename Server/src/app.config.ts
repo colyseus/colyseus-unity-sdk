@@ -20,7 +20,11 @@ export default config({
         // presence: new RedisPresence(),
     },
 
-    initializeTransport: (options) => new WebSocketTransport(options),
+    initializeTransport: (options) => new WebSocketTransport({
+        pingInterval: 6000,
+        pingMaxRetries: 4,
+        maxPayload: 1024 * 1024 * 1, // 1MB Max Payload
+      }),
 
     initializeGameServer: (gameServer) => {
         /**
