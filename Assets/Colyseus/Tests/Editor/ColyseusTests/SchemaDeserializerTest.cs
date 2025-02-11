@@ -123,6 +123,7 @@ public class SchemaDeserializerTest
 		callbacks.OnRemove(state => state.arrayOfStrings, (key, value) => arrayOfStringsOnRemove++);
 		callbacks.OnRemove(state => state.arrayOfInt32, (key, value) => arrayOfInt32OnRemove++);
 
+		// byte[] popBytes = { 255, 1, 64, 1, 255, 2, 64, 3, 64, 2, 64, 1, 255, 4, 64, 2, 64, 1, 255, 3, 64, 2, 64, 1 };
 		byte[] popBytes = { 255, 1, 64, 1, 255, 2, 64, 3, 64, 2, 64, 1, 255, 4, 64, 2, 64, 1, 255, 3, 64, 2, 64, 1 };
 		decoder.Decode(popBytes);
 
@@ -135,6 +136,13 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(3, arrayOfNumbersOnRemove);
 		Assert.AreEqual(2, arrayOfStringsOnRemove);
 		Assert.AreEqual(2, arrayOfInt32OnRemove);
+
+		// re-initialize ArraySchema's
+		decoder.Decode(new byte[] { 128, 7, 129, 8, 131, 9, 130, 10, 255, 7, 255, 8, 255, 9, 255, 10 });
+		Assert.AreEqual(0, state.arrayOfSchemas.Count);
+		Assert.AreEqual(0, state.arrayOfNumbers.Count);
+		Assert.AreEqual(0, state.arrayOfStrings.Count);
+		Assert.AreEqual(0, state.arrayOfInt32.Count);
 	}
 
 	[Test]
@@ -370,41 +378,40 @@ public class SchemaDeserializerTest
 	{
 		var decoder = new Colyseus.Schema.Decoder<SchemaTest.InstanceSharingTypes.State>();
 		var refs = decoder.Refs;
-		var client = decoder.State;
+		var state = decoder.State;
 
-		decoder.Decode(new byte[] { 130, 1, 131, 2, 128, 3, 129, 3, 255, 1, 255, 2, 255, 3, 128, 4, 255, 3, 128, 4, 255, 4, 128, 10, 129, 10, 255, 4, 128, 10, 129, 10 });
-		Assert.AreEqual(client.player1, client.player2);
-		Assert.AreEqual(client.player1.position, client.player2.position);
-		Assert.AreEqual(refs.refCounts[client.player1.__refId], 2);
+		decoder.Decode(new byte[]  { 130, 1, 131, 2, 128, 3, 129, 3, 255, 1, 255, 2, 255, 3, 128, 4, 255, 4, 128, 10, 129, 10 });
+		Assert.AreEqual(state.player1, state.player2);
+		Assert.AreEqual(state.player1.position, state.player2.position);
+		Assert.AreEqual(refs.refCounts[state.player1.__refId], 2);
 		Assert.AreEqual(5, refs.refs.Count);
 
-		decoder.Decode(new byte[] { 130, 1, 131, 2, 64, 65 });
-		Assert.AreEqual(null, client.player2);
-		Assert.AreEqual(null, client.player2);
+		decoder.Decode(new byte[] { 64, 65 });
+		Assert.AreEqual(null, state.player2);
+		Assert.AreEqual(null, state.player2);
 		Assert.AreEqual(3, refs.refs.Count);
 
-		decoder.Decode(new byte[] { 255, 1, 128, 0, 5, 128, 1, 5, 128, 2, 5, 128, 3, 6, 255, 5, 128, 7, 255, 6, 128, 8, 255, 7, 128, 10, 129, 10, 255, 8, 128, 10, 129, 10 });
-		Assert.AreEqual(client.arrayOfPlayers[0], client.arrayOfPlayers[1]);
-		Assert.AreEqual(client.arrayOfPlayers[1], client.arrayOfPlayers[2]);
-		Assert.AreNotEqual(client.arrayOfPlayers[2], client.arrayOfPlayers[3]);
+		decoder.Decode(new byte[] { 255, 1, 128, 0, 5, 128, 1, 5, 128, 2, 5, 128, 3, 7, 255, 5, 128, 6, 255, 6, 128, 10, 129, 10, 255, 7, 128, 8, 255, 8, 128, 10, 129, 10 });
+		Assert.AreEqual(state.arrayOfPlayers[0], state.arrayOfPlayers[1]);
+		Assert.AreEqual(state.arrayOfPlayers[1], state.arrayOfPlayers[2]);
+		Assert.AreNotEqual(state.arrayOfPlayers[2], state.arrayOfPlayers[3]);
 		Assert.AreEqual(7, refs.refs.Count);
 
 		decoder.Decode(new byte[] { 255, 1, 64, 3, 64, 2, 64, 1 });
-		Assert.AreEqual(1, client.arrayOfPlayers.Count);
+		Assert.AreEqual(1, state.arrayOfPlayers.Count);
 		Assert.AreEqual(5, refs.refs.Count);
-		var previousArraySchemaRefId = client.arrayOfPlayers.__refId;
+		var previousArraySchemaRefId = state.arrayOfPlayers.__refId;
 
 		// Replacing ArraySchema
 		decoder.Decode(new byte[] { 130, 9, 255, 9, 128, 0, 10, 255, 10, 128, 11, 255, 11, 128, 10, 129, 20 });
 		Assert.AreEqual(false, refs.refs.ContainsKey(previousArraySchemaRefId));
-		Assert.AreEqual(1, client.arrayOfPlayers.Count);
+		Assert.AreEqual(1, state.arrayOfPlayers.Count);
 		Assert.AreEqual(5, refs.refs.Count);
 
 		// Clearing ArraySchema
 		decoder.Decode(new byte[] { 255, 9, 10 });
-		Assert.AreEqual(0, client.arrayOfPlayers.Count);
+		Assert.AreEqual(0, state.arrayOfPlayers.Count);
 		Assert.AreEqual(3, refs.refs.Count);
-
 	}
 
 	[Test]

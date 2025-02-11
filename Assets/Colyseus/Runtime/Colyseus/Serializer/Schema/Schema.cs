@@ -187,6 +187,7 @@ namespace Colyseus.Schema
 	[SuppressMessage("ReSharper", "MissingXmlDoc")]
 	public interface IArraySchema : ISchemaCollection
 	{
+		void OnDecodeEnd();
 		void SetByIndex(int index, object value, byte operation);
 		void Reverse();
 	}

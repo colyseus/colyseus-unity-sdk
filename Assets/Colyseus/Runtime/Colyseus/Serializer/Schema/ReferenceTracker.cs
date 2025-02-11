@@ -38,23 +38,21 @@ namespace Colyseus.Schema
         /// <param name="incrementCount">If true, we increment the <see cref="refCounts" /> at this ID</param>
         public void Add(int refId, IRef _ref, bool incrementCount = true)
         {
-            int previousCount;
-
-            if (!refs.ContainsKey(refId))
-            {
-                refs[refId] = _ref;
-                previousCount = 0;
-            }
-            else
-            {
-                previousCount = refCounts[refId];
-            }
+			refs[refId] = _ref;
 
             if (incrementCount)
             {
-                refCounts[refId] = previousCount + 1;
+				int previousCount = (!refCounts.ContainsKey(refId))
+					? 0
+					: refCounts[refId];
+
+				refCounts[refId] = previousCount + 1;
             }
-        }
+
+			if (deletedRefs.Contains(refId)) {
+				deletedRefs.Remove(refId);
+			}
+		}
 
         /// <summary>
         ///     Get a reference by it's ID

@@ -19,53 +19,55 @@ namespace Colyseus.Schema
 		public Decoder()
 		{
             State = Activator.CreateInstance<T>();
+            Refs.Add(0, State);
         }
 
-        /// <summary>
-        ///     Decode incoming data
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it"><see cref="Iterator" /> used to  If null, will create a new one</param>
-        /// <param name="refs">
-        ///     <see cref="ColyseusReferenceTracker" /> for all refs found through the decoding process. If null, will
-        ///     create a new one
-        /// </param>
-        /// <exception cref="Exception">If no decoding fails</exception>
-        public void Decode(byte[] bytes, Iterator it = null)
-        {
-            if (it == null)
-            {
-                it = new Iterator();
-            }
+		/// <summary>
+		///     Decode incoming data
+		/// </summary>
+		/// <param name="bytes">The incoming data</param>
+		/// <param name="it"><see cref="Iterator" /> used to  If null, will create a new one</param>
+		/// <param name="refs">
+		///     <see cref="ColyseusReferenceTracker" /> for all refs found through the decoding process. If null, will
+		///     create a new one
+		/// </param>
+		/// <exception cref="Exception">If no decoding fails</exception>
+		public void Decode(byte[] bytes, Iterator it = null)
+		{
+			if (it == null)
+			{
+				it = new Iterator();
+			}
 
-            int totalBytes = bytes.Length;
-
-            int refId = 0;
-            IRef _ref = State;
-
-            Refs.Add(refId, _ref);
+			int refId = 0;
+			IRef _ref = State;
 
 			AllChanges.Clear();
 
+			int totalBytes = bytes.Length;
+
 			while (it.Offset < totalBytes)
-            {
-                if (bytes[it.Offset] == (byte)SPEC.SWITCH_TO_STRUCTURE)
-                {
+			{
+				if (bytes[it.Offset] == (byte)SPEC.SWITCH_TO_STRUCTURE)
+				{
 					it.Offset++;
 
-                    refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
-                    _ref = Refs.Get(refId);
+					refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
 
-                    //
-                    // Trying to access a reference that haven't been decoded yet.
-                    //
-                    if (_ref == null)
-                    {
-                        throw new Exception("refId not found: " + refId);
-                    }
+					if (_ref is IArraySchema) { ((IArraySchema)_ref).OnDecodeEnd(); }
 
-                    continue;
-                }
+					_ref = Refs.Get(refId);
+
+					//
+					// Trying to access a reference that haven't been decoded yet.
+					//
+					if (_ref == null)
+					{
+						throw new Exception("refId not found: " + refId);
+					}
+
+					continue;
+				}
 
 				bool isSchemaDefinitionMismatch;
 
@@ -106,12 +108,14 @@ namespace Colyseus.Schema
 
 					continue;
 				}
-            }
+			}
 
-            TriggerChanges?.Invoke(ref AllChanges);
+			if (_ref is IArraySchema) { ((IArraySchema)_ref).OnDecodeEnd(); }
 
-            Refs.GarbageCollection();
-        }
+			TriggerChanges?.Invoke(ref AllChanges);
+
+			Refs.GarbageCollection();
+		}
 
 		protected void DecodeValue(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType, System.Type childType, byte operation, out object value, out object previousValue)
 		{
@@ -412,7 +416,6 @@ namespace Colyseus.Schema
 			else
 			{
 				index = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
-
 			}
 
 			string fieldType;

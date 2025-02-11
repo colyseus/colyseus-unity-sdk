@@ -69,8 +69,6 @@ namespace Colyseus
 				var reflectionType = reflection.types[i];
 				var reflectionFields = GetFieldsFromType(reflectionType, types);
 
-				UnityEngine.Debug.Log(reflectionFields.Count);
-
 				var schemaType = Array.Find(namespaceSchemaTypes, t => CompareTypes(t, reflectionFields));
 
 				if (schemaType != null)
