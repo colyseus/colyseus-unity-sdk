@@ -393,7 +393,7 @@ namespace Colyseus.Schema
 			{
 				int refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
 				IRef itemByRefId = Refs.Get(refId);
-				if (itemByRefId == null)
+				if (itemByRefId != null)
 				{
 					int i = 0;
 					index = -1;

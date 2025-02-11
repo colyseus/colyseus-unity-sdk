@@ -191,6 +191,20 @@ namespace Colyseus.Schema
 			return items;
 		}
 
+		public int IndexOf(T value)
+		{
+			int i = 0;
+			foreach (var item in items)
+			{
+				if (item.Equals(value))
+				{
+					return i;
+				}
+				i++;
+			}
+			return -1;
+		}
+
 		/// <summary>
 		///     Setter function to cast and set <see cref="items" />
 		/// </summary>
