@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Colyseus.Schema;
 using GameDevWare.Serialization;
 using NativeWebSocket;
@@ -39,20 +39,20 @@ namespace Colyseus
     /// </summary>
     public interface IColyseusRoom
     {
-        event ColyseusCloseEventHandler OnLeave;
+		public event ColyseusCloseEventHandler OnLeave;
 
-        /// <summary>
-        ///     Connection task
-        /// </summary>
-        /// <returns>Task that completes upon connection (or failure to connect)</returns>
-        Task Connect();
+		/// <summary>
+		///     Connection task
+		/// </summary>
+		/// <returns>Task that completes upon connection (or failure to connect)</returns>
+		public UniTask Connect();
 
-        /// <summary>
-        ///     Disconnection task
-        /// </summary>
-        /// <param name="consented">True if by user's choice, false otherwise</param>
-        /// <returns>Task that completes upon Leaving</returns>
-        Task Leave(bool consented);
+		/// <summary>
+		///     Disconnection task
+		/// </summary>
+		/// <param name="consented">True if by user's choice, false otherwise</param>
+		/// <returns>Task that completes upon Leaving</returns>
+		public UniTask Leave(bool consented);
     }
 
     [Serializable]
@@ -157,7 +157,7 @@ namespace Colyseus
         ///     Implementation of <see cref="IColyseusRoom.Connect" />
         /// </summary>
         /// <returns>Response from <see cref="colyseusConnection"></see>.Connect()</returns>
-        public async Task Connect()
+        public async UniTask Connect()
         {
             await colyseusConnection.Connect();
         }
@@ -167,7 +167,7 @@ namespace Colyseus
         /// </summary>
         /// <param name="consented">If the user agreed to this disconnection</param>
         /// <returns>Connection closure depending on user consent</returns>
-        public async Task Leave(bool consented = true)
+        public async UniTask Leave(bool consented = true)
         {
             if (!colyseusConnection.IsOpen) {
                 return;
@@ -250,7 +250,7 @@ namespace Colyseus
         ///     Send a message by number type, without payload
         /// </summary>
         /// <param name="type">Message type</param>
-        public async Task Send(byte type)
+        public async UniTask Send(byte type)
         {
             await colyseusConnection.Send(new[] {ColyseusProtocol.ROOM_DATA, type});
         }
@@ -260,7 +260,7 @@ namespace Colyseus
         /// </summary>
         /// <param name="type">Message type</param>
         /// <param name="message">Message payload</param>
-        public async Task Send(byte type, object message)
+        public async UniTask Send(byte type, object message)
         {
             MemoryStream serializationOutput = new MemoryStream();
             MsgPack.Serialize(message, serializationOutput, SerializationOptions.SuppressTypeInformation);
@@ -279,7 +279,7 @@ namespace Colyseus
         ///     Send a message by string type, without payload
         /// </summary>
         /// <param name="type">Message type</param>
-        public async Task Send(string type)
+        public async UniTask Send(string type)
         {
             byte[] encodedType = Encoding.UTF8.GetBytes(type);
             byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType, ColyseusProtocol.ROOM_DATA);
@@ -296,7 +296,7 @@ namespace Colyseus
         /// </summary>
         /// <param name="type">Message type</param>
         /// <param name="message">Message payload</param>
-        public async Task Send(string type, object message)
+        public async UniTask Send(string type, object message)
         {
             MemoryStream serializationOutput = new MemoryStream();
             MsgPack.Serialize(message, serializationOutput, SerializationOptions.SuppressTypeInformation);
@@ -318,7 +318,7 @@ namespace Colyseus
         /// </summary>
         /// <param name="type">Message type</param>
         /// <param name="bytes">Message payload</param>
-        public async Task SendBytes(byte type, byte[] bytes)
+        public async UniTask SendBytes(byte type, byte[] bytes)
         {
             byte[] initialBytes = { ColyseusProtocol.ROOM_DATA_BYTES, type };
 
@@ -334,7 +334,7 @@ namespace Colyseus
         /// </summary>
         /// <param name="type">Message type</param>
         /// <param name="bytes">Message payload</param>
-        public async Task SendBytes(string type, byte[] bytes)
+        public async UniTask SendBytes(string type, byte[] bytes)
         {
             byte[] encodedType = Encoding.UTF8.GetBytes(type);
             byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType, ColyseusProtocol.ROOM_DATA_BYTES);

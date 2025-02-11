@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using GameDevWare.Serialization;
 
@@ -129,7 +129,7 @@ namespace Colyseus
 			set => _client.Http.AuthToken = value;
 		}
 
-		public async Task<Action> OnChange<T>(Action<AuthData<T>> callback)
+		public async UniTask<Action> OnChange<T>(Action<AuthData<T>> callback)
 		{
 			var handler = new AuthChangeHandler<AuthData<T>>
 			{
@@ -157,7 +157,7 @@ namespace Colyseus
 			return () => OnChangeHandlers.Remove(handler);
 		}
 
-		public async Task<T> GetUserData<T>()
+		public async UniTask<T> GetUserData<T>()
 		{
 			if (string.IsNullOrEmpty(Token))
 			{
@@ -169,7 +169,7 @@ namespace Colyseus
 			}
 		}
 
-		public async Task<AuthData<T>> RegisterWithEmailAndPassword<T>(string email, string password, Dictionary<string, object> options = null)
+		public async UniTask<AuthData<T>> RegisterWithEmailAndPassword<T>(string email, string password, Dictionary<string, object> options = null)
 		{
 			var response = getAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/register", new Dictionary<string, object>
 			{
@@ -183,12 +183,12 @@ namespace Colyseus
 			return response;
 		}
 
-		public async Task<IAuthData> RegisterWithEmailAndPassword(string email, string password, Dictionary<string, object> options = null)
+		public async UniTask<IAuthData> RegisterWithEmailAndPassword(string email, string password, Dictionary<string, object> options = null)
 		{
 			return await RegisterWithEmailAndPassword<IndexedDictionary<string, object>>(email, password, options);
 		}
 
-		public async Task<AuthData<T>> SignInWithEmailAndPassword<T>(string email, string password)
+		public async UniTask<AuthData<T>> SignInWithEmailAndPassword<T>(string email, string password)
 		{
 			var response = getAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/login", new Dictionary<string, object>
 			{
@@ -201,12 +201,12 @@ namespace Colyseus
 			return response;
 		}
 
-		public async Task<IAuthData> SignInWithEmailAndPassword(string email, string password)
+		public async UniTask<IAuthData> SignInWithEmailAndPassword(string email, string password)
 		{
 			return await SignInWithEmailAndPassword<IndexedDictionary<string, object>>(email, password);
 		}
 
-		public async Task<AuthData<T>> SignInAnonymously<T>(Dictionary<string, object> options = null)
+		public async UniTask<AuthData<T>> SignInAnonymously<T>(Dictionary<string, object> options = null)
 		{
 			var response = getAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/anonymous", options));
 
@@ -215,26 +215,26 @@ namespace Colyseus
 			return response;
 		}
 
-		public async Task<IAuthData> SignInAnonymously(Dictionary<string, object> options = null)
+		public async UniTask<IAuthData> SignInAnonymously(Dictionary<string, object> options = null)
 		{
 			return await SignInAnonymously<IndexedDictionary<string, object>>(options);
 		}
 
-		public async Task<AuthData<T>> SignInWithProvider<T>(string providerName, Dictionary<string, object> settings = null)
+		public async UniTask<AuthData<T>> SignInWithProvider<T>(string providerName, Dictionary<string, object> settings = null)
 		{
-			await Task.Run(() => {/* Satisfy the compiler async/await. This method is not implemented yet. */});
+			await UniTask.RunOnThreadPool(() => {/* Satisfy the compiler async/await. This method is not implemented yet. */});
 
 			//
 			// Implementation reference: https://github.com/colyseus/colyseus.js/blob/1f2208d4ff49e858a737e4e7d1581148de196cce/src/Auth.ts#L112C26-L161
 			//
 			throw new Exception("Not implemented. See implementation reference on JavaScript SDK");
 		}
-		public async Task<IAuthData> SignInWithProvider(string providerName, Dictionary<string, object> settings = null)
+		public async UniTask<IAuthData> SignInWithProvider(string providerName, Dictionary<string, object> settings = null)
 		{
 			return await SignInWithProvider<IndexedDictionary<string, object>>(providerName, settings);
 		}
 
-		public async Task<string> SendResetPasswordEmail(string email, string password)
+		public async UniTask<string> SendResetPasswordEmail(string email, string password)
 		{
 			return await _client.Http.Request("POST", $"{PATH}/login", new Dictionary<string, object>
 			{

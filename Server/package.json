@@ -9,7 +9,8 @@
     "tsx": "tsx watch src/index.ts",
     "loadtest": "tsx loadtest/example.ts --room my_room --numClients 99",
     "build": "tsc",
-    "test": "mocha -r tsx ts-node/register test/**_test.ts --exit --timeout 15000"
+    "test": "mocha -r tsx ts-node/register test/**_test.ts --exit --timeout 15000",
+    "schema-codegen": "npx schema-codegen src/rooms/schema/* --csharp --output \"../Assets/_Project/Code/Data/States\" --namespace Colyseus.Schema --partial"
   },
   "author": "",
   "license": "UNLICENSED",
