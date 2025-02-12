@@ -120,32 +120,22 @@ namespace Colyseus
                 if (req.isNetworkError || req.isHttpError)
 #endif
                 {
-                    if (_settings.useSecureProtocol)
-                    {
-                        //We failed to make this call with a secure protocol, try with non-secure and if that works we'll stick with it
-                        _settings.useSecureProtocol = false;
-                        Debug.LogError($"Failed to make request to {req.url} with secure protocol, trying again without!");
-                        return await Request(uriMethod, uriPath, jsonBody, headers);
-                    }
-                    else
-                    {
-                        var errorMessage = req.error;
+                    var errorMessage = req.error;
 
-                        //
-                        // Parse JSON from response
-                        //
-                        if (!string.IsNullOrEmpty(req.downloadHandler.text))
+                    //
+                    // Parse JSON from response
+                    //
+                    if (!string.IsNullOrEmpty(req.downloadHandler.text))
+					{
+                        var data = Json.Deserialize<ErrorResponse>(req.downloadHandler.text);
+                        if (!string.IsNullOrEmpty(data.error))
 						{
-                            var data = Json.Deserialize<ErrorResponse>(req.downloadHandler.text);
-                            if (!string.IsNullOrEmpty(data.error))
-							{
-                                errorMessage = data.error;
-                                throw new HttpException((int)req.responseCode, errorMessage);
-                            }
-						}
+                            errorMessage = data.error;
+                            throw new HttpException((int)req.responseCode, errorMessage);
+                        }
+					}
 
-                        throw new HttpException((int)req.responseCode, errorMessage);
-                    }
+                    throw new HttpException((int)req.responseCode, errorMessage);
                 }
 
                 return req.downloadHandler.text;

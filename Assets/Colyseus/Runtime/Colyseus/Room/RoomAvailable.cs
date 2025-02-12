@@ -50,7 +50,7 @@ namespace Colyseus
     /// </summary>
     /// <typeparam name="T">Type of room inherited from <see cref="ColyseusRoomAvailable" /></typeparam>
     [Serializable]
-    public class CSARoomAvailableCollection<T>
+    public class RoomAvailableCollection<T>
     {
         /// <summary>
         ///     Rooms in this collection

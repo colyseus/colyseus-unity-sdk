@@ -26,6 +26,11 @@ namespace Colyseus.Schema
         public Dictionary<int, IRef> refs = new Dictionary<int, IRef>();
 
         /// <summary>
+        ///     List of callbacks by refId
+        /// </summary>
+		public Dictionary<int, Dictionary<object, List<Delegate>>> callbacks = new Dictionary<int, Dictionary<object, List<Delegate>>>();
+
+        /// <summary>
         ///     Add a new reference to be tracked
         /// </summary>
         /// <param name="refId">The ID of the reference</param>
@@ -33,23 +38,21 @@ namespace Colyseus.Schema
         /// <param name="incrementCount">If true, we increment the <see cref="refCounts" /> at this ID</param>
         public void Add(int refId, IRef _ref, bool incrementCount = true)
         {
-            int previousCount;
-
-            if (!refs.ContainsKey(refId))
-            {
-                refs[refId] = _ref;
-                previousCount = 0;
-            }
-            else
-            {
-                previousCount = refCounts[refId];
-            }
+			refs[refId] = _ref;
 
             if (incrementCount)
             {
-                refCounts[refId] = previousCount + 1;
+				int previousCount = (!refCounts.ContainsKey(refId))
+					? 0
+					: refCounts[refId];
+
+				refCounts[refId] = previousCount + 1;
             }
-        }
+
+			if (deletedRefs.Contains(refId)) {
+				deletedRefs.Remove(refId);
+			}
+		}
 
         /// <summary>
         ///     Get a reference by it's ID
@@ -58,9 +61,7 @@ namespace Colyseus.Schema
         /// <returns>The reference with that <paramref name="refId" /> in <see cref="refs" />, if it exists</returns>
         public IRef Get(int refId)
         {
-            IRef _ref = null;
-
-            refs.TryGetValue(refId, out _ref);
+            refs.TryGetValue(refId, out var _ref);
 
             return _ref;
         }
@@ -122,18 +123,18 @@ namespace Colyseus.Schema
                     }
                     else if (_ref is ISchemaCollection && ((ISchemaCollection) _ref).HasSchemaChild)
                     {
-                        IDictionary items = ((ISchemaCollection) _ref).GetItems();
-                        foreach (IRef item in items.Values)
-                        {
-                            if (Remove(item.__refId))
-                            {
-                                totalDeletedRefs++;
-                            }
-                        }
+						((ISchemaCollection)_ref).ForEach((key, value) =>
+						{
+							if (Remove(((IRef)value).__refId))
+							{
+								totalDeletedRefs++;
+							}
+						});
                     }
 
                     refs.Remove(refId);
                     refCounts.Remove(refId);
+					callbacks.Remove(refId);
                 }
             }
 
@@ -147,6 +148,7 @@ namespace Colyseus.Schema
         {
             refs.Clear();
             refCounts.Clear();
+            callbacks.Clear();
             deletedRefs.Clear();
         }
     }

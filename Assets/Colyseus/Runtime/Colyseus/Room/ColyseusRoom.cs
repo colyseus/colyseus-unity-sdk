@@ -9,12 +9,11 @@ using NativeWebSocket;
 using UnityEngine;
 using Type = System.Type;
 
-// using System.Runtime.CompilerServices;
-
-// ReSharper disable InconsistentNaming
-
 namespace Colyseus
 {
+    using Decode = Schema.Utils.Decode;
+    using Encode = Schema.Utils.Encode;
+
     /// <summary>
     ///     Delegate function for when the <see cref="ColyseusClient" /> successfully connects to the
     ///     <see cref="ColyseusRoom{T}" />.
@@ -62,7 +61,7 @@ namespace Colyseus
         public string Token;
     }
 
-    public class ColyseusRoom<T> : IColyseusRoom
+    public class ColyseusRoom<T> : IColyseusRoom where T : Schema.Schema
     {
         /// <summary>
         ///     Delegate for handling messages
@@ -78,14 +77,10 @@ namespace Colyseus
         /// <param name="isFirstState">Flag if first state received</param>
         public delegate void RoomOnStateChangeEventHandler(T state, bool isFirstState);
 
-        private readonly ColyseusDecoder Decode = ColyseusDecoder.GetInstance();
-
-        private readonly ColyseusEncoder Encode = ColyseusEncoder.GetInstance();
-
         /// <summary>
         ///     Reference to the room's WebSocket Connection
         /// </summary>
-        public ColyseusConnection colyseusConnection;
+        public ColyseusConnection Connection;
 
         /// <summary>
         ///     Room ID
@@ -106,7 +101,7 @@ namespace Colyseus
         /// <summary>
         ///     Reference to the Serializer this room uses, determined and then generated based on the <see cref="SerializerId" />
         /// </summary>
-        protected IColyseusSerializer<T> serializer;
+        internal IColyseusSerializer<T> Serializer;
 
         /// <summary>
         ///     ID to determine which kind of serializer this room uses (<see cref="ColyseusSchemaSerializer{T}" /> or
@@ -139,7 +134,7 @@ namespace Colyseus
         /// </summary>
         public T State
         {
-            get { return serializer.GetState(); }
+            get { return Serializer.GetState(); }
         }
 
         [Obsolete(".Id is deprecated. Please use .RoomId instead.")]
@@ -156,10 +151,10 @@ namespace Colyseus
         /// <summary>
         ///     Implementation of <see cref="IColyseusRoom.Connect" />
         /// </summary>
-        /// <returns>Response from <see cref="colyseusConnection"></see>.Connect()</returns>
+        /// <returns>Response from <see cref="Connection"></see>.Connect()</returns>
         public async Task Connect()
         {
-            await colyseusConnection.Connect();
+            await Connection.Connect();
         }
 
         /// <summary>
@@ -169,7 +164,7 @@ namespace Colyseus
         /// <returns>Connection closure depending on user consent</returns>
         public async Task Leave(bool consented = true)
         {
-            if (!colyseusConnection.IsOpen) {
+            if (!Connection.IsOpen) {
                 return;
             }
 
@@ -177,11 +172,11 @@ namespace Colyseus
             {
                 if (consented)
                 {
-                    await colyseusConnection.Send(new[] {ColyseusProtocol.LEAVE_ROOM});
+                    await Connection.Send(new[] {ColyseusProtocol.LEAVE_ROOM});
                 }
                 else
                 {
-                    await colyseusConnection.Close();
+                    await Connection.Close();
                 }
             }
             else
@@ -190,10 +185,8 @@ namespace Colyseus
             }
         }
 
-        /// <summary>
-        ///     Occurs when the <see cref="ColyseusClient" /> successfully connects to the <see cref="ColyseusRoom{T}" />.
-        /// </summary>
-        public event ColyseusOpenEventHandler OnJoin;
+        // Internal OnJoin event. It is used by ColyseusClient.cs during matchmaking.
+        internal event ColyseusOpenEventHandler OnJoin;
 
         /// <summary>
         ///     Occurs when some error has been triggered in the room.
@@ -212,9 +205,9 @@ namespace Colyseus
         public void SetConnection(ColyseusConnection colyseusConnection,  ColyseusRoom<T> room = null, Action devModeCloseCallback = null)
         {
 	        room ??= this;
-	        room.colyseusConnection = colyseusConnection;
+	        room.Connection = colyseusConnection;
 
-	        room.colyseusConnection.OnClose += code =>
+	        room.Connection.OnClose += code =>
 	        {
 		        if (devModeCloseCallback == null || code == 1006)
 		        {
@@ -229,8 +222,8 @@ namespace Colyseus
 	        // TODO: expose WebSocket error code!
 	        // Connection.OnError += (code, message) => OnError?.Invoke(code, message);
 
-	        room.colyseusConnection.OnError += message => room.OnError?.Invoke(0, message);
-	        room.colyseusConnection.OnMessage += bytes => room.ParseMessage(bytes);
+	        room.Connection.OnError += message => room.OnError?.Invoke(0, message);
+	        room.Connection.OnMessage += bytes => room.ParseMessage(bytes);
         }
 
         /// <summary>
@@ -239,11 +232,11 @@ namespace Colyseus
         /// ///
         /// <remarks>Invokes everything subscribed to <see cref="OnStateChange" /></remarks>
         /// <param name="encodedState">Byte array of the new state data</param>
-        /// <param name="offset">Offset to provide the room's <see cref="serializer" /></param>
+        /// <param name="offset">Offset to provide the room's <see cref="Serializer" /></param>
         public void SetState(byte[] encodedState, int offset)
         {
-            serializer.SetState(encodedState, offset);
-            OnStateChange?.Invoke(serializer.GetState(), true);
+            Serializer.SetState(encodedState, offset);
+            OnStateChange?.Invoke(Serializer.GetState(), true);
         }
 
         /// <summary>
@@ -252,7 +245,7 @@ namespace Colyseus
         /// <param name="type">Message type</param>
         public async Task Send(byte type)
         {
-            await colyseusConnection.Send(new[] {ColyseusProtocol.ROOM_DATA, type});
+            await Connection.Send(new[] {ColyseusProtocol.ROOM_DATA, type});
         }
 
         /// <summary>
@@ -272,7 +265,7 @@ namespace Colyseus
             Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
             Buffer.BlockCopy(encodedMessage, 0, bytes, initialBytes.Length, encodedMessage.Length);
 
-            await colyseusConnection.Send(bytes);
+            await Connection.Send(bytes);
         }
 
         /// <summary>
@@ -288,7 +281,7 @@ namespace Colyseus
             Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
             Buffer.BlockCopy(encodedType, 0, bytes, initialBytes.Length, encodedType.Length);
 
-            await colyseusConnection.Send(bytes);
+            await Connection.Send(bytes);
         }
 
         /// <summary>
@@ -310,7 +303,7 @@ namespace Colyseus
             Buffer.BlockCopy(encodedType, 0, bytes, initialBytes.Length, encodedType.Length);
             Buffer.BlockCopy(encodedMessage, 0, bytes, initialBytes.Length + encodedType.Length, encodedMessage.Length);
 
-            await colyseusConnection.Send(bytes);
+            await Connection.Send(bytes);
         }
 
         /// <summary>
@@ -326,7 +319,7 @@ namespace Colyseus
             Buffer.BlockCopy(initialBytes, 0, bytesToSend, 0, initialBytes.Length);
             Buffer.BlockCopy(bytes, 0, bytesToSend, initialBytes.Length, bytes.Length);
 
-            await colyseusConnection.Send(bytesToSend);
+            await Connection.Send(bytesToSend);
         }
 
         /// <summary>
@@ -344,7 +337,7 @@ namespace Colyseus
             Buffer.BlockCopy(encodedType, 0, bytesToSend, initialBytes.Length, encodedType.Length);
             Buffer.BlockCopy(bytes, 0, bytesToSend, initialBytes.Length + encodedType.Length, bytes.Length);
 
-            await colyseusConnection.Send(bytesToSend);
+            await Connection.Send(bytesToSend);
         }
 
         /// <summary>
@@ -376,22 +369,9 @@ namespace Colyseus
         }
 
         /// <summary>
-        ///     Method to add new message handlers to the room
+        ///     The function that will be called when the <see cref="Connection" /> receives a message
         /// </summary>
-        /// <param name="handler"></param>
-        /// <typeparam name="MessageType">The type of object this message should respond with</typeparam>
-        public void OnMessage<MessageType>(Action<MessageType> handler) where MessageType : Schema.Schema, new()
-        {
-            OnMessageHandlers.Add("s" + typeof(MessageType), new ColyseusMessageHandler<MessageType>
-            {
-                Action = handler
-            });
-        }
-
-        /// <summary>
-        ///     The function that will be called when the <see cref="colyseusConnection" /> receives a message
-        /// </summary>
-        /// <param name="bytes">The message as provided from the <see cref="colyseusConnection" /></param>
+        /// <param name="bytes">The message as provided from the <see cref="Connection" /></param>
         protected async void ParseMessage(byte[] bytes)
         {
             byte code = bytes[0];
@@ -410,7 +390,7 @@ namespace Colyseus
                 {
                     try
                     {
-                        serializer = new ColyseusSchemaSerializer<T>();
+                        Serializer = new ColyseusSchemaSerializer<T>();
                     }
                     catch (Exception e)
                     {
@@ -428,7 +408,7 @@ namespace Colyseus
                 {
                     try
                     {
-                        serializer = (IColyseusSerializer<T>) new ColyseusNoneSerializer();
+                        Serializer = (IColyseusSerializer<T>) new NoneSerializer<NoState>();
                     }
                     catch (Exception e)
                     {
@@ -441,7 +421,7 @@ namespace Colyseus
                 if (bytes.Length > offset)
                 {
 	                try {
-		                serializer.Handshake(bytes, offset);
+		                Serializer.Handshake(bytes, offset);
 	                }
 	                catch (Exception e)
 	                {
@@ -460,7 +440,7 @@ namespace Colyseus
                 OnJoin?.Invoke();
 
                 // Acknowledge JOIN_ROOM
-                await colyseusConnection.Send(new[] {ColyseusProtocol.JOIN_ROOM});
+                await Connection.Send(new[] {ColyseusProtocol.JOIN_ROOM});
             }
             else if (code == ColyseusProtocol.ERROR)
             {
@@ -468,28 +448,6 @@ namespace Colyseus
                 float errorCode = Decode.DecodeNumber(bytes, it);
                 string errorMessage = Decode.DecodeString(bytes, it);
                 OnError?.Invoke((int) errorCode, errorMessage);
-            }
-            else if (code == ColyseusProtocol.ROOM_DATA_SCHEMA)
-            {
-                Iterator it = new Iterator {Offset = 1};
-                float typeId = Decode.DecodeNumber(bytes, it);
-
-                Type messageType = ColyseusContext.GetInstance().Get(typeId);
-                Schema.Schema message = (Schema.Schema) Activator.CreateInstance(messageType);
-
-                message.Decode(bytes, it);
-
-                IColyseusMessageHandler handler = null;
-                OnMessageHandlers.TryGetValue("s" + message.GetType(), out handler);
-
-                if (handler != null)
-                {
-                    handler.Invoke(message);
-                }
-                else
-                {
-                    Debug.LogWarning("room.OnMessage not registered for Schema of type: '" + message.GetType() + "'");
-                }
             }
             else if (code == ColyseusProtocol.LEAVE_ROOM)
             {
@@ -556,11 +514,11 @@ namespace Colyseus
         /// </summary>
         /// <remarks>Invokes everything subscribed to <see cref="OnStateChange" /></remarks>
         /// <param name="delta">The updates to the state</param>
-        /// <param name="offset">Offset to provide the room's <see cref="serializer" /></param>
+        /// <param name="offset">Offset to provide the room's <see cref="Serializer" /></param>
         protected void Patch(byte[] delta, int offset)
         {
-            serializer.Patch(delta, offset);
-            OnStateChange?.Invoke(serializer.GetState(), false);
+            Serializer.Patch(delta, offset);
+            OnStateChange?.Invoke(Serializer.GetState(), false);
         }
 
         /// <summary>
