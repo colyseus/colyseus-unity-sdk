@@ -154,29 +154,34 @@ namespace Colyseus.Schema
 				var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
 				value = Refs.Get(__refId);
 
-				if (operation != (byte)OPERATION.REPLACE)
+				if (previousValue != null)
 				{
-					System.Type concreteChildType = GetSchemaType(bytes, it, childType);
+					var previousRefId = ((IRef)previousValue).__refId;
+					if (
+						previousRefId > 0 &&
+						__refId != previousRefId &&
+						// FIXME: we may need to check for REPLACE operation as well
+						((operation & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE)
+					)
+					{
+						Refs.Remove(previousRefId);
+					}
+				}
 
+				if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
+				{
 					if (value == null)
 					{
+						System.Type concreteChildType = GetSchemaType(bytes, it, childType);
 						value = CreateTypeInstance(concreteChildType);
 						((IRef)value).__refId = __refId;
-
-						if (previousValue != null)
-						{
-							if (
-								((IRef)previousValue).__refId > 0 &&
-								__refId != ((IRef)previousValue).__refId
-							)
-							{
-								Refs.Remove(((IRef)previousValue).__refId);
-							}
-						}
 					}
-
-					Refs.Add(__refId, (IRef)value, value != previousValue);
+					Refs.Add(__refId, (IRef)value, (
+						value != previousValue ||  // increment ref count if value has changed
+						(operation == (byte)OPERATION.DELETE_AND_ADD && value == previousValue) // increment ref count if the same instance is being added again
+					));
 				}
+
 			}
 			else if (childType == null)
 			{
