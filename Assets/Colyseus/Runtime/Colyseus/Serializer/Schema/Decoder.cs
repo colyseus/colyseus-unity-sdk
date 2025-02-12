@@ -170,9 +170,9 @@ namespace Colyseus.Schema
 
 				if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
 				{
+					System.Type concreteChildType = GetSchemaType(bytes, it, childType);
 					if (value == null)
 					{
-						System.Type concreteChildType = GetSchemaType(bytes, it, childType);
 						value = CreateTypeInstance(concreteChildType);
 						((IRef)value).__refId = __refId;
 					}
