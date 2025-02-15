@@ -227,35 +227,6 @@ namespace Colyseus
 		}
 
 		/// <summary>
-		///     Get all available rooms
-		/// </summary>
-		/// <param name="roomName">Room identifier</param>
-		/// <param name="headers">Dictionary of headers to pass to the server</param>
-		/// <returns><see cref="ColyseusRoomAvailable" /> array via async task</returns>
-		public async Task<ColyseusRoomAvailable[]> GetAvailableRooms(string roomName = "")
-		{
-			return await GetAvailableRooms<ColyseusRoomAvailable>(roomName);
-		}
-
-		/// <summary>
-		///     Get all available rooms with provided custom type <typeparamref name="T" />
-		/// </summary>
-		/// <param name="roomName">Name of the room</param>
-		/// <returns><see cref="CSACSARoomAvailableCollection{T}" /> array via async task</returns>
-		public async Task<T[]> GetAvailableRooms<T>(string roomName = "")
-		{
-			string json = await Http.Request("GET", $"matchmake/{roomName}");
-
-			if (json.StartsWith("[", StringComparison.CurrentCulture))
-			{
-				json = "{\"rooms\":" + json + "}";
-			}
-
-			RoomAvailableCollection<T> response = JsonUtility.FromJson<RoomAvailableCollection<T>>(json);
-			return response.rooms;
-		}
-
-		/// <summary>
 		///     Consume the seat reservation
 		/// </summary>
 		/// <param name="response">The response from the matchmaking attempt</param>
@@ -272,8 +243,10 @@ namespace Colyseus
 				SessionId = response.sessionId
 			};
 
-			Dictionary<string, object> queryString = new Dictionary<string, object>();
-			queryString.Add("sessionId", room.SessionId);
+			Dictionary<string, object> queryString = new Dictionary<string, object>
+			{
+				{ "sessionId", room.SessionId }
+			};
 
 			// forward reconnection token
 			if (response.reconnectionToken != null)
