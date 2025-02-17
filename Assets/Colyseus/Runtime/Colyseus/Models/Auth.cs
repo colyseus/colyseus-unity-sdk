@@ -148,8 +148,9 @@ namespace Colyseus
 						token = Token,
 						user = await GetUserData<T>()
 					});
-				} catch (Exception _)
+				} catch (Exception e)
 				{
+					Debug.LogWarning(e);
 					emitChange(new AuthData<object> { user = null, token = null });
 				}
 			}

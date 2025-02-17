@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "my-app",
-  "version": "1.0.0",
+  "version": "0.16.0",
   "description": "npm init template for bootstrapping an empty Colyseus project",
   "main": "lib/index.js",
   "scripts": {
@@ -18,9 +18,9 @@
   },
   "homepage": "https://github.com/colyseus/create-colyseus#readme",
   "devDependencies": {
-    "@colyseus/loadtest": "^0.15.0",
-    "@colyseus/playground": "^0.15.0",
-    "@colyseus/testing": "^0.15.0",
+    "@colyseus/loadtest": "^0.16.0-preview.0",
+    "@colyseus/playground": "^0.16.0-preview.0",
+    "@colyseus/testing": "^0.16.0-preview.0",
     "@types/cors": "^2.8.6",
     "@types/express": "^4.17.1",
     "@types/mocha": "^8.2.3",
@@ -30,13 +30,11 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
-    "@colyseus/auth": "^0.15.8",
-    "@colyseus/core": "^0.15.0",
-    "@colyseus/monitor": "^0.15.0",
-    "@colyseus/redis-driver": "^0.15.0",
-    "@colyseus/redis-presence": "^0.15.0",
-    "@colyseus/tools": "^0.15.0",
-    "colyseus": "^0.15.0",
+    "@colyseus/auth": "^0.16.0-preview.0",
+    "@colyseus/core": "^0.16.0-preview.0",
+    "@colyseus/monitor": "^0.16.0-preview.0",
+    "@colyseus/tools": "^0.16.0-preview.0",
+    "colyseus": "^0.16.0-preview.0",
     "cors": "^2.8.5",
     "express": "^4.16.4"
   }

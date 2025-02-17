@@ -8,8 +8,11 @@
 using Colyseus.Schema;
 
 namespace SchemaTest.Callbacks {
-	public partial class CallbacksState : Schema {
-		[Type(0, "ref", typeof(Container))]
-		public Container container = null;
+	public partial class Player : Schema {
+		[Type(0, "ref", typeof(Vec3))]
+		public Vec3 position = null;
+
+		[Type(1, "map", typeof(MapSchema<Item>))]
+		public MapSchema<Item> items = null;
 	}
 }
