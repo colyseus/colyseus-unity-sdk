@@ -203,6 +203,15 @@ public class SchemaDeserializerTest
 		callbacks.OnRemove(state => state.mapOfStrings, (key, value) => mapOfStringsRemove++);
 		callbacks.OnRemove(state => state.mapOfInt32, (key, value) => mapOfIntRemove++);
 
+		var mapOfSchemasChange = 0;
+		var mapOfNumbersChange = 0;
+		var mapOfStringsChange = 0;
+		var mapOfIntChange = 0;
+		callbacks.OnChange(state => state.mapOfSchemas, (key, value) => mapOfSchemasChange++);
+		callbacks.OnChange(state => state.mapOfNumbers, (key, value) => mapOfNumbersChange++);
+		callbacks.OnChange(state => state.mapOfStrings, (key, value) => mapOfStringsChange++);
+		callbacks.OnChange(state => state.mapOfInt32, (key, value) => mapOfIntChange++);
+
 		decoder.Decode(bytes);
 
 		Assert.AreEqual(state.mapOfSchemas.Count, 3);
@@ -245,6 +254,11 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(mapOfNumbersRemove, 2);
 		Assert.AreEqual(mapOfStringsRemove, 2);
 		Assert.AreEqual(mapOfIntRemove, 2);
+
+		Assert.AreEqual(mapOfSchemasChange, 3);
+		Assert.AreEqual(mapOfNumbersChange, 3);
+		Assert.AreEqual(mapOfStringsChange, 3);
+		Assert.AreEqual(mapOfIntChange, 3);
 	}
 
 	[Test]
@@ -423,8 +437,11 @@ public class SchemaDeserializerTest
 
 		var onListenContainer = 0;
 		var onPlayerAdd = 0;
+		var onPlayerChange = 0;
 		var onPlayerRemove = 0;
+
 		var onItemAdd = 0;
+		var onItemChange = 0;
 		var onItemRemove = 0;
 
 		callbacks.Listen(state => state.container, (container, _) =>
@@ -440,10 +457,20 @@ public class SchemaDeserializerTest
 					onItemAdd++;
 				});
 
+				callbacks.OnChange(player, player => player.items, (key, item) =>
+				{
+					onItemChange++;
+				});
+
 				callbacks.OnRemove(player, player => player.items, (key, item) =>
 				{
 					onItemRemove++;
 				});
+			});
+
+			callbacks.OnChange(container, container => container.playersMap, (sessionId, player) =>
+			{
+				onPlayerChange++;
 			});
 
 			callbacks.OnRemove(container, container => container.playersMap, (sessionId, player) =>
@@ -460,7 +487,9 @@ public class SchemaDeserializerTest
 
 		Assert.AreEqual(1, onListenContainer);
 		Assert.AreEqual(2, onPlayerAdd);
+		Assert.AreEqual(2, onPlayerChange);
 		Assert.AreEqual(6, onItemAdd);
+		Assert.AreEqual(6, onItemChange);
 
 		// (2nd encode)
 		decoder.Decode(new byte[] { 255, 1, 255, 2, 64, 1, 128, 2, 165, 116, 104, 114, 101, 101, 16, 255, 2, 255, 3, 255, 4, 255, 5, 64, 0, 64, 1, 128, 3, 166, 105, 116, 101, 109, 45, 52, 15, 255, 8, 255, 5, 255, 5, 255, 15, 128, 166, 73, 116, 101, 109, 32, 52, 129, 4, 255, 2, 255, 16, 128, 17, 129, 18, 255, 17, 128, 1, 129, 2, 130, 3, 255, 18, 128, 0, 166, 105, 116, 101, 109, 45, 49, 19, 128, 1, 166, 105, 116, 101, 109, 45, 50, 20, 128, 2, 166, 105, 116, 101, 109, 45, 51, 21, 255, 19, 128, 166, 73, 116, 101, 109, 32, 49, 129, 1, 255, 20, 128, 166, 73, 116, 101, 109, 32, 50, 129, 2, 255, 21, 128, 166, 73, 116, 101, 109, 32, 51, 129, 3 });
@@ -471,9 +500,11 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(2, onListenContainer);
 		Assert.AreEqual(4, onPlayerAdd);
 		Assert.AreEqual(1, onPlayerRemove);
+		Assert.AreEqual(4, onPlayerChange);
 
 		Assert.AreEqual(11, onItemAdd);
 		Assert.AreEqual(2, onItemRemove);
+		Assert.AreEqual(11, onItemChange);
 	}
 
 }

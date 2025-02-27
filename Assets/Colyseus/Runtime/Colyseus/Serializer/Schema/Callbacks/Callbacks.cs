@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
@@ -16,7 +15,7 @@ namespace Colyseus.Schema
 	/// <summary>
 	///     Delegate function when any property on the schema structure has changed.
 	/// </summary>
-	public delegate void OnChangeEventHandler();
+	public delegate void OnInstanceChangeEventHandler();
 
 	/// <summary>
 	///     Delegate function for handling <see cref="Schema" /> removal
@@ -121,7 +120,7 @@ namespace Colyseus.Schema
 			return AddCallback(instance.__refId, propertyName, handler);
 		}
 
-		public Action OnChange<T>(T instance, OnChangeEventHandler handler)
+		public Action OnChange<T>(T instance, OnInstanceChangeEventHandler handler)
 			where T : Schema
 		{
 			return AddCallback(instance.__refId, OPERATION.REPLACE, handler);
@@ -147,6 +146,28 @@ namespace Colyseus.Schema
 			where TInstance : Schema
 		{
 			return AddCallbackOrWaitCollectionAvailable(instance, propertyExpression, OPERATION.ADD, handler, immediate);
+		}
+
+		public Action OnChange<TReturn>(Expression<Func<TState, ArraySchema<TReturn>>> propertyExpression, KeyValueEventHandler<int, TReturn> handler)
+		{
+			return OnChange(Decoder.State, propertyExpression, handler);
+		}
+
+		public Action OnChange<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, ArraySchema<TReturn>>> propertyExpression, KeyValueEventHandler<int, TReturn> handler)
+			where TInstance : Schema
+		{
+			return AddCallbackOrWaitCollectionAvailable(instance, propertyExpression, OPERATION.REPLACE, handler);
+		}
+
+		public Action OnChange<TReturn>(Expression<Func<TState, MapSchema<TReturn>>> propertyExpression, KeyValueEventHandler<string, TReturn> handler)
+		{
+			return OnChange(Decoder.State, propertyExpression, handler);
+		}
+
+		public Action OnChange<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, MapSchema<TReturn>>> propertyExpression, KeyValueEventHandler<string, TReturn> handler)
+			where TInstance : Schema
+		{
+			return AddCallbackOrWaitCollectionAvailable(instance, propertyExpression, OPERATION.REPLACE, handler);
 		}
 
 		public Action OnRemove<TReturn>(Expression<Func<TState, ArraySchema<TReturn>>> propertyExpression, KeyValueEventHandler<int, TReturn> handler)
