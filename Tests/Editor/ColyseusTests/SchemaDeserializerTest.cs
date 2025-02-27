@@ -255,10 +255,10 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(mapOfStringsRemove, 2);
 		Assert.AreEqual(mapOfIntRemove, 2);
 
-		Assert.AreEqual(mapOfSchemasChange, 3);
-		Assert.AreEqual(mapOfNumbersChange, 3);
-		Assert.AreEqual(mapOfStringsChange, 3);
-		Assert.AreEqual(mapOfIntChange, 3);
+		Assert.AreEqual(mapOfSchemasChange, 5);
+		Assert.AreEqual(mapOfNumbersChange, 5);
+		Assert.AreEqual(mapOfStringsChange, 5);
+		Assert.AreEqual(mapOfIntChange, 5);
 	}
 
 	[Test]
@@ -500,11 +500,11 @@ public class SchemaDeserializerTest
 		Assert.AreEqual(2, onListenContainer);
 		Assert.AreEqual(4, onPlayerAdd);
 		Assert.AreEqual(1, onPlayerRemove);
-		Assert.AreEqual(4, onPlayerChange);
+		Assert.AreEqual(5, onPlayerChange);
 
 		Assert.AreEqual(11, onItemAdd);
 		Assert.AreEqual(2, onItemRemove);
-		Assert.AreEqual(11, onItemChange);
+		Assert.AreEqual(13, onItemChange);
 	}
 
 }
