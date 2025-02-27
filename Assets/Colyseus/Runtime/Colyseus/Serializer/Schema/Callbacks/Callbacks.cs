@@ -372,7 +372,7 @@ namespace Colyseus.Schema
 					}
 
 					// trigger onChange
-					if (change.Value != change.PreviousValue && change.Value != null)
+					if (change.Value != change.PreviousValue)
 					{
 						callbacks.TryGetValue(OPERATION.REPLACE, out var replaceCallbacks);
 						if (replaceCallbacks != null)
