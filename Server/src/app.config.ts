@@ -12,6 +12,7 @@ import { playground } from "@colyseus/playground";
  */
 import { MyRoom } from "./rooms/MyRoom";
 import auth from "./config/auth";
+import { LobbyRoom } from "colyseus";
 
 export default config({
     options: {
@@ -28,6 +29,7 @@ export default config({
          */
         gameServer.define('my_room', MyRoom);
 
+        gameServer.define('lobby', LobbyRoom);
     },
 
     initializeExpress: (app) => {
