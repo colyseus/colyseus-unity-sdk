@@ -48,7 +48,7 @@ export default config({
         app.use("/colyseus", monitor());
 
         // Bind "playground"
-        app.use("/playground", playground);
+        app.use("/playground", playground());
 
         // Bind auth routes
         app.use(auth.prefix, auth.routes());
