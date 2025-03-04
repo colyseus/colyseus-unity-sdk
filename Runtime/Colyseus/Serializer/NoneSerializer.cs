@@ -6,17 +6,19 @@ namespace Colyseus
     /// <summary>
     ///     An empty implementation of <see cref="IColyseusSerializer{T}" />
     /// </summary>
-    public class NoneSerializer<T> : IColyseusSerializer<object> where T: NoState
+    public class NoneSerializer : IColyseusSerializer<NoState>
     {
+        NoState state = new NoState();
+
         /// <inheritdoc />
         public void SetState(byte[] rawEncodedState, int offset)
         {
         }
 
         /// <inheritdoc />
-        public object GetState()
+        public NoState GetState()
         {
-            return this;
+            return state;
         }
 
         /// <inheritdoc />

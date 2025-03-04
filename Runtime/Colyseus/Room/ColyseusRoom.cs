@@ -7,7 +7,6 @@ using Colyseus.Schema;
 using GameDevWare.Serialization;
 using NativeWebSocket;
 using UnityEngine;
-using Type = System.Type;
 
 namespace Colyseus
 {
@@ -406,16 +405,7 @@ namespace Colyseus
                 }
                 else
                 {
-                    try
-                    {
-                        Serializer = (IColyseusSerializer<T>) new NoneSerializer<NoState>();
-                    }
-                    catch (Exception e)
-                    {
-                        DisplaySerializerErrorHelp(e,
-                            "Consider setting state in the server-side using \"this.setState(new " + typeof(T).Name +
-                            "())\"");
-                    }
+                    Serializer = (IColyseusSerializer<T>) new NoneSerializer();
                 }
 
                 if (bytes.Length > offset)
