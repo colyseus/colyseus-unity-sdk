@@ -417,7 +417,7 @@ public class SchemaDeserializerTest
 		var previousArraySchemaRefId = state.arrayOfPlayers.__refId;
 
 		// Replacing ArraySchema
-		decoder.Decode(new byte[] { 130, 9, 255, 9, 128, 0, 10, 255, 10, 128, 11, 255, 11, 128, 10, 129, 20 });
+		decoder.Decode(new byte[] { 194, 9, 255, 9, 128, 0, 10, 255, 10, 128, 11, 255, 11, 128, 10, 129, 20 });
 		Assert.AreEqual(false, refs.refs.ContainsKey(previousArraySchemaRefId));
 		Assert.AreEqual(1, state.arrayOfPlayers.Count);
 		Assert.AreEqual(5, refs.refs.Count);
