@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Colyseus.Schema
 {
@@ -80,18 +80,20 @@ namespace Colyseus.Schema
         ///     Remove a reference by ID
         /// </summary>
         /// <param name="refId">The ID of the reference to remove</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public bool Remove(int refId)
+        public void Remove(int refId)
         {
-            refCounts[refId] = refCounts[refId] - 1;
-
-            if (!deletedRefs.Contains(refId))
+            if (!refCounts.ContainsKey(refId))
             {
-                deletedRefs.Add(refId);
-                return true;
+                Debug.Log("trying to remove refId that doesn't exist: " + refId);
+                return;
             }
 
-            return false;
+            refCounts[refId] = refCounts[refId] - 1;
+
+            if (refCounts[refId] <= 0)
+            {
+                deletedRefs.Add(refId);
+            }
         }
 
         /// <summary>
@@ -110,31 +112,36 @@ namespace Colyseus.Schema
                     IRef _ref = refs[refId];
                     if (_ref is Schema)
                     {
-                        foreach (KeyValuePair<string, System.Type> field in ((Schema) _ref).GetFieldChildTypes())
+                        foreach (KeyValuePair<string, System.Type> field in ((Schema)_ref).GetFieldChildTypes())
                         {
-                            object fieldValue = ((Schema) _ref)[field.Key];
-                            if (
-                                fieldValue is IRef &&
-                                Remove(((IRef) fieldValue).__refId))
+                            object fieldValue = ((Schema)_ref)[field.Key];
+                            if (fieldValue is IRef)
                             {
-                                totalDeletedRefs++;
+                                int childRefId = ((IRef)fieldValue).__refId;
+                                if (!deletedRefs.Contains(childRefId))
+                                {
+                                    Remove(childRefId);
+                                    totalDeletedRefs++;
+                                }
                             }
                         }
                     }
-                    else if (_ref is ISchemaCollection && ((ISchemaCollection) _ref).HasSchemaChild)
+                    else if (_ref is ISchemaCollection && ((ISchemaCollection)_ref).HasSchemaChild)
                     {
-						((ISchemaCollection)_ref).ForEach((key, value) =>
-						{
-							if (Remove(((IRef)value).__refId))
-							{
-								totalDeletedRefs++;
-							}
-						});
+                        ((ISchemaCollection)_ref).ForEach((key, value) =>
+                        {
+                            int childRefId = ((IRef)value).__refId;
+                            if (!deletedRefs.Contains(childRefId))
+                            {
+                                Remove(childRefId);
+                                totalDeletedRefs++;
+                            }
+                        });
                     }
 
                     refs.Remove(refId);
                     refCounts.Remove(refId);
-					callbacks.Remove(refId);
+                    callbacks.Remove(refId);
                 }
             }
 

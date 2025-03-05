@@ -1,4 +1,4 @@
-import { Room, Client } from "colyseus";
+import { Room, Client, AuthContext } from "colyseus";
 import { MyRoomState, Player } from "./schema/MyRoomState";
 
 export type PositionMessage = {
@@ -10,6 +10,10 @@ export class MyRoom extends Room<MyRoomState> {
 
   onCreate (options: any) {
     this.setState(new MyRoomState());
+  }
+
+  onAuth(client: Client, options: any, context: AuthContext) {
+    return false;
   }
 
   onJoin (client: Client, options: any) {

@@ -124,15 +124,15 @@ namespace Colyseus.Schema
 			//
 			if ((operation & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE)
 			{
-				if (operation != (byte)OPERATION.DELETE_AND_ADD)
-				{
-					_ref.DeleteByIndex(fieldIndex);
-				}
-
 				// Flag `refId` for garbage collection.
 				if (previousValue != null && previousValue is IRef)
 				{
 					Refs.Remove(((IRef)previousValue).__refId);
+				}
+
+				if (operation != (byte)OPERATION.DELETE_AND_ADD)
+				{
+					_ref.DeleteByIndex(fieldIndex);
 				}
 
 				value = null;
@@ -151,20 +151,6 @@ namespace Colyseus.Schema
 			{
 				var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
 				value = Refs.Get(__refId);
-
-				if (previousValue != null)
-				{
-					var previousRefId = ((IRef)previousValue).__refId;
-					if (
-						previousRefId > 0 &&
-						__refId != previousRefId &&
-						// FIXME: we may need to check for REPLACE operation as well
-						((operation & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE)
-					)
-					{
-						Refs.Remove(previousRefId);
-					}
-				}
 
 				if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
 				{
@@ -210,9 +196,11 @@ namespace Colyseus.Schema
 						__refId != ((IRef)previousValue).__refId
 					)
 					{
-						Refs.Remove(((IRef)previousValue).__refId);
-
 						((ISchemaCollection)previousValue).ForEach((key, value) => {
+							if (value is IRef) {
+								Refs.Remove(((IRef)value).__refId);
+							}
+
 							AllChanges.Add(new DataChange
 							{
 								RefId = __refId,
@@ -225,7 +213,10 @@ namespace Colyseus.Schema
 					}
 				}
 
-				Refs.Add(__refId, (IRef)value, valueRef != previousValue);
+				Refs.Add(__refId, (IRef)value, (
+					valueRef != previousValue || // increment ref count if value has changed
+					(operation == (byte)OPERATION.DELETE_AND_ADD && valueRef == previousValue) // increment ref count if the same instance is being added again
+				));
 			}
 		}
 
