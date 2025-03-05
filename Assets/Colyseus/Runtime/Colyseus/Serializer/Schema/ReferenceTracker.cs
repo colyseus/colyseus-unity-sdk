@@ -80,12 +80,12 @@ namespace Colyseus.Schema
         ///     Remove a reference by ID
         /// </summary>
         /// <param name="refId">The ID of the reference to remove</param>
-        public void Remove(int refId)
+        public bool Remove(int refId)
         {
             if (!refCounts.ContainsKey(refId))
             {
                 Debug.Log("trying to remove refId that doesn't exist: " + refId);
-                return;
+                return false;
             }
 
             refCounts[refId] = refCounts[refId] - 1;
@@ -93,7 +93,10 @@ namespace Colyseus.Schema
             if (refCounts[refId] <= 0)
             {
                 deletedRefs.Add(refId);
+                return true;
             }
+
+            return false;
         }
 
         /// <summary>
@@ -118,9 +121,8 @@ namespace Colyseus.Schema
                             if (fieldValue is IRef)
                             {
                                 int childRefId = ((IRef)fieldValue).__refId;
-                                if (!deletedRefs.Contains(childRefId))
+                                if (!deletedRefs.Contains(childRefId) && Remove(childRefId))
                                 {
-                                    Remove(childRefId);
                                     totalDeletedRefs++;
                                 }
                             }
@@ -131,9 +133,8 @@ namespace Colyseus.Schema
                         ((ISchemaCollection)_ref).ForEach((key, value) =>
                         {
                             int childRefId = ((IRef)value).__refId;
-                            if (!deletedRefs.Contains(childRefId))
+                            if (!deletedRefs.Contains(childRefId) && Remove(childRefId))
                             {
-                                Remove(childRefId);
                                 totalDeletedRefs++;
                             }
                         });
