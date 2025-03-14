@@ -52,9 +52,7 @@ namespace Colyseus
 			System.Type targetType = typeof(T);
 
 			System.Type[] allTypes = targetType.Assembly.GetTypes();
-			System.Type[] namespaceSchemaTypes = Array.FindAll(allTypes, t => t.Namespace == targetType.Namespace &&
-																			  typeof(Schema.Schema).IsAssignableFrom(
-																				  targetType));
+			List<System.Type> namespaceSchemaTypes = new List<System.Type>(Array.FindAll(allTypes, t => t.Namespace == targetType.Namespace && typeof(Schema.Schema).IsAssignableFrom( targetType)));
 
 			Iterator it = new Iterator { Offset = offset };
 
@@ -69,30 +67,42 @@ namespace Colyseus
 				var reflectionType = reflection.types[i];
 				var reflectionFields = GetFieldsFromType(reflectionType, types);
 
-				var schemaType = Array.Find(namespaceSchemaTypes, t => CompareTypes(t, reflectionFields));
+				var schemaType = namespaceSchemaTypes.Find(t => CompareTypes(t, reflectionFields));
 
 				if (schemaType != null)
 				{
+					// UnityEngine.Debug.Log("FOUND: " + schemaType.FullName + " => " + DebugReflectionType(reflectionType, reflectionFields));
+
 					Decoder.Context.SetTypeId(schemaType, reflection.types[i].id);
+
+					// Remove from list to avoid duplicate checks
+					namespaceSchemaTypes.Remove(schemaType);
+
 				}
 				else
 				{
+					// UnityEngine.Debug.Log("NOT FOUND: " + DebugReflectionType(reflectionType, reflectionFields));
+
 					UnityEngine.Debug.LogWarning(
 						"Local schema mismatch from server. Use \"schema-codegen\" to generate up-to-date local definitions.");
 				}
 			}
 		}
 
+		private static string DebugReflectionType(ReflectionType reflectionType, List<ReflectionField> reflectionFields)
+		{
+			List<string> fieldNames = new List<string>();
+			for (int i = 0; i < reflectionFields.Count; i++)
+			{
+				fieldNames.Add(reflectionFields[i].name);
+			}
+			return $"TypeId: {reflectionType.id} (extendsId: {reflectionType.extendsId}), Fields: {string.Join(", ", fieldNames)}";
+		}
+
 		private static bool CompareTypes(System.Type schemaType, List<ReflectionField> reflectionFields)
 		{
 			FieldInfo[] fields = schemaType.GetFields();
 			int typedFieldCount = 0;
-
-			// string fieldNames = "";
-			// for (int i = 0; i < fields.Length; i++)
-			// {
-			//     fieldNames += fields[i].Name + ", ";
-			// }
 
 			foreach (FieldInfo field in fields)
 			{
