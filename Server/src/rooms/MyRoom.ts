@@ -8,12 +8,17 @@ export type PositionMessage = {
 
 export class MyRoom extends Room<MyRoomState> {
 
+  state = new MyRoomState();
+
   onCreate (options: any) {
-    this.setState(new MyRoomState());
+    this.setMetadata({
+      //Set room metadata here, e.g.,
+      //RoomName: options.RoomName
+    })
   }
 
   onAuth(client: Client, options: any, context: AuthContext) {
-    return false;
+    return true;
   }
 
   onJoin (client: Client, options: any) {
@@ -34,11 +39,11 @@ export class MyRoom extends Room<MyRoomState> {
   }
 
   onLeave (client: Client, consented: boolean) {
+    this.state.players.delete(client.sessionId);
     console.log(client.sessionId, "left!");
   }
 
   onDispose() {
     console.log("room", this.roomId, "disposing...");
   }
-
 }
