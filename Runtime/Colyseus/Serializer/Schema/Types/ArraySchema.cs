@@ -100,6 +100,13 @@ namespace Colyseus.Schema
 		public void DeleteByIndex(int index)
 		{
 			deletedKeys.Add(index);
+
+			// skip if index is out of range
+			if (index >= items.Count)
+			{
+				return;
+			}
+
 			items[index] = default(T);
 		}
 
