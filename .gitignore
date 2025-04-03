@@ -7,6 +7,7 @@ Server/build
 .DS_Store
 .vs/
 .vsconfig
+.idea/
 
 #Mono Project Files
 *.pidb
