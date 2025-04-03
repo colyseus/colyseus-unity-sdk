@@ -250,13 +250,12 @@ namespace Colyseus.Schema
 				//
 				// trigger onRemove on child structure.
 				//
-				if (
-					(change.Op & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE &&
-					change.PreviousValue is Schema
-				)
+				if ((change.Op & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE && change.PreviousValue is Schema)
 				{
 					Decoder.Refs.callbacks.TryGetValue(((Schema)change.PreviousValue).__refId, out var deleteCallbacks);
-					if (deleteCallbacks != null && deleteCallbacks[OPERATION.DELETE] != null)
+					if (deleteCallbacks != null
+					    && deleteCallbacks.ContainsKey(OPERATION.DELETE)
+					    && deleteCallbacks[OPERATION.DELETE] != null)
 					{
 						foreach (var callback in deleteCallbacks[OPERATION.DELETE])
 						{
