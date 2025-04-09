@@ -45,8 +45,12 @@ namespace Colyseus.Schema
         /// <summary>
         ///     An <see cref="ArraySchema{T}" /> of <see cref="ReflectionField" />
         /// </summary>
+        [Preserve]
         [Type(2, "array", typeof(ArraySchema<ReflectionField>))]
         public ArraySchema<ReflectionField> fields;
+
+        [Preserve]
+        public ReflectionType() {}
     }
 
     /// <summary>
@@ -58,6 +62,7 @@ namespace Colyseus.Schema
         /// <summary>
         ///     An <see cref="ArraySchema{T}" /> of <see cref="ReflectionType" />
         /// </summary>
+        [Preserve]
         [Type(0, "array", typeof(ArraySchema<ReflectionType>))]
         public ArraySchema<ReflectionType> types;
 
