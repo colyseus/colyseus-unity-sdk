@@ -383,6 +383,12 @@ namespace Colyseus
 				options = new Dictionary<string, object>();
 			}
 
+			// Add authentication token to query string
+			if (!string.IsNullOrEmpty(Http.AuthToken))
+			{
+				options.Add("_authToken", Http.AuthToken);
+			}
+
 			List<string> list = new List<string>();
 			foreach (KeyValuePair<string, object> item in options)
 			{
