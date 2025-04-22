@@ -351,10 +351,7 @@ namespace Colyseus.Schema
 					}
 					else if (
 						(change.Op & (byte)OPERATION.ADD) == (byte)OPERATION.ADD &&
-						(
-							change.PreviousValue == null ||
-							Equals(change.PreviousValue, container.GetTypeDefaultValue())
-						)
+						change.PreviousValue != change.Value
 					)
 					{
 						// trigger onAdd
