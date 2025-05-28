@@ -220,44 +220,44 @@ namespace Colyseus.Schema
 	/// </summary>
 	public class Schema : IRef
 	{
-		private static readonly Dictionary<System.Type, Meta> _metas = new Dictionary<System.Type, Meta>();
+		private static readonly Dictionary<System.Type, Metadata> _cachedMetadata = new Dictionary<System.Type, Metadata>();
 
-		private readonly Meta _meta;
+		private readonly Metadata _metadata;
 
 		/// <summary>
 		///     Map of the <see cref="Type.ChildPrimitiveType" />s that this schema uses
 		/// </summary>
-		internal Dictionary<string, string> fieldChildPrimitiveTypes => _meta.FieldChildPrimitiveTypes;
+		internal Dictionary<string, string> fieldChildPrimitiveTypes => _metadata.FieldChildPrimitiveTypes;
 
 		/// <summary>
 		///     Map of the <see cref="Type.ChildType" />s that this schema uses
 		/// </summary>
-		internal Dictionary<string, System.Type> fieldChildTypes => _meta.FieldChildTypes;
+		internal Dictionary<string, System.Type> fieldChildTypes => _metadata.FieldChildTypes;
 
 		/// <summary>
 		///     Map of the fields in this schema using {<see cref="Type.Index" />,
 		/// </summary>
-		internal Dictionary<int, string> fieldsByIndex => _meta.FieldsByIndex;
+		internal Dictionary<int, string> fieldsByIndex => _metadata.FieldsByIndex;
 
 		/// <summary>
 		///     Map of the field types in this schema
 		/// </summary>
-		internal Dictionary<string, string> fieldTypes => _meta.FieldTypes;
+		internal Dictionary<string, string> fieldTypes => _metadata.FieldTypes;
 
 		public Schema()
 		{
 			var type = GetType();
-			if (!_metas.TryGetValue(type, out _meta))
+			if (!_cachedMetadata.TryGetValue(type, out _metadata))
 			{
-				_meta = CreateMeta(type);
-				_metas.Add(type, _meta);
+				_metadata = CreateMetadata(type);
+				_cachedMetadata.Add(type, _metadata);
 			}
 		}
 
 
-		private static Meta CreateMeta(System.Type type)
+		private static Metadata CreateMetadata(System.Type type)
 		{
-			var meta = new Meta();
+			var metadata = new Metadata();
 
 			FieldInfo[] fields = type.GetFields();
 			foreach (FieldInfo field in fields)
@@ -266,22 +266,22 @@ namespace Colyseus.Schema
 				for (int i = 0; i < typeAttributes.Length; i++)
 				{
 					Type t = (Type)typeAttributes[i];
-					meta.FieldsByIndex.Add(t.Index, field.Name);
-					meta.FieldTypes.Add(field.Name, t.FieldType);
+					metadata.FieldsByIndex.Add(t.Index, field.Name);
+					metadata.FieldTypes.Add(field.Name, t.FieldType);
 
 					if (t.ChildPrimitiveType != null)
 					{
-						meta.FieldChildPrimitiveTypes.Add(field.Name, t.ChildPrimitiveType);
+						metadata.FieldChildPrimitiveTypes.Add(field.Name, t.ChildPrimitiveType);
 					}
 
 					if (t.ChildType != null)
 					{
-						meta.FieldChildTypes.Add(field.Name, t.ChildType);
+						metadata.FieldChildTypes.Add(field.Name, t.ChildType);
 					}
 				}
 			}
 
-			return meta;
+			return metadata;
 		}
 
 		/// <summary>
@@ -363,7 +363,7 @@ namespace Colyseus.Schema
 		/// <summary>
 		///		Metadata for Schema type
 		/// </summary>
-		private class Meta
+		private class Metadata
 		{
 			/// <summary>
 			///     Map of the <see cref="Type.ChildPrimitiveType" />s that this schema uses
