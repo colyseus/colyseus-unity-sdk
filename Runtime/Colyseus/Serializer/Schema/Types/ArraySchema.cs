@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.Scripting;
 
 namespace Colyseus.Schema
 {
@@ -17,6 +18,7 @@ namespace Colyseus.Schema
 
 		internal HashSet<int> deletedKeys = new HashSet<int>();
 
+		[Preserve]
 		public ArraySchema()
 		{
 			items = new List<T>();
