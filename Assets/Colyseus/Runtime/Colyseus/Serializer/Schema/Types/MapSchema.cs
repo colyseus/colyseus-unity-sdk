@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using UnityEngine.Scripting;
 
 namespace Colyseus.Schema
 {
@@ -18,6 +19,7 @@ namespace Colyseus.Schema
         /// </summary>
         public OrderedDictionary items = new OrderedDictionary();
 
+        [Preserve]
         public MapSchema()
         {
             items = new OrderedDictionary();
