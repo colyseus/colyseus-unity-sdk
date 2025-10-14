@@ -101,6 +101,17 @@ namespace Colyseus
 		public Type UserType { get => userType; set => userType = value; }
 	}
 
+	[Serializable]
+	public class GameCenterCredentials
+	{
+		public string playerId;
+		public string bundleId;
+		public long timestamp;
+		public string salt;
+		public string signature;
+		public string publicKeyUrl;
+	}
+
 	/// <summary>
 	///     Colyseus.Auth
 	/// </summary>
@@ -219,6 +230,27 @@ namespace Colyseus
 		public async Task<IAuthData> SignInAnonymously(Dictionary<string, object> options = null)
 		{
 			return await SignInAnonymously<IndexedDictionary<string, object>>(options);
+		}
+
+		public async Task<AuthData<T>> SignInWithGameCenter<T>(GameCenterCredentials credentials)
+		{
+			var response = getAuthData<T>(await _client.Http.Request<AuthData<IndexedDictionary<string, object>>>("POST", $"{PATH}/gamecenter", new Dictionary<string, object>
+			{
+				{ "playerId", credentials.playerId },
+				{ "bundleId", credentials.bundleId },
+				{ "timestamp", credentials.timestamp },
+				{ "salt", credentials.salt },
+				{ "signature", credentials.signature },
+				{ "publicKeyUrl", credentials.publicKeyUrl }
+			}));
+
+			emitChange(response);
+			return response;
+		}
+
+		public async Task<IAuthData> SignInWithGameCenter(GameCenterCredentials credentials)
+		{
+			return await SignInWithGameCenter<IndexedDictionary<string, object>>(credentials);
 		}
 
 		public async Task<AuthData<T>> SignInWithProvider<T>(string providerName, Dictionary<string, object> settings = null)
