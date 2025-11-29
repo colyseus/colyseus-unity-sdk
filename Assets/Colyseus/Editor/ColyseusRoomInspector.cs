@@ -53,6 +53,12 @@ namespace Colyseus.Editor
         private Dictionary<string, string> _rawJsonInputs = new Dictionary<string, string>();
         private Dictionary<string, bool> _useRawJson = new Dictionary<string, bool>();
         private Dictionary<string, string> _customMessageTypes = new Dictionary<string, string>();
+        
+        // Splitter state for Room State / Messages sections
+        private Dictionary<string, float> _roomSplitterPosition = new Dictionary<string, float>();
+        private Dictionary<string, bool> _isResizingRoomSplitter = new Dictionary<string, bool>();
+        private const float MinPanelHeight = 150f;
+        private const float SplitterHeight = 4f;
 
         [MenuItem("Window/Colyseus/Room Inspector")]
         public static void ShowWindow()
@@ -294,31 +300,14 @@ namespace Colyseus.Editor
                 {
                     DrawReadOnlyField("Room ID", roomInfo.RoomId ?? "N/A");
                     DrawReadOnlyField("Session ID", roomInfo.SessionId ?? "N/A");
-                    DrawReadOnlyField("Connection", roomInfo.IsConnected ? "Connected" : "Disconnected");
+                    DrawReadOnlyField("Status", roomInfo.IsConnected ? "Connected" : "Disconnected");
                     DrawReadOnlyObjectField("Source Object", roomInfo.SourceObject, typeof(MonoBehaviour));
                 });
 
                 EditorGUILayout.Space(5);
 
-                // State Section
-                if (roomInfo.State != null)
-                {
-                    DrawSection("Room State", () =>
-                    {
-                        DrawReadOnlyField("State Type", roomInfo.StateType?.Name ?? "Unknown");
-                        EditorGUILayout.Space(3);
-                        DrawSchemaObject(roomInfo.State, roomInfo.StateType, "state");
-                    });
-                }
-                else
-                {
-                    EditorGUILayout.HelpBox("State is null or not yet initialized", MessageType.Warning);
-                }
-
-                EditorGUILayout.Space(5);
-
-                // Messages Section
-                DrawMessagesSection(roomInfo);
+                // Draw horizontal split panel for State and Messages
+                DrawStateAndMessagesSplitPanel(roomInfo);
 
                 EditorGUI.indentLevel--;
             }
@@ -714,6 +703,99 @@ namespace Colyseus.Editor
 
 
 
+        private void DrawStateAndMessagesSplitPanel(RoomInfo roomInfo)
+        {
+            var roomId = roomInfo.RoomId;
+            var splitterKey = $"room_splitter_{roomId}";
+            
+            // Initialize splitter position for this room
+            if (!_roomSplitterPosition.ContainsKey(splitterKey))
+            {
+                _roomSplitterPosition[splitterKey] = 300f; // Default top panel height
+            }
+            if (!_isResizingRoomSplitter.ContainsKey(splitterKey))
+            {
+                _isResizingRoomSplitter[splitterKey] = false;
+            }
+            
+            // Calculate available height (estimate remaining scroll view height)
+            var availableHeight = 600f; // Default available height
+            var topPanelHeight = Mathf.Clamp(_roomSplitterPosition[splitterKey], MinPanelHeight, availableHeight - MinPanelHeight - SplitterHeight);
+            var bottomPanelHeight = availableHeight - topPanelHeight - SplitterHeight;
+            
+            // Top Panel - Room State
+            EditorGUILayout.BeginVertical(GUILayout.Height(topPanelHeight));
+            DrawStateSection(roomInfo);
+            EditorGUILayout.EndVertical();
+            
+            // Horizontal Splitter
+            DrawHorizontalSplitter(splitterKey, availableHeight);
+            
+            // Bottom Panel - Messages
+            EditorGUILayout.BeginVertical(GUILayout.Height(bottomPanelHeight));
+            DrawMessagesSection(roomInfo);
+            EditorGUILayout.EndVertical();
+        }
+        
+        private void DrawHorizontalSplitter(string splitterKey, float availableHeight)
+        {
+            var splitterRect = EditorGUILayout.GetControlRect(GUILayout.Height(SplitterHeight), GUILayout.ExpandWidth(true));
+            EditorGUI.DrawRect(splitterRect, new Color(0.3f, 0.3f, 0.3f, 0.5f));
+            EditorGUIUtility.AddCursorRect(splitterRect, MouseCursor.ResizeVertical);
+            
+            var e = Event.current;
+            
+            if (e.type == EventType.MouseDown && splitterRect.Contains(e.mousePosition))
+            {
+                _isResizingRoomSplitter[splitterKey] = true;
+                e.Use();
+            }
+            
+            if (_isResizingRoomSplitter[splitterKey])
+            {
+                if (e.type == EventType.MouseDrag)
+                {
+                    _roomSplitterPosition[splitterKey] += e.delta.y;
+                    _roomSplitterPosition[splitterKey] = Mathf.Clamp(
+                        _roomSplitterPosition[splitterKey],
+                        MinPanelHeight,
+                        availableHeight - MinPanelHeight - SplitterHeight
+                    );
+                    Repaint();
+                    e.Use();
+                }
+                
+                if (e.type == EventType.MouseUp)
+                {
+                    _isResizingRoomSplitter[splitterKey] = false;
+                    e.Use();
+                }
+            }
+        }
+        
+        private void DrawStateSection(RoomInfo roomInfo)
+        {
+            var stateScrollKey = $"state_scroll_{roomInfo.RoomId}";
+            if (!_foldouts.ContainsKey(stateScrollKey))
+            {
+                _foldouts[stateScrollKey] = true;
+            }
+            
+            DrawSection("Room State", () =>
+            {
+                if (roomInfo.State != null)
+                {
+                    DrawReadOnlyField("State Type", roomInfo.StateType?.Name ?? "Unknown");
+                    EditorGUILayout.Space(3);
+                    DrawSchemaObject(roomInfo.State, roomInfo.StateType, "state");
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("State is null or not yet initialized", MessageType.Warning);
+                }
+            });
+        }
+        
         private void DrawMessagesSection(RoomInfo roomInfo)
         {
             var roomId = roomInfo.RoomId;
@@ -760,131 +842,126 @@ namespace Colyseus.Editor
                     EditorGUILayout.HelpBox("No message types available. Enable playground in the server to see message types here.", MessageType.Info);
                     return;
                 }
-
+                
                 // Ensure index is valid
                 if (_selectedMessageTypeIndex[roomId] >= messageTypeNames.Length)
                 {
                     _selectedMessageTypeIndex[roomId] = 0;
                 }
+                
+                // Draw message interface
+                DrawMessageInterface(roomInfo, messageTypeNames, messageTypes, messageInputs);
+            });
+        }
+        
+        private void DrawMessageInterface(RoomInfo roomInfo, string[] messageTypeNames, Dictionary<string, object> messageTypes, Dictionary<string, string> messageInputs)
+        {
+            var roomId = roomInfo.RoomId;
+            
+            // Message type selector
+            EditorGUILayout.LabelField("Message Type:", EditorStyles.boldLabel);
+            var previousIndex = _selectedMessageTypeIndex[roomId];
+            _selectedMessageTypeIndex[roomId] = EditorGUILayout.Popup(
+                _selectedMessageTypeIndex[roomId],
+                messageTypeNames,
+                GUILayout.Height(20)
+            );
 
-                // Draw message type selector
-                EditorGUILayout.LabelField("Message Type:", EditorStyles.boldLabel);
-                var previousIndex = _selectedMessageTypeIndex[roomId];
-                _selectedMessageTypeIndex[roomId] = EditorGUILayout.Popup(
-                    _selectedMessageTypeIndex[roomId],
-                    messageTypeNames,
-                    GUILayout.Height(20)
+            var selectedMessageName = messageTypeNames[_selectedMessageTypeIndex[roomId]];
+            var isCustomMessage = selectedMessageName == "* (Custom)";
+            
+            // Handle custom message type
+            if (isCustomMessage)
+            {
+                var customKey = $"{roomId}_custom";
+                if (!_customMessageTypes.ContainsKey(customKey))
+                {
+                    _customMessageTypes[customKey] = "";
+                }
+                
+                EditorGUILayout.Space(4);
+                EditorGUILayout.LabelField("Custom Message Type:", EditorStyles.boldLabel);
+                _customMessageTypes[customKey] = EditorGUILayout.TextField(_customMessageTypes[customKey], GUILayout.Height(20));
+                
+                selectedMessageName = _customMessageTypes[customKey];
+            }
+            
+            IDictionary messageSchema = !isCustomMessage && messageTypes.ContainsKey(selectedMessageName) 
+                ? messageTypes[selectedMessageName] as IDictionary 
+                : null;
+                
+            EditorGUILayout.Space(4);
+            
+            // Initialize raw JSON toggle state
+            var rawJsonKey = $"{roomId}_{selectedMessageName}";
+            if (!_useRawJson.ContainsKey(rawJsonKey))
+            {
+                _useRawJson[rawJsonKey] = false;
+            }
+
+            // Initialize raw JSON input
+            if (!_rawJsonInputs.ContainsKey(rawJsonKey))
+            {
+                _rawJsonInputs[rawJsonKey] = messageSchema != null ? GenerateDefaultJSON(messageSchema) : "{}";
+            }
+
+            // Check if message type changed - update raw JSON when switching message types
+            var currentMessageKey = isCustomMessage ? "* (Custom)" : selectedMessageName;
+            if (!_lastSelectedMessageType.ContainsKey(roomId) || 
+                _lastSelectedMessageType[roomId] != currentMessageKey)
+            {
+                _lastSelectedMessageType[roomId] = currentMessageKey;
+                _rawJsonInputs[rawJsonKey] = messageSchema != null ? GenerateDefaultJSON(messageSchema) : "{}";
+                
+                // Clear all field inputs for this message type
+                if (!isCustomMessage)
+                {
+                    var keysToRemove = messageInputs.Keys.Where(k => k.StartsWith($"{roomId}_{selectedMessageName}_field_")).ToList();
+                    foreach (var key in keysToRemove)
+                    {
+                        messageInputs.Remove(key);
+                    }
+                }
+            }
+
+            // Toggle between form fields and raw JSON
+            var previousUseRawJson = _useRawJson[rawJsonKey];
+
+            // Only show toggle if schema is available
+            if (messageSchema != null)
+            {
+                _useRawJson[rawJsonKey] = EditorGUILayout.Toggle("Use Raw JSON", _useRawJson[rawJsonKey]);
+                EditorGUILayout.Space(4);
+            }
+            
+            // When switching to raw JSON mode, populate from field values
+            if (_useRawJson[rawJsonKey] && !previousUseRawJson && messageSchema != null)
+            {
+                _rawJsonInputs[rawJsonKey] = GenerateJSONFromFields(roomId, selectedMessageName, messageSchema, messageInputs);
+            }
+            
+            // If raw JSON mode is enabled or schema is invalid, show JSON text area
+            if (_useRawJson[rawJsonKey] || messageSchema == null)
+            {
+                EditorGUILayout.Space(4);
+                EditorGUILayout.LabelField("JSON Payload:", EditorStyles.boldLabel);
+                
+                // Multi-line text area for JSON input
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                var textAreaStyle = new GUIStyle(EditorStyles.textArea);
+                textAreaStyle.wordWrap = true;
+                textAreaStyle.stretchHeight = true;
+                
+                _rawJsonInputs[rawJsonKey] = EditorGUILayout.TextArea(
+                    _rawJsonInputs[rawJsonKey], 
+                    textAreaStyle, 
+                    GUILayout.MinHeight(40),
+                    GUILayout.MaxHeight(80)
                 );
-
-                var selectedMessageName = messageTypeNames[_selectedMessageTypeIndex[roomId]];
-                var isCustomMessage = selectedMessageName == "* (Custom)";
-                
-                // Handle custom message type
-                if (isCustomMessage)
-                {
-                    var customKey = $"{roomId}_custom";
-                    if (!_customMessageTypes.ContainsKey(customKey))
-                    {
-                        _customMessageTypes[customKey] = "";
-                    }
-                    
-                    EditorGUILayout.Space(4);
-                    EditorGUILayout.LabelField("Custom Message Type:", EditorStyles.boldLabel);
-                    _customMessageTypes[customKey] = EditorGUILayout.TextField(_customMessageTypes[customKey], GUILayout.Height(20));
-                    
-                    selectedMessageName = _customMessageTypes[customKey];
-                }
-                
-                IDictionary messageSchema = !isCustomMessage && messageTypes.ContainsKey(selectedMessageName) 
-                    ? messageTypes[selectedMessageName] as IDictionary 
-                    : null;
-                
-                // Initialize raw JSON toggle state
-                var rawJsonKey = $"{roomId}_{selectedMessageName}";
-                if (!_useRawJson.ContainsKey(rawJsonKey))
-                {
-                    _useRawJson[rawJsonKey] = false;
-                }
-
-                // Initialize raw JSON input
-                if (!_rawJsonInputs.ContainsKey(rawJsonKey))
-                {
-                    _rawJsonInputs[rawJsonKey] = messageSchema != null ? GenerateDefaultJSON(messageSchema) : "{}";
-                }
-
-                // Check if message type changed - update raw JSON when switching message types
-                var currentMessageKey = isCustomMessage ? "* (Custom)" : selectedMessageName;
-                if (!_lastSelectedMessageType.ContainsKey(roomId) || 
-                    _lastSelectedMessageType[roomId] != currentMessageKey)
-                {
-                    _lastSelectedMessageType[roomId] = currentMessageKey;
-                    _rawJsonInputs[rawJsonKey] = messageSchema != null ? GenerateDefaultJSON(messageSchema) : "{}";
-                    
-                    // Clear all field inputs for this message type
-                    if (!isCustomMessage)
-                    {
-                        var keysToRemove = messageInputs.Keys.Where(k => k.StartsWith($"{roomId}_{selectedMessageName}_field_")).ToList();
-                        foreach (var key in keysToRemove)
-                        {
-                            messageInputs.Remove(key);
-                        }
-                    }
-                }
-
-                // Toggle between form fields and raw JSON
-                var previousUseRawJson = _useRawJson[rawJsonKey];
-
-                // Only show toggle if schema is available
-                if (messageSchema != null)
-                {
-                    EditorGUILayout.Space(4);
-                    _useRawJson[rawJsonKey] = EditorGUILayout.Toggle("Use Raw JSON", _useRawJson[rawJsonKey]);
-                }
-                
-                // When switching to raw JSON mode, populate from field values
-                if (_useRawJson[rawJsonKey] && !previousUseRawJson && messageSchema != null)
-                {
-                    _rawJsonInputs[rawJsonKey] = GenerateJSONFromFields(roomId, selectedMessageName, messageSchema, messageInputs);
-                }
-                
-                // If raw JSON mode is enabled or schema is invalid, show JSON text area
-                if (_useRawJson[rawJsonKey] || messageSchema == null)
-                {
-                    EditorGUILayout.Space(4);
-                    EditorGUILayout.LabelField("JSON Payload:", EditorStyles.boldLabel);
-                    
-                    // Multi-line text area for JSON input
-                    EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                    var textAreaStyle = new GUIStyle(EditorStyles.textArea);
-                    textAreaStyle.wordWrap = true;
-                    textAreaStyle.stretchHeight = true;
-                    
-                    _rawJsonInputs[rawJsonKey] = EditorGUILayout.TextArea(
-                        _rawJsonInputs[rawJsonKey], 
-                        textAreaStyle, 
-                        GUILayout.MinHeight(40),
-                        GUILayout.MaxHeight(80)
-                    );
-                    EditorGUILayout.EndVertical();
-                    
-                    EditorGUILayout.Space(5);
-
-                    // Send button for raw JSON
-                    var canSendRaw = !isCustomMessage || !string.IsNullOrWhiteSpace(selectedMessageName);
-                    var buttonLabelRaw = isCustomMessage && string.IsNullOrWhiteSpace(selectedMessageName) 
-                        ? "Send (enter message type above)" 
-                        : $"Send '{selectedMessageName}'";
-                    
-                    EditorGUI.BeginDisabledGroup(!canSendRaw);
-                    if (GUILayout.Button(buttonLabelRaw, GUILayout.Height(30)))
-                    {
-                        SendMessageFromRawJson(roomInfo, selectedMessageName, _rawJsonInputs[rawJsonKey]);
-                    }
-                    EditorGUI.EndDisabledGroup();
-                    
-                    return;
-                }
-
+                EditorGUILayout.EndVertical();
+            }
+            else
+            {
                 // Get required fields
                 List<object> requiredFields = null;
                 if (messageSchema.Contains("required"))
@@ -920,29 +997,29 @@ namespace Colyseus.Editor
                 {
                     EditorGUILayout.HelpBox("No fields defined for this message type.", MessageType.Info);
                 }
+            }
 
-                EditorGUILayout.Space(5);
+            EditorGUILayout.Space(8);
 
-                // Send button
-                var canSend = !isCustomMessage || !string.IsNullOrWhiteSpace(selectedMessageName);
-                var buttonLabel = isCustomMessage && string.IsNullOrWhiteSpace(selectedMessageName) 
-                    ? "Send (enter message type above)" 
-                    : $"Send '{selectedMessageName}'";
-                
-                EditorGUI.BeginDisabledGroup(!canSend);
-                if (GUILayout.Button(buttonLabel, GUILayout.Height(30)))
+            // Send button
+            var canSend = !isCustomMessage || !string.IsNullOrWhiteSpace(selectedMessageName);
+            var buttonLabel = isCustomMessage && string.IsNullOrWhiteSpace(selectedMessageName) 
+                ? "Send (enter message type above)" 
+                : $"Send '{selectedMessageName}'";
+            
+            EditorGUI.BeginDisabledGroup(!canSend);
+            if (GUILayout.Button(buttonLabel, GUILayout.Height(30)))
+            {
+                if (_useRawJson[rawJsonKey])
                 {
-                    if (_useRawJson[rawJsonKey])
-                    {
-                        SendMessageFromRawJson(roomInfo, selectedMessageName, _rawJsonInputs[rawJsonKey]);
-                    }
-                    else
-                    {
-                        SendMessageFromFields(roomInfo, selectedMessageName, messageSchema, messageInputs);
-                    }
+                    SendMessageFromRawJson(roomInfo, selectedMessageName, _rawJsonInputs[rawJsonKey]);
                 }
-                EditorGUI.EndDisabledGroup();
-            });
+                else
+                {
+                    SendMessageFromFields(roomInfo, selectedMessageName, messageSchema, messageInputs);
+                }
+            }
+            EditorGUI.EndDisabledGroup();
         }
 
         private void DrawMessageField(string roomId, string messageName, string fieldName, IDictionary fieldSchema, bool isRequired, Dictionary<string, string> messageInputs)
