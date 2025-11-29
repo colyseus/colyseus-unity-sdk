@@ -52,6 +52,7 @@ namespace Colyseus.Editor
         private Dictionary<string, string> _lastSelectedMessageType = new Dictionary<string, string>();
         private Dictionary<string, string> _rawJsonInputs = new Dictionary<string, string>();
         private Dictionary<string, bool> _useRawJson = new Dictionary<string, bool>();
+        private Dictionary<string, string> _customMessageTypes = new Dictionary<string, string>();
 
         [MenuItem("Window/Colyseus/Room Inspector")]
         public static void ShowWindow()
@@ -750,7 +751,9 @@ namespace Colyseus.Editor
                 var messageInputs = _messageInputs[roomId];
 
                 // Create array of message type names for popup
-                var messageTypeNames = messageTypes.Keys.ToArray();
+                var messageTypeList = messageTypes.Keys.ToList();
+                messageTypeList.Add("* (Custom)");
+                var messageTypeNames = messageTypeList.ToArray();
                 
                 if (messageTypeNames.Length == 0)
                 {
@@ -774,7 +777,27 @@ namespace Colyseus.Editor
                 );
 
                 var selectedMessageName = messageTypeNames[_selectedMessageTypeIndex[roomId]];
-                IDictionary messageSchema = messageTypes[selectedMessageName] as IDictionary;
+                var isCustomMessage = selectedMessageName == "* (Custom)";
+                
+                // Handle custom message type
+                if (isCustomMessage)
+                {
+                    var customKey = $"{roomId}_custom";
+                    if (!_customMessageTypes.ContainsKey(customKey))
+                    {
+                        _customMessageTypes[customKey] = "";
+                    }
+                    
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("Custom Message Type:", EditorStyles.boldLabel);
+                    _customMessageTypes[customKey] = EditorGUILayout.TextField(_customMessageTypes[customKey], GUILayout.Height(20));
+                    
+                    selectedMessageName = _customMessageTypes[customKey];
+                }
+                
+                IDictionary messageSchema = !isCustomMessage && messageTypes.ContainsKey(selectedMessageName) 
+                    ? messageTypes[selectedMessageName] as IDictionary 
+                    : null;
                 
                 // Initialize raw JSON toggle state
                 var rawJsonKey = $"{roomId}_{selectedMessageName}";
@@ -782,25 +805,29 @@ namespace Colyseus.Editor
                 {
                     _useRawJson[rawJsonKey] = false;
                 }
-                
+
                 // Initialize raw JSON input
                 if (!_rawJsonInputs.ContainsKey(rawJsonKey))
                 {
                     _rawJsonInputs[rawJsonKey] = messageSchema != null ? GenerateDefaultJSON(messageSchema) : "{}";
                 }
-                
+
                 // Check if message type changed - update raw JSON when switching message types
+                var currentMessageKey = isCustomMessage ? "* (Custom)" : selectedMessageName;
                 if (!_lastSelectedMessageType.ContainsKey(roomId) || 
-                    _lastSelectedMessageType[roomId] != selectedMessageName)
+                    _lastSelectedMessageType[roomId] != currentMessageKey)
                 {
-                    _lastSelectedMessageType[roomId] = selectedMessageName;
+                    _lastSelectedMessageType[roomId] = currentMessageKey;
                     _rawJsonInputs[rawJsonKey] = messageSchema != null ? GenerateDefaultJSON(messageSchema) : "{}";
                     
                     // Clear all field inputs for this message type
-                    var keysToRemove = messageInputs.Keys.Where(k => k.StartsWith($"{roomId}_{selectedMessageName}_field_")).ToList();
-                    foreach (var key in keysToRemove)
+                    if (!isCustomMessage)
                     {
-                        messageInputs.Remove(key);
+                        var keysToRemove = messageInputs.Keys.Where(k => k.StartsWith($"{roomId}_{selectedMessageName}_field_")).ToList();
+                        foreach (var key in keysToRemove)
+                        {
+                            messageInputs.Remove(key);
+                        }
                     }
                 }
 
@@ -823,7 +850,7 @@ namespace Colyseus.Editor
                 // If raw JSON mode is enabled or schema is invalid, show JSON text area
                 if (_useRawJson[rawJsonKey] || messageSchema == null)
                 {
-                    EditorGUILayout.Space(5);
+                    EditorGUILayout.Space(4);
                     EditorGUILayout.LabelField("JSON Payload:", EditorStyles.boldLabel);
                     
                     // Multi-line text area for JSON input
@@ -843,10 +870,17 @@ namespace Colyseus.Editor
                     EditorGUILayout.Space(5);
 
                     // Send button for raw JSON
-                    if (GUILayout.Button($"Send '{selectedMessageName}'", GUILayout.Height(30)))
+                    var canSendRaw = !isCustomMessage || !string.IsNullOrWhiteSpace(selectedMessageName);
+                    var buttonLabelRaw = isCustomMessage && string.IsNullOrWhiteSpace(selectedMessageName) 
+                        ? "Send (enter message type above)" 
+                        : $"Send '{selectedMessageName}'";
+                    
+                    EditorGUI.BeginDisabledGroup(!canSendRaw);
+                    if (GUILayout.Button(buttonLabelRaw, GUILayout.Height(30)))
                     {
                         SendMessageFromRawJson(roomInfo, selectedMessageName, _rawJsonInputs[rawJsonKey]);
                     }
+                    EditorGUI.EndDisabledGroup();
                     
                     return;
                 }
@@ -890,10 +924,24 @@ namespace Colyseus.Editor
                 EditorGUILayout.Space(5);
 
                 // Send button
-                if (GUILayout.Button($"Send '{selectedMessageName}'", GUILayout.Height(30)))
+                var canSend = !isCustomMessage || !string.IsNullOrWhiteSpace(selectedMessageName);
+                var buttonLabel = isCustomMessage && string.IsNullOrWhiteSpace(selectedMessageName) 
+                    ? "Send (enter message type above)" 
+                    : $"Send '{selectedMessageName}'";
+                
+                EditorGUI.BeginDisabledGroup(!canSend);
+                if (GUILayout.Button(buttonLabel, GUILayout.Height(30)))
                 {
-                    SendMessageFromFields(roomInfo, selectedMessageName, messageSchema, messageInputs);
+                    if (_useRawJson[rawJsonKey])
+                    {
+                        SendMessageFromRawJson(roomInfo, selectedMessageName, _rawJsonInputs[rawJsonKey]);
+                    }
+                    else
+                    {
+                        SendMessageFromFields(roomInfo, selectedMessageName, messageSchema, messageInputs);
+                    }
                 }
+                EditorGUI.EndDisabledGroup();
             });
         }
 
