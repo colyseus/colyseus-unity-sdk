@@ -126,6 +126,39 @@ namespace Colyseus
         public ColyseusRoom(string name)
         {
             Name = name;
+
+#if UNITY_EDITOR
+            // Register handler for editor Room Inspector message type capture
+            // Uses reflection to avoid assembly reference from runtime to editor
+            OnMessage<Dictionary<string, object>>("__playground_message_types", (messageTypes) =>
+            {
+                try
+                {
+                    var editorAssembly = System.Reflection.Assembly.Load("Colyseus.Editor");
+                    if (editorAssembly != null)
+                    {
+                        var captureType = editorAssembly.GetType("Colyseus.Editor.RoomMessageType");
+                        if (captureType != null)
+                        {
+                            var field = captureType.GetField("CapturedMessageTypes", 
+                                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                            if (field != null)
+                            {
+                                var dict = field.GetValue(null) as Dictionary<string, Dictionary<string, object>>;
+                                if (dict != null && !string.IsNullOrEmpty(RoomId))
+                                {
+                                    dict[RoomId] = messageTypes;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Silently ignore if editor assembly is not available
+                }
+            });
+#endif
         }
 
         /// <summary>
