@@ -1,4 +1,4 @@
-﻿#if !NET_LEGACY
+#if !NET_LEGACY
 using System.Collections.Specialized;
 using System.Net;
 using System.Text;
@@ -9,7 +9,7 @@ namespace Colyseus
     ///     Child class used to convert a <see cref="NameValueCollection" /> to a properly formatted Query String for HTTP
     ///     requests
     /// </summary>
-    public class ColyseusHttpQSCollection : NameValueCollection
+    public class HttpQSCollection : NameValueCollection
     {
         /// <summary>
         ///     Build a Query string out of all the keys in this <see cref="NameValueCollection" />

@@ -7,7 +7,7 @@ namespace Colyseus.Schema
     /// <summary>
     ///     Keep track of and maintain multiple <see cref="IRef" /> objects
     /// </summary>
-    public class ColyseusReferenceTracker
+    public class ReferenceTracker
     {
         /// <summary>
         ///     Local list of <see cref="IRef" />s we have scheduled for removal in the next

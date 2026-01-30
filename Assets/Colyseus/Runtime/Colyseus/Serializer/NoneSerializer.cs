@@ -4,9 +4,9 @@ namespace Colyseus
     public class NoState : Schema.Schema { }
 
     /// <summary>
-    ///     An empty implementation of <see cref="IColyseusSerializer{T}" />
+    ///     An empty implementation of <see cref="ISerializer{T}" />
     /// </summary>
-    public class NoneSerializer : IColyseusSerializer<NoState>
+    public class NoneSerializer : ISerializer<NoState>
     {
         NoState state = new NoState();
 

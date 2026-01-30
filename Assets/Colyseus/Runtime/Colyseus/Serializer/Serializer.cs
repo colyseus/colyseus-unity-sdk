@@ -4,7 +4,7 @@ namespace Colyseus
     ///     Serializer Interface
     /// </summary>
     /// <typeparam name="T">The type of state this serializer will be for</typeparam>
-    public interface IColyseusSerializer<T>
+    public interface ISerializer<T>
     {
         /// <summary>
         ///     Set the serializer's state

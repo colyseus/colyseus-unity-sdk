@@ -223,6 +223,7 @@ namespace NativeWebSocket
     public static extern int WebSocketGetState (int instanceId);
 
     protected int instanceId;
+    protected string url;
 
     public event WebSocketOpenEventHandler OnOpen;
     public event WebSocketMessageEventHandler OnMessage;
@@ -230,6 +231,8 @@ namespace NativeWebSocket
     public event WebSocketCloseEventHandler OnClose;
 
     public WebSocket (string url, Dictionary<string, string> headers = null) {
+      this.url = url;
+
       if (!WebSocketFactory.isInitialized) {
         WebSocketFactory.Initialize ();
       }
@@ -342,9 +345,9 @@ namespace NativeWebSocket
         public event WebSocketErrorEventHandler OnError;
         public event WebSocketCloseEventHandler OnClose;
 
-        private Uri uri;
-        private Dictionary<string, string> headers;
-        private ClientWebSocket m_Socket = new ClientWebSocket();
+        protected Uri uri;
+        protected Dictionary<string, string> headers;
+        protected ClientWebSocket m_Socket = new ClientWebSocket();
 
         private CancellationTokenSource m_TokenSource;
         private CancellationToken m_CancellationToken;

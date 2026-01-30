@@ -29,9 +29,31 @@ Support major platforms, including:
 - Mac
 - Windows
 
+### Developer Tools
+
+#### Room Inspector
+
+A Unity Editor window for inspecting connected Colyseus room states in real-time:
+- Open via **Window → Colyseus → Room Inspector**
+- View all room properties, connection status, and state
+- Auto-refresh display while in Play mode
+- Copy state to clipboard for debugging
+- See [Room Inspector README](Assets/Colyseus/Editor/RoomInspector-README.md) for details
+
 ### Unit tests
 
 Open Window → General → Test Runner.
+
+## Running the test server
+
+In order to start a test server for this project's included example, do the following:
+
+```
+git clone https://github.com/colyseus/colyseus.git
+cd colyseus
+pnpm install
+pnpm run sdk-test-server
+```
 
 ### Releasing a new version
 

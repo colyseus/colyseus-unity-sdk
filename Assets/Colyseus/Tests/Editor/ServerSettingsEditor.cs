@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 
-[CustomEditor(typeof(ColyseusSettings))]
+[CustomEditor(typeof(Settings))]
 public class ServerSettingsEditor : Editor
 {
     private SerializedProperty url;
@@ -34,7 +34,7 @@ public class ServerSettingsEditor : Editor
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
-        
+
         EditorGUILayout.LabelField("Colyseus Server Settings", EditorStyles.boldLabel);
         serverInfoExpanded = EditorGUILayout.Foldout(serverInfoExpanded, "Server Information");
         if (serverInfoExpanded)

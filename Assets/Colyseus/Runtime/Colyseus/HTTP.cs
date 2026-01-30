@@ -21,9 +21,9 @@ namespace Colyseus
     {
         public string AuthToken;
 
-        private ColyseusSettings _settings;
+        private Settings _settings;
 
-        public HTTP(ColyseusSettings settings)
+        public HTTP(Settings settings)
         {
             _settings = settings;
         }

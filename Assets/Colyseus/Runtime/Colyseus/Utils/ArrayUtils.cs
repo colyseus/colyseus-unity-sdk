@@ -5,7 +5,7 @@ namespace Colyseus
     /// <summary>
     ///     Class for various needed Array utilities
     /// </summary>
-    public class ColyseusArrayUtils
+    public class ArrayUtils
     {
         /// <summary>
         ///     Get a partial array from a larger array

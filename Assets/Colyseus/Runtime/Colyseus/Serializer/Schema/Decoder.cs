@@ -7,7 +7,7 @@ namespace Colyseus.Schema
 
     public class Decoder<T> where T : Schema
     {
-        public ColyseusReferenceTracker Refs = new ColyseusReferenceTracker();
+        public ReferenceTracker Refs = new ReferenceTracker();
         public TypeContext Context = new TypeContext();
         public T State;
 
@@ -26,7 +26,7 @@ namespace Colyseus.Schema
 		/// <param name="bytes">The incoming data</param>
 		/// <param name="it"><see cref="Iterator" /> used to  If null, will create a new one</param>
 		/// <param name="refs">
-		///     <see cref="ColyseusReferenceTracker" /> for all refs found through the decoding process. If null, will
+		///     <see cref="ReferenceTracker" /> for all refs found through the decoding process. If null, will
 		///     create a new one
 		/// </param>
 		/// <exception cref="Exception">If no decoding fails</exception>

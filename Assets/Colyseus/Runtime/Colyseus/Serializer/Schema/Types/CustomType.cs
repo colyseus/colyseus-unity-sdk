@@ -3,15 +3,15 @@ using System.Collections.Generic;
 
 namespace Colyseus.Schema
 {
-	class ColyseusCustomType
+	class CustomType
 	{
-		protected static ColyseusCustomType instance = new ColyseusCustomType();
+		protected static CustomType instance = new CustomType();
 		protected Dictionary<string, System.Type> types = new Dictionary<string, System.Type>();
 		//{
 		//		["array"] = ArraySchema
-		//};	
+		//};
 
-		public static ColyseusCustomType GetInstance()
+		public static CustomType GetInstance()
 		{
 			return instance;
 		}
