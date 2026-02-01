@@ -53,7 +53,7 @@ namespace Colyseus
 #endif
 		public void Drop()
 		{
-			m_Socket.Abort();
+			CancelConnection();
 		}
 
         /// <summary>
@@ -62,16 +62,37 @@ namespace Colyseus
         /// <param name="reconnectionToken">The token to use for reconnection</param>
         public async Task Reconnect(string reconnectionToken)
         {
+            // Build query string manually (System.Web.HttpUtility is not available in Unity)
+            var queryParams = new List<string>();
+
+            // Preserve existing query parameters
+            if (!string.IsNullOrEmpty(uri.Query))
+            {
+                var existingQuery = uri.Query.TrimStart('?');
+                if (!string.IsNullOrEmpty(existingQuery))
+                {
+                    foreach (var param in existingQuery.Split('&'))
+                    {
+                        var key = param.Split('=')[0];
+                        // Skip params we're going to override
+                        if (key != "reconnectionToken" && key != "skipHandshake")
+                        {
+                            queryParams.Add(param);
+                        }
+                    }
+                }
+            }
+
+            queryParams.Add("reconnectionToken=" + Uri.EscapeDataString(reconnectionToken));
+            queryParams.Add("skipHandshake=1");
+
+            var uriBuilder = new UriBuilder(uri) { Query = string.Join("&", queryParams) };
+            uri = uriBuilder.Uri;
+
 			//
 			// TODO: refactor here. we should have a single code path for both WebGL and non-WebGL scenarios.
 			//
 #if UNITY_WEBGL && !UNITY_EDITOR
-            // WebGL: Need to create new instance with modified URL
-            var originalUri = new Uri(url);
-            var query = HttpUtility.ParseQueryString(originalUri.Query);
-            query["reconnectionToken"] = reconnectionToken;
-            var uriBuilder = new UriBuilder(originalUri) { Query = query.ToString() };
-
             // Destroy old instance and create new one
             WebSocketFactory.HandleInstanceDestroy(instanceId);
             WebSocketFactory.instances.Remove(instanceId);
@@ -79,17 +100,10 @@ namespace Colyseus
             url = uriBuilder.ToString();
             instanceId = WebSocketFactory.WebSocketAllocate(url);
             WebSocketFactory.instances.Add(instanceId, this);
-
-            await Connect();
-#else
-            // Non-WebGL: Modify URI and reconnect
-            var query = HttpUtility.ParseQueryString(uri.Query);
-            query["reconnectionToken"] = reconnectionToken;
-            var uriBuilder = new UriBuilder(uri) { Query = query.ToString() };
-            uri = uriBuilder.Uri;
-
-            await Connect();
 #endif
+
+			Debug.Log($"Reconnecting to {uri}");
+            await Connect();
         }
 
         /// <summary>

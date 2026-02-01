@@ -49,10 +49,22 @@ public class ColyseusNetworkManager : MonoBehaviour
 
   }
 
+  async void OnDestroy()
+  {
+    // Close all room connections when the MonoBehaviour is destroyed
+    // (e.g., when stopping play mode in the Editor)
+    if (room != null) await room.Leave();
+    if (lobbyRoom != null) await lobbyRoom.Leave();
+    if (queueRoom != null) await queueRoom.Leave();
+  }
+
   protected async void joinMyRoom()
   {
     var options = new Dictionary<string, object>();
     room = await client.JoinOrCreate<MyRoomState>("my_room", options);
+
+    // Allow to reconnect immediately
+    room.Reconnection.MinUptime = 0;
 
     room.OnLeave += (int code) => {
       Debug.Log($"[MyRoom] Left room with code: {code}");

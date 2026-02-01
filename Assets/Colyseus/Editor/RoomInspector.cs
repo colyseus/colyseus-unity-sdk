@@ -63,9 +63,10 @@ namespace Colyseus.Editor
         // Tab selection for rooms
         private int _selectedRoomIndex = 0;
 
-        [MenuItem("Window/Colyseus/Room Inspector")]
+        [MenuItem("Window/Colyseus/Room Inspector (experimental)")]
         public static void ShowWindow()
         {
+			Debug.LogWarning("The Colyseus Room Inspector is experimental. Please report any issues to https://github.com/colyseus/colyseus-unity-sdk/issues");
             var window = GetWindow<RoomInspector>("Colyseus Room Inspector");
             window.minSize = new Vector2(400, 300);
             window.Show();
@@ -531,7 +532,11 @@ namespace Colyseus.Editor
                 }
                 else
                 {
-                    var enumerable = arrayObj as IEnumerable;
+                    // Access the items field of ArraySchema (which is a List<T>)
+                    var itemsField = arrayType.GetField("items");
+                    var itemsValue = itemsField?.GetValue(arrayObj);
+                    var enumerable = itemsValue as IList;
+
                     if (enumerable != null)
                     {
                         var index = 0;
@@ -555,6 +560,10 @@ namespace Colyseus.Editor
                                 break;
                             }
                         }
+                    }
+                    else
+                    {
+                        EditorGUILayout.LabelField($"Error: Could not access ArraySchema items", EditorStyles.miniLabel);
                     }
                 }
 

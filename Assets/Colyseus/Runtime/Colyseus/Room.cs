@@ -650,7 +650,6 @@ namespace Colyseus
 
                     if ( code == Protocol.ROOM_DATA )
                     {
-						Debug.Log($"[Room] Received message: {type}");
                         //
                         // MsgPack deserialization can be optimized:
                         // https://github.com/deniszykov/msgpack-unity3d/issues/23
