@@ -187,6 +187,16 @@ namespace Colyseus
         protected long JoinedAtTime = 0;
 
         /// <summary>
+        ///     Timestamp of the last ping request (in milliseconds).
+        /// </summary>
+        private long _lastPingTime = 0;
+
+        /// <summary>
+        ///     Callback to invoke when ping response is received.
+        /// </summary>
+        private Action<int> _pingCallback = null;
+
+        /// <summary>
         ///     Initializes a new instance of the <see cref="Room{T}" /> class.
         ///     It synchronizes state automatically with the server and send and receive messaes.
         /// </summary>
@@ -500,6 +510,23 @@ namespace Colyseus
         }
 
         /// <summary>
+        ///     Send a ping to the server and measure round-trip latency.
+        /// </summary>
+        /// <param name="callback">Callback invoked with the round-trip time in milliseconds</param>
+        public async void Ping(Action<int> callback)
+        {
+            // Skip if connection is not open
+            if (Connection == null || !Connection.IsOpen)
+            {
+                return;
+            }
+
+            _lastPingTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            _pingCallback = callback;
+            await Connection.Send(new[] { Protocol.PING });
+        }
+
+        /// <summary>
         ///     Method to add new message handlers to the room
         /// </summary>
         /// <param name="type">The type of message received</param>
@@ -626,6 +653,12 @@ namespace Colyseus
             {
                 Patch(bytes, 1);
             }
+            else if (code == Protocol.PING)
+            {
+                long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                _pingCallback?.Invoke((int)(now - _lastPingTime));
+                _pingCallback = null;
+            }
             else if (code == Protocol.ROOM_DATA || code == Protocol.ROOM_DATA_BYTES)
             {
                 IMessageHandler handler = null;
@@ -667,9 +700,9 @@ namespace Colyseus
 
                     handler.Invoke(message);
                 }
-                else
+                else if (type != null && !type.ToString().StartsWith("__"))
                 {
-                    Debug.LogWarning("room.OnMessage not registered for: '" + type + "'");
+                    Debug.LogWarning("room.OnMessage() not registered for: '" + type + "'");
                 }
             }
         }

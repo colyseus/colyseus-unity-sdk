@@ -58,6 +58,11 @@ namespace Colyseus
 
         public static byte ROOM_DATA_BYTES = 17;
 
+        /// <summary>
+        ///     Ping message for measuring round-trip latency.
+        /// </summary>
+        public static byte PING = 18;
+
         //
         // Matchmaking messages (20~30)
         //

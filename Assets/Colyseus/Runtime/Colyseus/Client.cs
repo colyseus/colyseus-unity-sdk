@@ -1,12 +1,29 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using NativeWebSocket;
 using UnityEngine;
 
 // ReSharper disable InconsistentNaming
 
 namespace Colyseus
 {
+	/// <summary>
+	///     Options for latency measurement.
+	/// </summary>
+	public class LatencyOptions
+	{
+		/// <summary>
+		///     "ws" for WebSocket, "h3" for WebTransport (default: "ws")
+		/// </summary>
+		public string Protocol { get; set; } = "ws";
+
+		/// <summary>
+		///     Number of pings to send (default: 1). Returns the average latency when > 1.
+		/// </summary>
+		public int PingCount { get; set; } = 1;
+	}
+
 	/// <summary>
 	///     Colyseus.Client
 	/// </summary>
@@ -372,6 +389,147 @@ namespace Colyseus
 			};
 
 			return new Connection(uriBuilder.ToString(), headers);
+		}
+
+		/// <summary>
+		///     Select the endpoint with the lowest latency.
+		/// </summary>
+		/// <param name="endpoints">Array of endpoints to select from.</param>
+		/// <param name="latencyOptions">Latency measurement options (protocol, pingCount).</param>
+		/// <returns>The client with the lowest latency.</returns>
+		public static async Task<Client> SelectByLatency(string[] endpoints, LatencyOptions latencyOptions = null)
+		{
+			if (latencyOptions == null)
+			{
+				latencyOptions = new LatencyOptions();
+			}
+
+			var clients = new Client[endpoints.Length];
+			for (int i = 0; i < endpoints.Length; i++)
+			{
+				clients[i] = new Client(endpoints[i]);
+			}
+
+			var latencyTasks = new Task<(int index, double latency, bool success)>[clients.Length];
+			for (int i = 0; i < clients.Length; i++)
+			{
+				int index = i;
+				latencyTasks[i] = MeasureClientLatency(clients[index], index, latencyOptions);
+			}
+
+			var results = await Task.WhenAll(latencyTasks);
+
+			int bestIndex = -1;
+			double bestLatency = double.MaxValue;
+
+			for (int i = 0; i < results.Length; i++)
+			{
+				if (results[i].success && results[i].latency < bestLatency)
+				{
+					bestLatency = results[i].latency;
+					bestIndex = results[i].index;
+				}
+			}
+
+			if (bestIndex == -1)
+			{
+				throw new Exception("All endpoints failed to respond");
+			}
+
+			return clients[bestIndex];
+		}
+
+		private static async Task<(int index, double latency, bool success)> MeasureClientLatency(Client client, int index, LatencyOptions options)
+		{
+			try
+			{
+				var latency = await client.GetLatency(options);
+				var settings = client.Settings;
+				Debug.Log($"Endpoint Latency: {latency}ms - {settings.colyseusServerAddress}:{settings.colyseusServerPort}");
+				return (index, latency, success: true);
+			}
+			catch (Exception)
+			{
+				return (index, latency: double.MaxValue, success: false);
+			}
+		}
+
+		/// <summary>
+		///     Create a new connection with the server, and measure the latency.
+		/// </summary>
+		/// <param name="options">Latency measurement options (protocol, pingCount).</param>
+		/// <returns>The average latency in milliseconds.</returns>
+		public Task<double> GetLatency(LatencyOptions options = null)
+		{
+			if (options == null)
+			{
+				options = new LatencyOptions();
+			}
+
+			var protocol = options.Protocol ?? "ws";
+			var pingCount = options.PingCount > 0 ? options.PingCount : 1;
+
+			if (protocol == "h3")
+			{
+				throw new Exception("WebTransport protocol is not supported yet. Please use WebSocket protocol instead.");
+			}
+
+			var tcs = new TaskCompletionSource<double>();
+			var latencies = new List<double>();
+			long pingStart = 0;
+
+			var conn = new Connection(Endpoint.ToString(), null);
+
+			void OnOpen()
+			{
+				pingStart = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+				_ = conn.Send(new byte[] { Protocol.PING });
+			}
+
+			void OnMessage(byte[] data)
+			{
+				latencies.Add(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - pingStart);
+
+				if (latencies.Count < pingCount)
+				{
+					// Send another ping
+					pingStart = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+					_ = conn.Send(new byte[] { Protocol.PING });
+				}
+				else
+				{
+					// Done, calculate average and close
+					conn.OnOpen -= OnOpen;
+					conn.OnMessage -= OnMessage;
+					conn.OnError -= OnError;
+
+					_ = conn.Close();
+
+					double sum = 0;
+					for (int i = 0; i < latencies.Count; i++)
+					{
+						sum += latencies[i];
+					}
+					tcs.TrySetResult(sum / latencies.Count);
+				}
+			}
+
+			void OnError(string errorMsg)
+			{
+				conn.OnOpen -= OnOpen;
+				conn.OnMessage -= OnMessage;
+				conn.OnError -= OnError;
+
+				tcs.TrySetException(new MatchMakeException((int)CloseCode.ABNORMAL_CLOSURE, $"Failed to get latency: {errorMsg}"));
+			}
+
+			conn.OnOpen += OnOpen;
+			conn.OnMessage += OnMessage;
+			conn.OnError += OnError;
+
+			_ = conn.Connect();
+
+			return tcs.Task;
 		}
 	}
 }
