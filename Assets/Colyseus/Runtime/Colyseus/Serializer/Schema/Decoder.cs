@@ -387,10 +387,11 @@ namespace Colyseus.Schema
 			{
 				int refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
 				IRef itemByRefId = Refs.Get(refId);
+
+				index = -1;
 				if (itemByRefId != null)
 				{
 					int i = 0;
-					index = -1;
 					foreach (var item in refArray.GetItems())
 					{
 						if (item == itemByRefId)
@@ -401,7 +402,8 @@ namespace Colyseus.Schema
 						i++;
 					}
 				}
-				else
+
+				if (index == -1)
 				{
 					index = refArray.Count;
 				}
@@ -437,7 +439,7 @@ namespace Colyseus.Schema
 				out var previousValue
 			);
 
-			if (value != null)
+			if (value != null && value != previousValue)
 			{
 				refArray.SetByIndex(index, value, operation);
 			}
