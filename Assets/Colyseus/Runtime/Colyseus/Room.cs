@@ -760,7 +760,7 @@ namespace Colyseus
 					Reconnection.Backoff(Reconnection.RetryCount, Reconnection.Delay)));
 
 			Debug.Log($"[Colyseus reconnection]: Will retry in {delay / 1000f:F1} seconds...");
-			await Task.Delay(delay);
+			await new WaitForSeconds(delay / 1000f);
 
 			try
 			{

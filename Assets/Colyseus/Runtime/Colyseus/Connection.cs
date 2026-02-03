@@ -89,20 +89,7 @@ namespace Colyseus
             var uriBuilder = new UriBuilder(uri) { Query = string.Join("&", queryParams) };
             uri = uriBuilder.Uri;
 
-			//
-			// TODO: refactor here. we should have a single code path for both WebGL and non-WebGL scenarios.
-			//
-#if UNITY_WEBGL && !UNITY_EDITOR
-            // Destroy old instance and create new one
-            WebSocketFactory.HandleInstanceDestroy(instanceId);
-            WebSocketFactory.instances.Remove(instanceId);
-
-            url = uriBuilder.ToString();
-            instanceId = WebSocketFactory.WebSocketAllocate(url);
-            WebSocketFactory.instances.Add(instanceId, this);
-#endif
-
-			Debug.Log($"Reconnecting to {uri}");
+            Debug.Log($"Reconnecting to {uri}");
             await Connect();
         }
 

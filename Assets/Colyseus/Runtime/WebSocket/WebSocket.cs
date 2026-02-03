@@ -38,6 +38,26 @@ public class MainThreadUtil : MonoBehaviour
     }
 }
 
+public class MainThreadAwaiter : INotifyCompletion
+{
+    Action continuation;
+
+    public bool IsCompleted { get; set; }
+
+    public void GetResult() { }
+
+    public void Complete()
+    {
+        IsCompleted = true;
+        continuation?.Invoke();
+    }
+
+    void INotifyCompletion.OnCompleted(Action continuation)
+    {
+        this.continuation = continuation;
+    }
+}
+
 public class WaitForUpdate : CustomYieldInstruction
 {
     public override bool keepWaiting
@@ -52,29 +72,36 @@ public class WaitForUpdate : CustomYieldInstruction
         return awaiter;
     }
 
-    public class MainThreadAwaiter : INotifyCompletion
-    {
-        Action continuation;
-
-        public bool IsCompleted { get; set; }
-
-        public void GetResult() { }
-
-        public void Complete()
-        {
-            IsCompleted = true;
-            continuation?.Invoke();
-        }
-
-        void INotifyCompletion.OnCompleted(Action continuation)
-        {
-            this.continuation = continuation;
-        }
-    }
-
     public static IEnumerator CoroutineWrapper(IEnumerator theWorker, MainThreadAwaiter awaiter)
     {
         yield return theWorker;
+        awaiter.Complete();
+    }
+}
+
+/// <summary>
+/// Awaitable WaitForSeconds that works in WebGL (unlike Task.Delay).
+/// Use: await new WaitForSeconds(1.5f);
+/// </summary>
+public class WaitForSeconds
+{
+    private float _seconds;
+
+    public WaitForSeconds(float seconds)
+    {
+        _seconds = seconds;
+    }
+
+    public MainThreadAwaiter GetAwaiter()
+    {
+        var awaiter = new MainThreadAwaiter();
+        MainThreadUtil.Run(CoroutineWrapper(awaiter));
+        return awaiter;
+    }
+
+    private IEnumerator CoroutineWrapper(MainThreadAwaiter awaiter)
+    {
+        yield return new UnityEngine.WaitForSecondsRealtime(_seconds);
         awaiter.Complete();
     }
 }
@@ -222,8 +249,8 @@ namespace NativeWebSocket
     [DllImport ("__Internal")]
     public static extern int WebSocketGetState (int instanceId);
 
-    protected int instanceId;
-    protected string url;
+    protected int instanceId = -1;
+    protected Uri uri;
 
     public event WebSocketOpenEventHandler OnOpen;
     public event WebSocketMessageEventHandler OnMessage;
@@ -231,16 +258,11 @@ namespace NativeWebSocket
     public event WebSocketCloseEventHandler OnClose;
 
     public WebSocket (string url, Dictionary<string, string> headers = null) {
-      this.url = url;
+      this.uri = new Uri(url);
 
       if (!WebSocketFactory.isInitialized) {
         WebSocketFactory.Initialize ();
       }
-
-      int instanceId = WebSocketFactory.WebSocketAllocate (url);
-      WebSocketFactory.instances.Add (instanceId, this);
-
-      this.instanceId = instanceId;
     }
 
     ~WebSocket () {
@@ -252,6 +274,14 @@ namespace NativeWebSocket
     }
 
     public Task Connect () {
+      if (this.instanceId != -1) {
+        WebSocketFactory.HandleInstanceDestroy (this.instanceId);
+        WebSocketFactory.instances.Remove (this.instanceId);
+      }
+
+      this.instanceId = WebSocketFactory.WebSocketAllocate (this.uri.ToString());
+      WebSocketFactory.instances.Add (this.instanceId, this);
+
       int ret = WebSocketConnect (this.instanceId);
 
       if (ret < 0)
