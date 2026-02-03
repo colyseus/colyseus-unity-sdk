@@ -91,6 +91,14 @@ public class ColyseusNetworkManager : MonoBehaviour
       {
         Debug.Log($"[MyRoom] Player {key} changed!");
       });
+
+      callbacks.Listen(player, player => player.x, (x, _) => {
+        Debug.Log($"[MyRoom] Player {key} moved to {x}");
+      });
+
+      callbacks.Listen(player, player => player.y, (y, _) => {
+        Debug.Log($"[MyRoom] Player {key} moved to {y}");
+      });
     });
 
     callbacks.OnRemove(state => state.players, (key, player) =>
