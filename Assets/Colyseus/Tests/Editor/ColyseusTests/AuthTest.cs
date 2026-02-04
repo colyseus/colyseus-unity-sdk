@@ -15,13 +15,13 @@ public class AuthTest
 		public bool anonymous;
 	}
 
-	private Colyseus.ColyseusClient client;
+	private Colyseus.Client client;
 
 	[SetUp]
 	public void Init()
 	{
-		// Initialize without a token on each test 
-		client = new Colyseus.ColyseusClient("http://localhost:2567");
+		// Initialize without a token on each test
+		client = new Colyseus.Client("http://localhost:2567");
 		client.Auth.Token = null;
 
 		// Make sure auth token is not cached

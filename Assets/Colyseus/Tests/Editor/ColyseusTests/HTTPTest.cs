@@ -19,7 +19,7 @@ public class HTTPTest
 	[Test]
 	public void UnsecureRootPathWithPortTest()
 	{
-		var settings = new Colyseus.ColyseusSettings();
+		var settings = new Colyseus.Settings();
 		settings.colyseusServerAddress = "localhost";
 		settings.colyseusServerPort = "2567";
 		settings.useSecureProtocol = false;
@@ -31,7 +31,7 @@ public class HTTPTest
 	[Test]
 	public void UnsecureChildPathWithPortTest()
 	{
-		var settings = new Colyseus.ColyseusSettings();
+		var settings = new Colyseus.Settings();
 		settings.colyseusServerAddress = "localhost/path";
 		settings.colyseusServerPort = "2567";
 		settings.useSecureProtocol = false;
@@ -43,7 +43,7 @@ public class HTTPTest
 	[Test]
 	public void UnsecureChildPathNoPortTest()
 	{
-		var settings = new Colyseus.ColyseusSettings();
+		var settings = new Colyseus.Settings();
 		settings.colyseusServerAddress = "localhost/path";
 		settings.colyseusServerPort = "80";
 		settings.useSecureProtocol = false;
@@ -56,7 +56,7 @@ public class HTTPTest
 	[Test]
 	public void SecureChildPathNoPortTest()
 	{
-		var settings = new Colyseus.ColyseusSettings();
+		var settings = new Colyseus.Settings();
 		settings.colyseusServerAddress = "localhost/path";
 		settings.colyseusServerPort = "443";
 		settings.useSecureProtocol = true;
@@ -68,7 +68,7 @@ public class HTTPTest
 	[Test]
 	public void SecureChildPathWithPortTest()
 	{
-		var settings = new Colyseus.ColyseusSettings();
+		var settings = new Colyseus.Settings();
 		settings.colyseusServerAddress = "localhost";
 		settings.colyseusServerPort = "8080";
 		settings.useSecureProtocol = true;

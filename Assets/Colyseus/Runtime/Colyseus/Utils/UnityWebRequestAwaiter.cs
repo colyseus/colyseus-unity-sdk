@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -9,12 +9,12 @@ namespace Colyseus
     ///     A custom class that awaits the completion of a <see cref="UnityWebRequestAsyncOperation" /> and then performs an
     ///     <see cref="Action" /> upon completion
     /// </summary>
-    public class ColyseusUnityWebRequestAwaiter : INotifyCompletion
+    public class UnityWebRequestAwaiter : INotifyCompletion
     {
         private readonly UnityWebRequestAsyncOperation _asyncOp;
         private Action _continuation;
 
-        public ColyseusUnityWebRequestAwaiter(UnityWebRequestAsyncOperation asyncOp)
+        public UnityWebRequestAwaiter(UnityWebRequestAsyncOperation asyncOp)
         {
             _asyncOp = asyncOp;
             asyncOp.completed += OnRequestCompleted;

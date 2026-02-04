@@ -4,9 +4,9 @@ using UnityEngine;
 
 public class NetworkManager : MonoBehaviour
 {
-    private static ColyseusClient _client = null;
+    private static Client _client = null;
     private static MenuManager _menuManager = null;
-    private static ColyseusRoom<MyRoomState> _room = null;
+    private static Room<MyRoomState> _room = null;
 
     public void Initialize()
     {
@@ -14,17 +14,17 @@ public class NetworkManager : MonoBehaviour
         {
             _menuManager = gameObject.AddComponent<MenuManager>();
         }
-        
-        _client = new ColyseusClient(_menuManager.HostAddress);
+
+        _client = new Client(_menuManager.HostAddress);
     }
-    
+
     public async Task JoinOrCreateGame()
     {
         // Will create a new game room if there is no available game rooms in the server.
         _room = await Client.JoinOrCreate<MyRoomState>(_menuManager.GameName);
     }
 
-    public ColyseusClient Client
+    public Client Client
     {
         get
         {
@@ -37,7 +37,7 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    public ColyseusRoom<MyRoomState> GameRoom
+    public Room<MyRoomState> GameRoom
     {
         get
         {

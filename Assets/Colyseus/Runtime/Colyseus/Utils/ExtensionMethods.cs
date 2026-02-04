@@ -11,13 +11,13 @@ namespace Colyseus
     public static class ColyseusExtensionMethods
     {
         /// <summary>
-        ///     Returns our custom <see cref="ColyseusUnityWebRequestAwaiter" /> instead of a standard
+        ///     Returns our custom <see cref="UnityWebRequestAwaiter" /> instead of a standard
         ///     <see cref="UnityWebRequestAsyncOperation" />
         /// </summary>
-        /// <returns>An instance of <see cref="ColyseusUnityWebRequestAwaiter" /></returns>
-        public static ColyseusUnityWebRequestAwaiter GetAwaiter(this UnityWebRequestAsyncOperation asyncOp)
+        /// <returns>An instance of <see cref="UnityWebRequestAwaiter" /></returns>
+        public static UnityWebRequestAwaiter GetAwaiter(this UnityWebRequestAsyncOperation asyncOp)
         {
-            return new ColyseusUnityWebRequestAwaiter(asyncOp);
+            return new UnityWebRequestAwaiter(asyncOp);
         }
     }
 }

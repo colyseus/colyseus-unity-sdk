@@ -10,7 +10,7 @@ namespace Colyseus
 	///     An instance of ISerializer specifically for <see cref="Schema" /> based serialization
 	/// </summary>
 	/// <typeparam name="T">A child of <see cref="Schema" /></typeparam>
-	public class ColyseusSchemaSerializer<T> : IColyseusSerializer<T> where T : Schema.Schema
+	public class SchemaSerializer<T> : ISerializer<T> where T : Schema.Schema
 	{
 		public Decoder<T> Decoder = new Decoder<T>();
 
@@ -71,8 +71,6 @@ namespace Colyseus
 
 				if (schemaType != null)
 				{
-					// UnityEngine.Debug.Log("FOUND: " + schemaType.FullName + " => " + DebugReflectionType(reflectionType, reflectionFields));
-
 					Decoder.Context.SetTypeId(schemaType, reflection.types[i].id);
 
 					// Remove from list to avoid duplicate checks
@@ -81,8 +79,6 @@ namespace Colyseus
 				}
 				else
 				{
-					// UnityEngine.Debug.Log("NOT FOUND: " + DebugReflectionType(reflectionType, reflectionFields));
-
 					UnityEngine.Debug.LogWarning(
 						"Local schema mismatch from server. Use \"schema-codegen\" to generate up-to-date local definitions.");
 				}

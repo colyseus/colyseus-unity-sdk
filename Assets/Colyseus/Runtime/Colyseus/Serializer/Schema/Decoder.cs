@@ -7,7 +7,7 @@ namespace Colyseus.Schema
 
     public class Decoder<T> where T : Schema
     {
-        public ColyseusReferenceTracker Refs = new ColyseusReferenceTracker();
+        public ReferenceTracker Refs = new ReferenceTracker();
         public TypeContext Context = new TypeContext();
         public T State;
 
@@ -26,7 +26,7 @@ namespace Colyseus.Schema
 		/// <param name="bytes">The incoming data</param>
 		/// <param name="it"><see cref="Iterator" /> used to  If null, will create a new one</param>
 		/// <param name="refs">
-		///     <see cref="ColyseusReferenceTracker" /> for all refs found through the decoding process. If null, will
+		///     <see cref="ReferenceTracker" /> for all refs found through the decoding process. If null, will
 		///     create a new one
 		/// </param>
 		/// <exception cref="Exception">If no decoding fails</exception>
@@ -387,10 +387,11 @@ namespace Colyseus.Schema
 			{
 				int refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
 				IRef itemByRefId = Refs.Get(refId);
+
+				index = -1;
 				if (itemByRefId != null)
 				{
 					int i = 0;
-					index = -1;
 					foreach (var item in refArray.GetItems())
 					{
 						if (item == itemByRefId)
@@ -401,7 +402,8 @@ namespace Colyseus.Schema
 						i++;
 					}
 				}
-				else
+
+				if (index == -1)
 				{
 					index = refArray.Count;
 				}
@@ -437,7 +439,7 @@ namespace Colyseus.Schema
 				out var previousValue
 			);
 
-			if (value != null)
+			if (value != null && value != previousValue)
 			{
 				refArray.SetByIndex(index, value, operation);
 			}

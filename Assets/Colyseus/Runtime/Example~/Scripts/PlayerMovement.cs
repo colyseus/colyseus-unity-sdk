@@ -10,7 +10,7 @@ public class PlayerMovement : MonoBehaviour
 	private bool _moving;
 	private NetworkManager _networkManager;
 	private Vector2 _targetPosition;
-	private StateCallbackStrategy<MyRoomState> _callBacks;
+	private StateCallbackStrategy<MyRoomState> _callbacks;
 
 	private void Awake()
 	{
@@ -45,7 +45,7 @@ public class PlayerMovement : MonoBehaviour
 	private void registerListeners()
 	{
 		// Retrieve the StateCallbackStrategy object
-		_callBacks = Callbacks.Get(_networkManager.GameRoom);
+		_callbacks = Callbacks.Get(_networkManager.GameRoom);
 
 		// Assign listener for incoming messages
 		_networkManager.GameRoom.OnMessage<string>("welcomeMessage", message =>
@@ -54,26 +54,20 @@ public class PlayerMovement : MonoBehaviour
 		});
 
 		// Assign listeners for state change/add/remove
-		_networkManager.GameRoom.OnStateChange += (changedState, firstState) =>
+		_callbacks.OnAdd(state => state.players, (sessionId, addedPlayer) =>
 		{
-			if (!firstState)
-				return;
+			Debug.Log($"player {sessionId} joined)");
 
-			_callBacks.OnAdd(addedState => addedState.players, (sessionId, addedPlayer) =>
+			_callbacks.OnChange(addedPlayer, () =>
 			{
-				Debug.Log($"player {sessionId} joined)");
-
-				_callBacks.OnChange(addedPlayer, () =>
-				{
-					_targetPosition = new Vector2(addedPlayer.x, addedPlayer.y);
-					_moving = true;
-				});
+				_targetPosition = new Vector2(addedPlayer.x, addedPlayer.y);
+				_moving = true;
 			});
+		});
 
-			_callBacks.OnRemove(removedState => removedState.players, (sessionId, removedPlayer) =>
-			{
-				Debug.Log($"player {sessionId} left");
-			});
-		};
+		_callbacks.OnRemove(state => state.players, (sessionId, removedPlayer) =>
+		{
+			Debug.Log($"player {sessionId} left");
+		});
 	}
 }
