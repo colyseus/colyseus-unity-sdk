@@ -15,15 +15,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
-      - uses: EndBug/version-check@v1
+      - uses: EndBug/version-check@v2
         id: check
         with:
           file-name: Assets/Colyseus/package.json
           diff-search: true
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Log when changed
-        if: steps.check.outputs.changed == 'true'
-        run: 'echo "Version change found in commit ${{ steps.check.outputs.commit }}! New version: ${{ steps.check.outputs.version }} (${{ steps.check.outputs.type }})"'
   updateUPM:
     name: Update UPM branch
     runs-on: ubuntu-latest
