@@ -1,0 +1,536 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using NativeWebSocket;
+using UnityEngine;
+
+// ReSharper disable InconsistentNaming
+
+namespace Colyseus
+{
+	/// <summary>
+	///     Options for latency measurement.
+	/// </summary>
+	public class LatencyOptions
+	{
+		/// <summary>
+		///     "ws" for WebSocket, "h3" for WebTransport (default: "ws")
+		/// </summary>
+		public string Protocol { get; set; } = "ws";
+
+		/// <summary>
+		///     Number of pings to send (default: 1). Returns the average latency when > 1.
+		/// </summary>
+		public int PingCount { get; set; } = 1;
+	}
+
+	/// <summary>
+	///     Colyseus.Client
+	/// </summary>
+	/// <remarks>
+	///     Provides integration between Colyseus Game Server through WebSocket protocol (
+	///     <see href="http://tools.ietf.org/html/rfc6455">RFC 6455</see>).
+	/// </remarks>
+	public class Client
+	{
+		/// <summary>
+		///     Authentication tools, see: https://docs.colyseus.io/auth/
+		/// </summary>
+		public Auth Auth;
+
+		/// <summary>
+		///     Reference to the client's <see cref="UriBuilder" />
+		/// </summary>
+		private UriBuilder Endpoint;
+
+		/// <summary>
+		/// Object to perform <see cref="UnityEngine.Networking.UnityWebRequest"/>s to the server.
+		/// </summary>
+		public HTTP Http;
+
+		/// <summary>
+		///     Initializes a new instance of the <see cref="Client" /> class with
+		///     the specified Colyseus Game Server endpoint.
+		/// </summary>
+		/// <param name="endpoint">
+		///     A <see cref="string" /> that represents the WebSocket URL to connect.
+		/// </param>
+		public Client(string endpoint)
+		{
+			Endpoint = new UriBuilder(endpoint);
+
+			// Create Settings object to pass to the ColyseusRequest object
+			Settings settings = ScriptableObject.CreateInstance<Settings>();
+			settings.colyseusServerAddress = $"{Endpoint.Host}{Endpoint.Path}";
+			settings.colyseusServerPort = Endpoint.Port.ToString();
+			settings.useSecureProtocol = string.Equals(Endpoint.Scheme, "wss") || string.Equals(Endpoint.Scheme, "https");
+
+			Settings = settings;
+			Auth = new Auth(this);
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="Client"/> class with
+		/// the specified Colyseus Settings object.
+		/// </summary>
+		/// <param name="settings">The settings you wish to use</param>
+		/// <param name="useWebSocketEndpoint">Determines whether the connection endpoint should use either web socket or http protocols.</param>
+		public Client(Settings settings)
+		{
+			Settings = settings;
+			Auth = new Auth(this);
+		}
+
+		/// <summary>
+		/// The getter for the <see cref="Settings"/> currently assigned to this client object
+		/// </summary>
+		private Settings _colyseusSettings;
+		public Settings Settings
+		{
+			get
+			{
+				return _colyseusSettings;
+			}
+
+			set
+			{
+				_colyseusSettings = value;
+
+				Endpoint = new UriBuilder(_colyseusSettings.WebSocketEndpoint);
+
+				// Instantiate our ColyseusRequest object with the settings object
+				Http = new HTTP(_colyseusSettings);
+			}
+		}
+
+		/// <summary>
+		///     Join or Create a <see cref="Room{T}" />
+		/// </summary>
+		/// <param name="roomName">Room identifier</param>
+		/// <param name="options">Dictionary of options to pass to the room upon creation/joining</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we create/join the room</param>
+		/// <typeparam name="T">Type of <see cref="Room{T}" /> we want to join or create</typeparam>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<T>> JoinOrCreate<T>(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+			where T : Schema.Schema
+		{
+			return await CreateMatchMakeRequest<T>("joinOrCreate", roomName, options, headers);
+		}
+
+		/// <summary>
+		///     Create a <see cref="Room{T}" />
+		/// </summary>
+		/// <param name="roomName">Room identifier</param>
+		/// <param name="options">Dictionary of options to pass to the room upon creation</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we create the room</param>
+		/// <typeparam name="T">Type of <see cref="Room{T}" /> we want to create</typeparam>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<T>> Create<T>(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+			where T : Schema.Schema
+		{
+			return await CreateMatchMakeRequest<T>("create", roomName, options, headers);
+		}
+
+		/// <summary>
+		///     Join a <see cref="Room{T}" />
+		/// </summary>
+		/// <param name="roomName">Room identifier</param>
+		/// <param name="options">Dictionary of options to pass to the room upon joining</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we join the room</param>
+		/// <typeparam name="T">Type of <see cref="Room{T}" /> we want to join</typeparam>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<T>> Join<T>(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+			where T : Schema.Schema
+		{
+			return await CreateMatchMakeRequest<T>("join", roomName, options, headers);
+		}
+
+		/// <summary>
+		///     Join a <see cref="Room{T}" /> by ID
+		/// </summary>
+		/// <param name="roomId">ID of the room</param>
+		/// <param name="options">Dictionary of options to pass to the room upon joining</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we join the room</param>
+		/// <typeparam name="T">Type of <see cref="Room{T}" /> we want to join</typeparam>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<T>> JoinById<T>(string roomId, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+			where T : Schema.Schema
+		{
+			return await CreateMatchMakeRequest<T>("joinById", roomId, options, headers);
+		}
+
+		/// <summary>
+		///     Reconnect to a <see cref="Room{T}" />
+		/// </summary>
+		/// <param name="reconnectionToken">Previously connected ReconnectionToken</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we reconnect to the room</param>
+		/// <typeparam name="T">Type of <see cref="Room{T}" /> we want to reconnect with</typeparam>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<T>> Reconnect<T>(ReconnectionToken reconnectionToken, Dictionary<string, string> headers = null)
+			where T : Schema.Schema
+		{
+			Dictionary<string, object> options = new Dictionary<string, object>();
+			options.Add("reconnectionToken", reconnectionToken.Token);
+			return await CreateMatchMakeRequest<T>("reconnect", reconnectionToken.RoomId, options, headers);
+		}
+
+		//
+		// FossilDelta/None serializer versions for joining the state
+		//
+		/// <summary>
+		///     Join or Create a <see cref="Room{T}" />
+		/// </summary>
+		/// <param name="roomName">Room identifier</param>
+		/// <param name="options">Dictionary of options to pass to the room upon creation/joining</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we create/join the room</param>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<NoState>> JoinOrCreate(string roomName, Dictionary<string, object> options = null, Dictionary<string, string> headers = null)
+		{
+			return await CreateMatchMakeRequest<NoState>("joinOrCreate", roomName, options, headers);
+		}
+
+		/// <summary>
+		///     Create a <see cref="Room{T}" />
+		/// </summary>
+		/// <param name="roomName">Room identifier</param>
+		/// <param name="options">Dictionary of options to pass to the room upon creation</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we create the room</param>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<NoState>> Create(string roomName, Dictionary<string, object> options = null,
+			Dictionary<string, string> headers = null)
+		{
+			return await CreateMatchMakeRequest<NoState>("create", roomName, options, headers);
+		}
+
+		/// <summary>
+		///     Join a <see cref="Room{T}" />
+		/// </summary>
+		/// <param name="roomName">Room identifier</param>
+		/// <param name="options">Dictionary of options to pass to the room upon joining</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we join the room</param>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<NoState>> Join(string roomName, Dictionary<string, object> options = null,
+			Dictionary<string, string> headers = null)
+		{
+			return await CreateMatchMakeRequest<NoState>("join", roomName, options, headers);
+		}
+
+		/// <summary>
+		///     Join a <see cref="Room{T}" /> by ID
+		/// </summary>
+		/// <param name="roomId">ID of the room</param>
+		/// <param name="options">Dictionary of options to pass to the room upon joining</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we join the room</param>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<NoState>> JoinById(string roomId, Dictionary<string, object> options = null,
+			Dictionary<string, string> headers = null)
+		{
+			return await CreateMatchMakeRequest<NoState>("joinById", roomId, options, headers);
+		}
+
+		/// <summary>
+		///     Reconnect to a <see cref="Room{T}" />
+		/// </summary>
+		/// <param name="roomId">ID of the room</param>
+		/// <param name="sessionId">Previously connected sessionId</param>
+		/// <param name="headers">Dictionary of headers to pass to the server when we reconnect to the room</param>
+		/// <returns><see cref="Room{T}" /> via async task</returns>
+		public async Task<Room<NoState>> Reconnect(string roomId, string sessionId,
+			Dictionary<string, string> headers = null)
+		{
+			Dictionary<string, object> options = new Dictionary<string, object>();
+			options.Add("sessionId", sessionId);
+			return await CreateMatchMakeRequest<NoState>("joinById", roomId, options, headers);
+		}
+
+		/// <summary>
+		///     Consume the seat reservation
+		/// </summary>
+		/// <param name="response">The response from the matchmaking attempt</param>
+		/// <param name="headers">Dictionary of headers to pass to the server</param>
+		/// <param name="previousRoom">Previous Room{T} instance to re-establish the server connection: Please do not use this devMode param for general purposes</param>
+		/// <typeparam name="T">Type of <see cref="Room{T}" /> we're consuming the seat from</typeparam>
+		/// <returns><see cref="Room{T}" /> in which we now have a seat via async task</returns>
+		public async Task<Room<T>> ConsumeSeatReservation<T>(SeatReservation response, Dictionary<string, string> headers = null)
+			where T : Schema.Schema
+		{
+			Room<T> room = new Room<T>(response.name)
+			{
+				RoomId = response.roomId,
+				SessionId = response.sessionId
+			};
+
+			Dictionary<string, object> queryString = new Dictionary<string, object>
+			{
+				{ "sessionId", room.SessionId }
+			};
+
+			// forward reconnection token
+			if (response.reconnectionToken != null)
+			{
+				queryString.Add("reconnectionToken", response.reconnectionToken);
+			}
+
+			room.SetConnection(CreateConnection(response, queryString, headers));
+
+			TaskCompletionSource<Room<T>> tcs = new TaskCompletionSource<Room<T>>();
+
+			void OnError(int code, string message)
+			{
+				room.OnError -= OnError;
+				tcs.SetException(new MatchMakeException(code, message));
+			}
+
+			void OnJoin()
+			{
+				room.OnError -= OnError;
+				tcs.TrySetResult(room);
+			}
+
+			room.OnError += OnError;
+			room.OnJoin += OnJoin;
+
+			_ = room.Connect();
+
+			return await tcs.Task;
+		}
+
+		/// <summary>
+		///     Create a match making request
+		/// </summary>
+		/// <param name="method">The type of request we're making (join, create, etc)</param>
+		/// <param name="roomName">Room identifierroom we're trying to match</param>
+		/// <param name="options">Dictionary of options to use in the match making process</param>
+		/// <param name="headers">Dictionary of headers to pass to the server</param>
+		/// <typeparam name="T">Type of <see cref="Room{T}" /> we want to match with</typeparam>
+		/// <returns><see cref="Room{T}" /> we have matched with via async task</returns>
+		/// <exception cref="Exception">Thrown if there is a network related error</exception>
+		/// <exception cref="MatchMakeException">Thrown if there is an error in the match making process on the server side</exception>
+		protected async Task<Room<T>> CreateMatchMakeRequest<T>(string method, string roomName, Dictionary<string, object> options, Dictionary<string, string> headers)
+			where T : Schema.Schema
+		{
+			if (options == null)
+			{
+				options = new Dictionary<string, object>();
+			}
+
+			if (headers == null)
+			{
+				headers = new Dictionary<string, string>();
+			}
+
+			var response = await Http.Post<SeatReservation>($"matchmake/{method}/{roomName}", options, headers);
+
+			if (response == null)
+			{
+				throw new Exception($"Error with request: {response}");
+			}
+			// forward reconnection token on reconnect
+			if (method == "reconnect")
+			{
+				response.reconnectionToken = (string)options["reconnectionToken"];
+			}
+
+			return await ConsumeSeatReservation<T>(response, headers);
+		}
+
+		/// <summary>
+		///     Create a connection with a room
+		/// </summary>
+		/// <param name="path">Additional info used as the <see cref="UriBuilder.Path" /></param>
+		/// <param name="options">Dictionary of options to use when connecting</param>
+		/// <param name="headers">Dictionary of headers to pass when connecting</param>
+		/// <returns></returns>
+		protected Connection CreateConnection(
+			SeatReservation room,
+			Dictionary<string, object> options = null,
+			Dictionary<string, string> headers = null
+		)
+		{
+			if (room.protocol != null && room.protocol == "h3") {
+				// TODO: support h3 protocol (WebTransport)
+				throw new Exception("WebTransport protocol is not supported yet. Please use WebSocket protocol instead.");
+			}
+
+			if (options == null)
+			{
+				options = new Dictionary<string, object>();
+			}
+
+			// Add authentication token to query string
+			if (!string.IsNullOrEmpty(Http.AuthToken))
+			{
+				options.Add("_authToken", Http.AuthToken);
+			}
+
+			List<string> list = new List<string>();
+			foreach (KeyValuePair<string, object> item in options)
+			{
+				list.Add(item.Key + "=" + (item.Value != null ? Convert.ToString(item.Value) : "null"));
+			}
+
+			// Try to connect directly to custom publicAddress, if present.
+			var endpoint = (room.publicAddress != null && room.publicAddress.Length > 0)
+				? new Uri($"{Endpoint.Scheme}://{room.publicAddress}")
+				: Endpoint.Uri;
+
+			var basePath = endpoint.AbsolutePath;
+
+			// make sure to end path with backslash
+			if (basePath.Length > 0 && !basePath.EndsWith("/"))
+			{
+				basePath += "/";
+			}
+
+			UriBuilder uriBuilder = new UriBuilder(endpoint)
+			{
+				Path = $"{basePath}{room.processId}/{room.roomId}",
+				Query = string.Join("&", list.ToArray())
+			};
+
+			return new Connection(uriBuilder.ToString(), headers);
+		}
+
+		/// <summary>
+		///     Select the endpoint with the lowest latency.
+		/// </summary>
+		/// <param name="endpoints">Array of endpoints to select from.</param>
+		/// <param name="latencyOptions">Latency measurement options (protocol, pingCount).</param>
+		/// <returns>The client with the lowest latency.</returns>
+		public static async Task<Client> SelectByLatency(string[] endpoints, LatencyOptions latencyOptions = null)
+		{
+			if (latencyOptions == null)
+			{
+				latencyOptions = new LatencyOptions();
+			}
+
+			var clients = new Client[endpoints.Length];
+			for (int i = 0; i < endpoints.Length; i++)
+			{
+				clients[i] = new Client(endpoints[i]);
+			}
+
+			var latencyTasks = new Task<(int index, double latency, bool success)>[clients.Length];
+			for (int i = 0; i < clients.Length; i++)
+			{
+				int index = i;
+				latencyTasks[i] = MeasureClientLatency(clients[index], index, latencyOptions);
+			}
+
+			var results = await Task.WhenAll(latencyTasks);
+
+			int bestIndex = -1;
+			double bestLatency = double.MaxValue;
+
+			for (int i = 0; i < results.Length; i++)
+			{
+				if (results[i].success && results[i].latency < bestLatency)
+				{
+					bestLatency = results[i].latency;
+					bestIndex = results[i].index;
+				}
+			}
+
+			if (bestIndex == -1)
+			{
+				throw new Exception("All endpoints failed to respond");
+			}
+
+			return clients[bestIndex];
+		}
+
+		private static async Task<(int index, double latency, bool success)> MeasureClientLatency(Client client, int index, LatencyOptions options)
+		{
+			try
+			{
+				var latency = await client.GetLatency(options);
+				var settings = client.Settings;
+				Debug.Log($"Endpoint Latency: {latency}ms - {settings.colyseusServerAddress}:{settings.colyseusServerPort}");
+				return (index, latency, success: true);
+			}
+			catch (Exception)
+			{
+				return (index, latency: double.MaxValue, success: false);
+			}
+		}
+
+		/// <summary>
+		///     Create a new connection with the server, and measure the latency.
+		/// </summary>
+		/// <param name="options">Latency measurement options (protocol, pingCount).</param>
+		/// <returns>The average latency in milliseconds.</returns>
+		public Task<double> GetLatency(LatencyOptions options = null)
+		{
+			if (options == null)
+			{
+				options = new LatencyOptions();
+			}
+
+			var protocol = options.Protocol ?? "ws";
+			var pingCount = options.PingCount > 0 ? options.PingCount : 1;
+
+			if (protocol == "h3")
+			{
+				throw new Exception("WebTransport protocol is not supported yet. Please use WebSocket protocol instead.");
+			}
+
+			var tcs = new TaskCompletionSource<double>();
+			var latencies = new List<double>();
+			long pingStart = 0;
+
+			var conn = new Connection(Endpoint.ToString(), null);
+
+			void OnOpen()
+			{
+				pingStart = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+				_ = conn.Send(new byte[] { Protocol.PING });
+			}
+
+			void OnMessage(byte[] data)
+			{
+				latencies.Add(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - pingStart);
+
+				if (latencies.Count < pingCount)
+				{
+					// Send another ping
+					pingStart = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+					_ = conn.Send(new byte[] { Protocol.PING });
+				}
+				else
+				{
+					// Done, calculate average and close
+					conn.OnOpen -= OnOpen;
+					conn.OnMessage -= OnMessage;
+					conn.OnError -= OnError;
+
+					_ = conn.Close();
+
+					double sum = 0;
+					for (int i = 0; i < latencies.Count; i++)
+					{
+						sum += latencies[i];
+					}
+					tcs.TrySetResult(sum / latencies.Count);
+				}
+			}
+
+			void OnError(string errorMsg)
+			{
+				conn.OnOpen -= OnOpen;
+				conn.OnMessage -= OnMessage;
+				conn.OnError -= OnError;
+
+				tcs.TrySetException(new MatchMakeException((int)CloseCode.ABNORMAL_CLOSURE, $"Failed to get latency: {errorMsg}"));
+			}
+
+			conn.OnOpen += OnOpen;
+			conn.OnMessage += OnMessage;
+			conn.OnError += OnError;
+
+			_ = conn.Connect();
+
+			return tcs.Task;
+		}
+	}
+}
+

@@ -176,7 +176,7 @@ namespace Colyseus.Schema
 		IEnumerable GetItems();
 		void ForEach(Action<object, object> action);
 		void SetItems(object items);
-		void Clear(List<DataChange> changes, ColyseusReferenceTracker refs);
+		void Clear(List<DataChange> changes, ReferenceTracker refs);
 
 		System.Type GetChildType();
 		object GetTypeDefaultValue();
@@ -201,7 +201,7 @@ namespace Colyseus.Schema
 	}
 
 	/// <summary>
-	///     Interface for an object that can be tracked by a <see cref="ColyseusReferenceTracker" />
+	///     Interface for an object that can be tracked by a <see cref="ReferenceTracker" />
 	/// </summary>
 	[SuppressMessage("ReSharper", "MissingXmlDoc")]
 	public interface IRef
@@ -216,7 +216,7 @@ namespace Colyseus.Schema
 	}
 
 	/// <summary>
-	///     Data structure representing a <see cref="ColyseusRoom{T}" />'s state (synchronizeable data)
+	///     Data structure representing a <see cref="Room{T}" />'s state (synchronizeable data)
 	/// </summary>
 	public class Schema : IRef
 	{
@@ -325,7 +325,7 @@ namespace Colyseus.Schema
 		}
 
 		/// <summary>
-		///     Getter function, required for <see cref="ColyseusReferenceTracker.GarbageCollection" />
+		///     Getter function, required for <see cref="ReferenceTracker.GarbageCollection" />
 		/// </summary>
 		/// <returns>
 		///     <see cref="fieldChildTypes" />

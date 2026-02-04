@@ -1,6 +1,6 @@
 {
 	"name": "io.colyseus.sdk",
-	"version": "0.16.14",
+	"version": "0.17.0",
 	"displayName": "Colyseus SDK",
 	"description": "Colyseus Multiplayer SDK for Unity",
 	"unity": "2019.1",
@@ -26,7 +26,7 @@
 	"samples": [
 		{
 			"displayName": "Example",
-			"description": "Colyseus Example",
+			"description": "Barebones usage example, demonstrating how to join custom rooms, send messages, and receive state updates. Includes LobbyRoom and QueueRoom examples.",
 			"path": "Runtime/Example~"
 		}
 	]

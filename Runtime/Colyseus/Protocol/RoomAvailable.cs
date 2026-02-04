@@ -1,0 +1,60 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Colyseus
+{
+    /// <summary>
+    ///     Wrapper class for important, shorthand Room information
+    /// </summary>
+    [Serializable]
+    public class RoomAvailable
+    {
+        /// <summary>
+        ///     Current client count
+        /// </summary>
+        public int clients;
+
+        /// <summary>
+        ///     Maximum clients in this room (may be Infinity when unlimited)
+        /// </summary>
+        public double maxClients;
+
+        /// <summary>
+        ///     Room name
+        /// </summary>
+        public string name;
+
+        /// <summary>
+        ///     Public host address (optional)
+        /// </summary>
+        public string publicAddress;
+
+        /// <summary>
+        ///     Process ID used for connection
+        /// </summary>
+        public string processId;
+
+        /// <summary>
+        ///     Room ID
+        /// </summary>
+        public string roomId;
+
+        // public object metadata;
+    }
+
+    /// <summary>
+    ///     Get a collection of rooms
+    /// </summary>
+    /// <typeparam name="T">Type of room inherited from <see cref="RoomAvailable" /></typeparam>
+    [Serializable]
+    public class RoomAvailableCollection<T>
+    {
+        /// <summary>
+        ///     Rooms in this collection
+        /// </summary>
+        public T[] rooms;
+    }
+}

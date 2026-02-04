@@ -219,7 +219,7 @@ namespace Colyseus.Schema
         ///     Clear all items and indices
         /// </summary>
         /// <param name="refs">Passed in for garbage collection, if needed</param>
-        public void Clear(List<DataChange> changes, ColyseusReferenceTracker refs)
+        public void Clear(List<DataChange> changes, ReferenceTracker refs)
         {
 			Callbacks.RemoveChildRefs(this, changes, refs);
 			Indexes.Clear();

@@ -5,6 +5,43 @@ using System.Linq.Expressions;
 namespace Colyseus.Schema
 {
 	/// <summary>
+	///     Helper class to extract property chains from nested member expressions
+	/// </summary>
+	internal static class ExpressionHelper
+	{
+		/// <summary>
+		///     Extracts the property chain from a nested member expression.
+		///     For example, `state => state.staticEntities.entities` returns ["staticEntities", "entities"]
+		/// </summary>
+		public static List<string> GetPropertyChain(Expression expression)
+		{
+			var chain = new List<string>();
+			var current = expression;
+
+			while (current is MemberExpression memberExpr)
+			{
+				chain.Insert(0, memberExpr.Member.Name);
+				current = memberExpr.Expression;
+			}
+
+			return chain;
+		}
+
+		/// <summary>
+		///     Gets the root instance from an expression by walking up to the parameter.
+		/// </summary>
+		public static Expression GetRootExpression(Expression expression)
+		{
+			var current = expression;
+			while (current is MemberExpression memberExpr)
+			{
+				current = memberExpr.Expression;
+			}
+			return current;
+		}
+	}
+
+	/// <summary>
 	///     Delegate for handling events given a <paramref name="key" /> and a <paramref name="value" />
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
@@ -61,33 +98,134 @@ namespace Colyseus.Schema
 			return () => handlers[operationOrProperty].Remove(handler);
 		}
 
+		/// <summary>
+		///     Navigates through a nested property chain and invokes a callback when the final property is reached.
+		///     Automatically listens to intermediate properties and re-attaches handlers when they change.
+		/// </summary>
+		/// <param name="instance">The root instance to start navigation from</param>
+		/// <param name="propertyChain">List of property names to navigate through</param>
+		/// <param name="currentIndex">Current position in the property chain</param>
+		/// <param name="onFinalProperty">Callback invoked with the final Schema instance and property name</param>
+		/// <param name="immediate">Whether to trigger immediately if available</param>
+		/// <returns>Action to remove all attached listeners</returns>
+		protected Action NavigateNestedProperties(Schema instance, List<string> propertyChain, int currentIndex, Func<Schema, string, Action> onFinalProperty, bool immediate = true)
+		{
+			if (currentIndex >= propertyChain.Count)
+			{
+				return () => { };
+			}
+
+			var propertyName = propertyChain[currentIndex];
+			var isLastProperty = currentIndex == propertyChain.Count - 1;
+
+			if (isLastProperty)
+			{
+				// We've reached the final property, invoke the callback
+				return onFinalProperty(instance, propertyName);
+			}
+
+			// We're at an intermediate property, need to navigate deeper
+			Action removeHandler = () => { };
+			Action removeListener = () => removeHandler();
+
+			var currentValue = instance[propertyName];
+
+			if (currentValue == null)
+			{
+				// Intermediate property not available yet, listen for it
+				removeHandler = AddCallback(instance.__refId, propertyName, new PropertyChangeEventHandler<Schema>((newValue, prevValue) =>
+				{
+					// Remove previous deep listener if any
+					removeHandler();
+
+					if (newValue != null)
+					{
+						// Navigate to the next level
+						removeHandler = NavigateNestedProperties(newValue, propertyChain, currentIndex + 1, onFinalProperty, immediate);
+					}
+				}));
+			}
+			else if (currentValue is Schema schemaValue)
+			{
+				// Intermediate property is available, navigate deeper
+				removeHandler = NavigateNestedProperties(schemaValue, propertyChain, currentIndex + 1, onFinalProperty, immediate);
+
+				// Also listen for changes to re-attach handlers
+				var removeChangeListener = AddCallback(instance.__refId, propertyName, new PropertyChangeEventHandler<Schema>((newValue, prevValue) =>
+				{
+					// Remove previous deep listener
+					removeHandler();
+
+					if (newValue != null)
+					{
+						// Navigate to the next level with the new value
+						removeHandler = NavigateNestedProperties(newValue, propertyChain, currentIndex + 1, onFinalProperty, immediate);
+					}
+				}));
+
+				var originalRemoveHandler = removeHandler;
+				removeHandler = () =>
+				{
+					originalRemoveHandler();
+					removeChangeListener();
+				};
+			}
+
+			return removeListener;
+		}
+
 		protected Action AddCallbackOrWaitCollectionAvailable<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, TReturn>> propertyExpression, OPERATION operation, Delegate handler, bool immediate = true)
 			where TInstance : Schema
 			where TReturn : IRef
 		{
-			var memberExpression = (MemberExpression)propertyExpression.Body;
-			var propertyName = memberExpression.Member.Name;
+			var propertyChain = ExpressionHelper.GetPropertyChain(propertyExpression.Body);
 
-			Action removeHandler = () => {};
+			// If only one property in chain, use the original simple logic
+			if (propertyChain.Count == 1)
+			{
+				return AddCallbackOrWaitCollectionAvailableSimple(instance, propertyChain[0], operation, handler, immediate);
+			}
+
+			// For nested properties, use the navigation helper
+			Action removeHandler = () => { };
+			Action removeAll = () => removeHandler();
+
+			removeHandler = NavigateNestedProperties(instance, propertyChain, 0, (finalInstance, finalPropertyName) =>
+			{
+				return AddCallbackOrWaitCollectionAvailableSimple(finalInstance, finalPropertyName, operation, handler, immediate);
+			}, immediate);
+
+			return removeAll;
+		}
+
+		/// <summary>
+		///     Original simple implementation for single-level property access
+		/// </summary>
+		protected Action AddCallbackOrWaitCollectionAvailableSimple(Schema instance, string propertyName, OPERATION operation, Delegate handler, bool immediate = true)
+		{
+			Action removeHandler = () => { };
 			Action removeOnAdd = () => removeHandler();
 
 			// Collection not available yet. Listen for its availability before attaching the handler.
 			if (instance[propertyName] == null)
 			{
-				removeHandler = Listen(instance, propertyExpression, (TReturn array, TReturn _) =>
+				removeHandler = AddCallback(instance.__refId, propertyName, new PropertyChangeEventHandler<IRef>((IRef collection, IRef _) =>
 				{
-					removeHandler = AddCallback(array.__refId, operation, handler);
-				});
+					removeHandler = AddCallback(collection.__refId, operation, handler);
+				}));
 				return removeOnAdd;
-			} else {
-
+			}
+			else
+			{
 				//
 				// Call immediately if collection is already available, if it's an ADD operation.
 				//
 				immediate = immediate && isTriggering == false;
 
-				if (operation == OPERATION.ADD && immediate) {
-					((ISchemaCollection)instance[propertyName]).ForEach((key, value) => {
+				if (operation == OPERATION.ADD && immediate)
+				{
+					((ISchemaCollection)instance[propertyName]).ForEach((key, value) =>
+					{
 						handler.DynamicInvoke(key, value);
 					});
 				}
@@ -104,9 +242,31 @@ namespace Colyseus.Schema
 		public Action Listen<TInstance, TReturn>(TInstance instance, Expression<Func<TInstance, TReturn>> propertyExpression, PropertyChangeEventHandler<TReturn> handler, bool immediate = true)
 			where TInstance : Schema
 		{
-			var memberExpression = (MemberExpression)propertyExpression.Body;
-			var propertyName = memberExpression.Member.Name;
+			var propertyChain = ExpressionHelper.GetPropertyChain(propertyExpression.Body);
 
+			// If only one property in chain, use the original simple logic
+			if (propertyChain.Count == 1)
+			{
+				return ListenSimple(instance, propertyChain[0], handler, immediate);
+			}
+
+			// For nested properties, use the navigation helper
+			Action removeHandler = () => { };
+			Action removeAll = () => removeHandler();
+
+			removeHandler = NavigateNestedProperties(instance, propertyChain, 0, (finalInstance, finalPropertyName) =>
+			{
+				return ListenSimple(finalInstance, finalPropertyName, handler, immediate);
+			}, immediate);
+
+			return removeAll;
+		}
+
+		/// <summary>
+		///     Original simple implementation for single-level property listening
+		/// </summary>
+		protected Action ListenSimple<TReturn>(Schema instance, string propertyName, PropertyChangeEventHandler<TReturn> handler, bool immediate = true)
+		{
 			immediate = immediate && isTriggering == false;
 
 			//
@@ -388,10 +548,10 @@ namespace Colyseus.Schema
 
 	public class Callbacks // <T> where T : Schema
 	{
-		public static StateCallbackStrategy<T> Get<T>(ColyseusRoom<T> room)
+		public static StateCallbackStrategy<T> Get<T>(Room<T> room)
 			where T : Schema
 		{
-			var decoder = (room.Serializer as ColyseusSchemaSerializer<T>).Decoder;
+			var decoder = (room.Serializer as SchemaSerializer<T>).Decoder;
 			return new StateCallbackStrategy<T>(decoder);
 		}
 
@@ -401,7 +561,7 @@ namespace Colyseus.Schema
 			return new StateCallbackStrategy<T>(decoder);
 		}
 
-		internal static void RemoveChildRefs(ISchemaCollection collection, List<DataChange> changes, ColyseusReferenceTracker refs)
+		internal static void RemoveChildRefs(ISchemaCollection collection, List<DataChange> changes, ReferenceTracker refs)
 		{
 			if (refs == null) {
 				return;
