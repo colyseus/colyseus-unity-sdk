@@ -293,7 +293,7 @@ namespace Colyseus
             }
             else
             {
-                OnLeave?.Invoke((int)WebSocketCloseCode.Normal);
+                OnLeave?.Invoke((int)CloseCode.CONSENTED);
             }
         }
 
@@ -737,7 +737,7 @@ namespace Colyseus
 			long currentTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 			if (currentTime - JoinedAtTime < Reconnection.MinUptime)
 			{
-				Debug.Log($"[Colyseus reconnection]: Room not up long enough for auto-reconnect (min uptime: {Reconnection.MinUptime}ms)");
+				Debug.Log($"[Colyseus reconnection]: ❌ Room not up long enough for auto-reconnect (min uptime: {Reconnection.MinUptime}ms)");
 				OnLeave?.Invoke((int)CloseCode.ABNORMAL_CLOSURE);
 				return;
 			}
@@ -753,34 +753,34 @@ namespace Colyseus
 
 		private async Task RetryReconnection()
 		{
+			if (Reconnection.RetryCount >= Reconnection.MaxRetries)
+			{
+				// No more retries
+				Debug.Log($"[Colyseus reconnection]: ❌ Reconnection failed after {Reconnection.MaxRetries} attempts.");
+				Reconnection.IsReconnecting = false;
+				OnLeave?.Invoke((int)CloseCode.FAILED_TO_RECONNECT);
+				return;
+			}
+
 			Reconnection.RetryCount++;
 
 			int delay = Math.Min(Reconnection.MaxDelay,
 				Math.Max(Reconnection.MinDelay,
 					Reconnection.Backoff(Reconnection.RetryCount, Reconnection.Delay)));
 
-			Debug.Log($"[Colyseus reconnection]: Will retry in {delay / 1000f:F1} seconds...");
+			Debug.Log($"[Colyseus reconnection]: ⏳ Will retry in {delay / 1000f:F1} seconds...");
 			await new WaitForSeconds(delay / 1000f);
+
+			Debug.Log($"[Colyseus reconnection]: 🔄 Re-establishing sessionId '{SessionId}' with roomId '{RoomId}'... (attempt {Reconnection.RetryCount} of {Reconnection.MaxRetries})");
 
 			try
 			{
-				Debug.Log($"[Colyseus reconnection]: Re-establishing sessionId '{SessionId}' with roomId '{RoomId}'... (attempt {Reconnection.RetryCount} of {Reconnection.MaxRetries})");
 				await Connection.Reconnect(ReconnectionToken.Token);
 			}
 			catch (Exception e)
 			{
 				Debug.Log($"[Colyseus reconnection]: Reconnect failed - {e.Message}");
-
-				if (Reconnection.RetryCount < Reconnection.MaxRetries)
-				{
-					_ = RetryReconnection();
-				}
-				else
-				{
-					Debug.Log("[Colyseus reconnection]: Max retries reached. Giving up.");
-					Reconnection.IsReconnecting = false;
-					OnLeave?.Invoke((int)CloseCode.ABNORMAL_CLOSURE);
-				}
+				_ = RetryReconnection();
 			}
 		}
 
