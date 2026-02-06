@@ -330,6 +330,11 @@ namespace Colyseus
 	        Connection = connection;
 
 	        Connection.OnClose += code => {
+				if (JoinedAtTime == 0) {
+					OnError?.Invoke(code, "Connection closed before joining room");
+					return;
+				}
+
 				if (
 					code == (int) CloseCode.NO_STATUS_RECEIVED ||
 					code == (int) CloseCode.ABNORMAL_CLOSURE ||
