@@ -63,6 +63,12 @@ namespace Colyseus
     public class ReconnectionOptions
     {
         /// <summary>
+        ///     Whether automatic reconnection is enabled.
+        ///     Set to false to disable automatic reconnection entirely.
+        /// </summary>
+        public bool Enabled = true;
+
+        /// <summary>
         ///     The maximum number of reconnection attempts.
         /// </summary>
         public int MaxRetries = 15;
@@ -342,7 +348,7 @@ namespace Colyseus
 					code == (int) CloseCode.MAY_TRY_RECONNECT
 				) {
 					OnDrop?.Invoke(code);
-					HandleReconnection();
+					HandleReconnection(code);
 
 				} else {
 					OnLeave?.Invoke(code);
@@ -736,8 +742,14 @@ namespace Colyseus
             throw e;
         }
 
-		private void HandleReconnection()
+		private void HandleReconnection(int code)
 		{
+			if (!Reconnection.Enabled)
+			{
+				OnLeave?.Invoke(code);
+				return;
+			}
+
 			// Check minimum uptime before allowing reconnection
 			long currentTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 			if (currentTime - JoinedAtTime < Reconnection.MinUptime)

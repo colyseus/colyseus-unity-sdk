@@ -209,10 +209,17 @@ namespace Colyseus.Schema
 			// Collection not available yet. Listen for its availability before attaching the handler.
 			if (instance[propertyName] == null)
 			{
-				removeHandler = AddCallback(instance.__refId, propertyName, new PropertyChangeEventHandler<IRef>((IRef collection, IRef _) =>
+				Action removePropertyCallback = null;
+				removePropertyCallback = AddCallback(instance.__refId, propertyName, new PropertyChangeEventHandler<IRef>((IRef collection, IRef _) =>
 				{
-					removeHandler = AddCallback(collection.__refId, operation, handler);
+					if (collection != null)
+					{
+						// Remove the property listener now that collection is available
+						removePropertyCallback();
+						removeHandler = AddCallback(collection.__refId, operation, handler);
+					}
 				}));
+				removeHandler = removePropertyCallback;
 				return removeOnAdd;
 			}
 			else
