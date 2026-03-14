@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace Colyseus.Schema
@@ -460,7 +461,8 @@ namespace Colyseus.Schema
 					callbacks.TryGetValue(change.Field, out var fieldCallbacks);
 					if (fieldCallbacks != null)
 					{
-						foreach (var callback in fieldCallbacks)
+						// iterate a copy — deferred listeners may remove themselves during iteration
+						foreach (var callback in fieldCallbacks.ToList())
 						{
 							try
 							{
