@@ -14,6 +14,16 @@ namespace Colyseus.Schema
         public TriggerChangesDelegate TriggerChanges;
 		protected List<DataChange> AllChanges = new List<DataChange>();
 
+		/// <summary>
+		///     DynamicTypeDefinitions keyed by typeId, populated during Handshake when T is DynamicSchema.
+		/// </summary>
+		internal Dictionary<float, DynamicTypeDefinition> DynamicDefinitions;
+
+		/// <summary>
+		///     Maps collection refIds to their child element typeId (for DynamicSchema support).
+		/// </summary>
+		private Dictionary<int, float> _collectionChildTypeId;
+
 		public Decoder()
 		{
             State = Activator.CreateInstance<T>();
@@ -154,12 +164,41 @@ namespace Colyseus.Schema
 
 				if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
 				{
-					System.Type concreteChildType = GetSchemaType(bytes, it, childType);
+					float resolvedTypeId;
+					System.Type concreteChildType = GetSchemaType(bytes, it, childType, out resolvedTypeId);
 					if (value == null)
 					{
 						value = CreateTypeInstance(concreteChildType);
 						((IRef)value).__refId = __refId;
 					}
+
+					// Assign DynamicTypeDefinition for DynamicSchema instances
+					if (DynamicDefinitions != null && value is DynamicSchema dynamicValue && dynamicValue.Definition == null)
+					{
+						if (resolvedTypeId < 0)
+						{
+							// No TYPE_ID in stream, determine from parent context
+							if (_ref is DynamicSchema parentDs &&
+								parentDs.Definition != null &&
+								parentDs.Definition.FieldsByIndex.TryGetValue(fieldIndex, out var fn) &&
+								parentDs.Definition.FieldReferencedTypes.TryGetValue(fn, out var parentTypeId))
+							{
+								resolvedTypeId = parentTypeId;
+							}
+							else if (_ref is ISchemaCollection &&
+								_collectionChildTypeId != null &&
+								_collectionChildTypeId.TryGetValue(_ref.__refId, out var colTypeId))
+							{
+								resolvedTypeId = colTypeId;
+							}
+						}
+
+						if (resolvedTypeId >= 0 && DynamicDefinitions.TryGetValue(resolvedTypeId, out var def))
+						{
+							dynamicValue.Definition = def;
+						}
+					}
+
 					Refs.Add(__refId, (IRef)value, (
 						value != previousValue ||  // increment ref count if value has changed
 						(operation == (byte)OPERATION.DELETE_AND_ADD && value == previousValue) // increment ref count if the same instance is being added again
@@ -188,6 +227,15 @@ namespace Colyseus.Schema
 				((Schema)_ref).fieldsByIndex.TryGetValue(fieldIndex, out var fieldName);
 				((Schema)_ref).fieldChildPrimitiveTypes.TryGetValue(fieldName, out childPrimitiveType);
 				((ISchemaCollection)value).ChildPrimitiveType = childPrimitiveType;
+
+				// Track child typeId for DynamicSchema collections
+				if (DynamicDefinitions != null && _ref is DynamicSchema parentDs2 &&
+					parentDs2.Definition != null && fieldName != null &&
+					parentDs2.Definition.FieldReferencedTypes.TryGetValue(fieldName, out var collChildTypeId))
+				{
+					if (_collectionChildTypeId == null) _collectionChildTypeId = new Dictionary<int, float>();
+					_collectionChildTypeId[__refId] = collChildTypeId;
+				}
 
 				if (previousValue != null)
 				{
@@ -471,15 +519,16 @@ namespace Colyseus.Schema
 		///     <paramref name="bytes" />
 		/// </param>
 		/// <returns>The parsed <see cref="System.Type" /> if found, <paramref name="defaultType" /> if not</returns>
-		protected System.Type GetSchemaType(byte[] bytes, Iterator it, System.Type defaultType)
+		protected System.Type GetSchemaType(byte[] bytes, Iterator it, System.Type defaultType, out float resolvedTypeId)
         {
             System.Type type = defaultType;
+            resolvedTypeId = -1;
 
             if (it.Offset < bytes.Length && bytes[it.Offset] == (byte)SPEC.TYPE_ID)
             {
                 it.Offset++;
-                int typeId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
-                type = Context.Get(typeId);
+                resolvedTypeId = (float)Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+                type = Context.Get(resolvedTypeId);
             }
 
             return type;

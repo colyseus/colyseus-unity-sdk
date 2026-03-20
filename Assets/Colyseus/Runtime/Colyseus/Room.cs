@@ -5,8 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Colyseus.Schema;
 using GameDevWare.Serialization;
-using NativeWebSocket;
-using UnityEngine;
 
 namespace Colyseus
 {
@@ -598,7 +596,7 @@ namespace Colyseus
                 }
                 else if (SerializerId == "fossil-delta")
                 {
-                    Debug.LogError(
+                    ColyseusContext.Logger.LogError(
                         "FossilDelta Serialization has been deprecated. It is highly recommended that you update your code to use the Schema Serializer. Otherwise, you must use an earlier version of the Colyseus plugin");
                 }
                 else
@@ -634,7 +632,7 @@ namespace Colyseus
                 else
                 {
                     // Successful reconnection
-                    Debug.Log("[Colyseus reconnection]: Reconnection successful!");
+                    ColyseusContext.Logger.Log("[Colyseus reconnection]: Reconnection successful!");
                     Reconnection.IsReconnecting = false;
                     OnReconnect?.Invoke();
                 }
@@ -713,7 +711,7 @@ namespace Colyseus
                 }
                 else if (type != null && !type.ToString().StartsWith("__"))
                 {
-                    Debug.LogWarning("room.OnMessage() not registered for: '" + type + "'");
+                    ColyseusContext.Logger.LogWarning("room.OnMessage() not registered for: '" + type + "'");
                 }
             }
         }
@@ -738,7 +736,7 @@ namespace Colyseus
         /// <exception cref="Exception">Throws <paramref name="e" /></exception>
         protected void DisplaySerializerErrorHelp(Exception e, string helpMessage)
         {
-            Debug.LogWarning("The serializer from the server is: '" + SerializerId + "'. " + helpMessage);
+            ColyseusContext.Logger.LogWarning("The serializer from the server is: '" + SerializerId + "'. " + helpMessage);
             throw e;
         }
 
@@ -754,7 +752,7 @@ namespace Colyseus
 			long currentTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 			if (currentTime - JoinedAtTime < Reconnection.MinUptime)
 			{
-				Debug.Log($"[Colyseus reconnection]: ❌ Room not up long enough for auto-reconnect (min uptime: {Reconnection.MinUptime}ms)");
+				ColyseusContext.Logger.Log($"[Colyseus reconnection]: Room not up long enough for auto-reconnect (min uptime: {Reconnection.MinUptime}ms)");
 				OnLeave?.Invoke((int)CloseCode.ABNORMAL_CLOSURE);
 				return;
 			}
@@ -773,7 +771,7 @@ namespace Colyseus
 			if (Reconnection.RetryCount >= Reconnection.MaxRetries)
 			{
 				// No more retries
-				Debug.Log($"[Colyseus reconnection]: ❌ Reconnection failed after {Reconnection.MaxRetries} attempts.");
+				ColyseusContext.Logger.Log($"[Colyseus reconnection]: Reconnection failed after {Reconnection.MaxRetries} attempts.");
 				Reconnection.IsReconnecting = false;
 				OnLeave?.Invoke((int)CloseCode.FAILED_TO_RECONNECT);
 				return;
@@ -785,10 +783,10 @@ namespace Colyseus
 				Math.Max(Reconnection.MinDelay,
 					Reconnection.Backoff(Reconnection.RetryCount, Reconnection.Delay)));
 
-			Debug.Log($"[Colyseus reconnection]: ⏳ Will retry in {delay / 1000f:F1} seconds...");
-			await new WaitForSeconds(delay / 1000f);
+			ColyseusContext.Logger.Log($"[Colyseus reconnection]: Will retry in {delay / 1000f:F1} seconds...");
+			await Task.Delay(delay);
 
-			Debug.Log($"[Colyseus reconnection]: 🔄 Re-establishing sessionId '{SessionId}' with roomId '{RoomId}'... (attempt {Reconnection.RetryCount} of {Reconnection.MaxRetries})");
+			ColyseusContext.Logger.Log($"[Colyseus reconnection]: Re-establishing sessionId '{SessionId}' with roomId '{RoomId}'... (attempt {Reconnection.RetryCount} of {Reconnection.MaxRetries})");
 
 			try
 			{
@@ -796,7 +794,7 @@ namespace Colyseus
 			}
 			catch (Exception e)
 			{
-				Debug.Log($"[Colyseus reconnection]: Reconnect failed - {e.Message}");
+				ColyseusContext.Logger.Log($"[Colyseus reconnection]: Reconnect failed - {e.Message}");
 				_ = RetryReconnection();
 			}
 		}

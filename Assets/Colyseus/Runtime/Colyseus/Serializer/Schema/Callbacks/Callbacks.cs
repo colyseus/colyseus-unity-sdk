@@ -360,7 +360,79 @@ namespace Colyseus.Schema
 			return AddCallbackOrWaitCollectionAvailable(instance, propertyExpression, OPERATION.DELETE, handler);
 		}
 
-		// ...
+		//
+		// String-based overloads (for DynamicSchema / untyped access)
+		//
+
+		public Action Listen<TReturn>(string propertyName, PropertyChangeEventHandler<TReturn> handler, bool immediate = true)
+		{
+			return ListenSimple(Decoder.State, propertyName, handler, immediate);
+		}
+
+		public Action Listen<TReturn>(Schema instance, string propertyName, PropertyChangeEventHandler<TReturn> handler, bool immediate = true)
+		{
+			return ListenSimple(instance, propertyName, handler, immediate);
+		}
+
+		public Action OnAdd<TReturn>(string propertyName, KeyValueEventHandler<string, TReturn> handler, bool immediate = true)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(Decoder.State, propertyName, OPERATION.ADD, handler, immediate);
+		}
+
+		public Action OnAdd<TReturn>(Schema instance, string propertyName, KeyValueEventHandler<string, TReturn> handler, bool immediate = true)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(instance, propertyName, OPERATION.ADD, handler, immediate);
+		}
+
+		public Action OnAdd<TReturn>(string propertyName, KeyValueEventHandler<int, TReturn> handler, bool immediate = true)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(Decoder.State, propertyName, OPERATION.ADD, handler, immediate);
+		}
+
+		public Action OnAdd<TReturn>(Schema instance, string propertyName, KeyValueEventHandler<int, TReturn> handler, bool immediate = true)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(instance, propertyName, OPERATION.ADD, handler, immediate);
+		}
+
+		public Action OnRemove<TReturn>(string propertyName, KeyValueEventHandler<string, TReturn> handler)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(Decoder.State, propertyName, OPERATION.DELETE, handler);
+		}
+
+		public Action OnRemove<TReturn>(Schema instance, string propertyName, KeyValueEventHandler<string, TReturn> handler)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(instance, propertyName, OPERATION.DELETE, handler);
+		}
+
+		public Action OnRemove<TReturn>(string propertyName, KeyValueEventHandler<int, TReturn> handler)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(Decoder.State, propertyName, OPERATION.DELETE, handler);
+		}
+
+		public Action OnRemove<TReturn>(Schema instance, string propertyName, KeyValueEventHandler<int, TReturn> handler)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(instance, propertyName, OPERATION.DELETE, handler);
+		}
+
+		public Action OnChange<TReturn>(string propertyName, KeyValueEventHandler<string, TReturn> handler)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(Decoder.State, propertyName, OPERATION.REPLACE, handler);
+		}
+
+		public Action OnChange<TReturn>(Schema instance, string propertyName, KeyValueEventHandler<string, TReturn> handler)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(instance, propertyName, OPERATION.REPLACE, handler);
+		}
+
+		public Action OnChange<TReturn>(string propertyName, KeyValueEventHandler<int, TReturn> handler)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(Decoder.State, propertyName, OPERATION.REPLACE, handler);
+		}
+
+		public Action OnChange<TReturn>(Schema instance, string propertyName, KeyValueEventHandler<int, TReturn> handler)
+		{
+			return AddCallbackOrWaitCollectionAvailableSimple(instance, propertyName, OPERATION.REPLACE, handler);
+		}
 
 		/// <summary>
 		/// 	Binds a schema property to a target object.
@@ -387,7 +459,7 @@ namespace Colyseus.Schema
 						else
 						{
 							// Handle type mismatch, maybe convert or log
-							UnityEngine.Debug.Log($"BindTo: Type mismatch for property {field.Value}: Cannot assign {fromValue.GetType().Name} to {toProperty.PropertyType.Name}");
+							ColyseusContext.Logger.Log($"BindTo: Type mismatch for property {field.Value}: Cannot assign {fromValue.GetType().Name} to {toProperty.PropertyType.Name}");
 						}
 					}
 				}
@@ -452,7 +524,7 @@ namespace Colyseus.Schema
 								}
 								catch (Exception e)
 								{
-									UnityEngine.Debug.LogError(e.Message);
+									ColyseusContext.Logger.LogError(e.Message);
 								}
 							}
 						}
@@ -471,7 +543,7 @@ namespace Colyseus.Schema
 							}
 							catch (Exception e)
 							{
-								UnityEngine.Debug.LogError(e.Message);
+								ColyseusContext.Logger.LogError(e.Message);
 							} finally
 							{
 								isTriggering = false;

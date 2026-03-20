@@ -1,4 +1,4 @@
-using UnityEngine.Scripting;
+using Colyseus;
 
 namespace Colyseus.Schema
 {

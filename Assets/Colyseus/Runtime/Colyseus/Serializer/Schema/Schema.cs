@@ -227,22 +227,22 @@ namespace Colyseus.Schema
 		/// <summary>
 		///     Map of the <see cref="Type.ChildPrimitiveType" />s that this schema uses
 		/// </summary>
-		internal Dictionary<string, string> fieldChildPrimitiveTypes => _metadata.FieldChildPrimitiveTypes;
+		internal virtual Dictionary<string, string> fieldChildPrimitiveTypes => _metadata.FieldChildPrimitiveTypes;
 
 		/// <summary>
 		///     Map of the <see cref="Type.ChildType" />s that this schema uses
 		/// </summary>
-		internal Dictionary<string, System.Type> fieldChildTypes => _metadata.FieldChildTypes;
+		internal virtual Dictionary<string, System.Type> fieldChildTypes => _metadata.FieldChildTypes;
 
 		/// <summary>
 		///     Map of the fields in this schema using {<see cref="Type.Index" />,
 		/// </summary>
-		internal Dictionary<int, string> fieldsByIndex => _metadata.FieldsByIndex;
+		internal virtual Dictionary<int, string> fieldsByIndex => _metadata.FieldsByIndex;
 
 		/// <summary>
 		///     Map of the field types in this schema
 		/// </summary>
-		internal Dictionary<string, string> fieldTypes => _metadata.FieldTypes;
+		internal virtual Dictionary<string, string> fieldTypes => _metadata.FieldTypes;
 
 		public Schema()
 		{
@@ -288,7 +288,7 @@ namespace Colyseus.Schema
 		///     Allow get and set of property values by its <paramref name="propertyName" />
 		/// </summary>
 		/// <param name="propertyName">The object's field name</param>
-		public object this[string propertyName]
+		public virtual object this[string propertyName]
 		{
 			get { return GetType().GetField(propertyName).GetValue(this); }
 			set
