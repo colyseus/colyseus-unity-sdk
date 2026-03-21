@@ -36,7 +36,6 @@
 
   <!-- Test files -->
   <ItemGroup>
-    <Compile Include="../Assets/Colyseus/Runtime/Example/Schema/**/*.cs" />
     <Compile Include="**/*.cs" Exclude="obj/**;bin/**" />
   </ItemGroup>
 
