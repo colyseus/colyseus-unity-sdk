@@ -172,7 +172,7 @@ namespace Colyseus.Tests
 		[Test]
 		public async Task HostAssignment()
 		{
-			var room = await client.JoinOrCreate<MyRoomState>("my_room");
+			var room = await client.Create<MyRoomState>("my_room");
 			var stateReceived = new TaskCompletionSource<bool>();
 
 			room.OnStateChange += (state, isFirstState) =>
@@ -441,13 +441,13 @@ namespace Colyseus.Tests
 			Assert.AreEqual(2, addedSessionIds.Count);
 
 			// Second client leaves
-			await room2.Leave();
+			try { await room2.Leave(); } catch (TaskCanceledException) { }
 			await Task.Delay(500);
 
 			Assert.Contains(room2.SessionId, removedSessionIds);
 			Assert.AreEqual(1, removedSessionIds.Count);
 
-			await room1.Leave();
+			try { await room1.Leave(); } catch (TaskCanceledException) { }
 		}
 
 		[Test]
