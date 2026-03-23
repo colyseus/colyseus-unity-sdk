@@ -57,6 +57,7 @@ jobs:
         if: steps.version.outputs.changed == 'true'
         run: |
           dotnet pack nuget/Colyseus.csproj -c Release -o packages/
+          dotnet nuget add source packages/ --name local
           dotnet pack nuget-monogame/Colyseus.MonoGame.csproj -c Release -o packages/
 
       - name: Publish to NuGet
