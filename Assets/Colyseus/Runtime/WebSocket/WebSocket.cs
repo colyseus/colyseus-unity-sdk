@@ -192,7 +192,7 @@ namespace NativeWebSocket
 
         private async Task SendMessage(Queue<ArraySegment<byte>> queue, WebSocketMessageType messageType, ArraySegment<byte> buffer)
         {
-            if (buffer.Count == 0 || State != WebSocketState.Open)
+            if (buffer.Count == 0 || State != WebSocketState.Open || m_CancellationToken.IsCancellationRequested)
             {
                 return;
             }
@@ -228,6 +228,10 @@ namespace NativeWebSocket
 
                         await m_Socket.SendAsync(next, messageType, true, m_CancellationToken).ConfigureAwait(false);
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Connection was dropped/cancelled — silently bail out
                 }
                 finally
                 {
