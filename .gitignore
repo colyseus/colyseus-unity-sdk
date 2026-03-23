@@ -41,6 +41,7 @@ ExportedObj/
 .consulo/
 *.csproj
 !nuget/**/*.csproj
+!nuget-monogame/**/*.csproj
 *.unityproj
 *.sln
 *.suo

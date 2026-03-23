@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>Colyseus.MonoGame</AssemblyName>
+    <RootNamespace>Colyseus.MonoGame</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <IsPackable>true</IsPackable>
+
+    <!-- NuGet package metadata -->
+    <PackageId>Colyseus.MonoGame</PackageId>
+    <Authors>Endel Dreyer</Authors>
+    <Description>MonoGame integration for Colyseus Multiplayer SDK — provides a GameComponent that dispatches WebSocket events on the game loop.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://colyseus.io/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/colyseus/colyseus-unity-sdk</RepositoryUrl>
+    <PackageTags>colyseus;multiplayer;networking;monogame;gamedev</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Colyseus" Version="[0.17,0.18)" />
+    <PackageReference Include="Colyseus.NativeWebSocket" Version="2.0.0" />
+    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.2.1105" />
+  </ItemGroup>
+
+  <!-- Read version from UPM package.json -->
+  <Target Name="SetVersionFromPackageJson" BeforeTargets="PrepareForBuild;GenerateNuspec">
+    <Exec Command="python3 -c &quot;import json; print(json.load(open('$(MSBuildProjectDirectory)/../Assets/Colyseus/package.json'))['version'])&quot;" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="PackageVersion" />
+    </Exec>
+  </Target>
+
+</Project>
