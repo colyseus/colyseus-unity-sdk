@@ -23,12 +23,23 @@ namespace Colyseus
             _ws.OnClose += (code) =>
             {
                 _processingMessages = false;
+                ColyseusContext.UnregisterWebSocketForDispatch?.Invoke(_ws);
                 OnClose?.Invoke((int)code);
             };
 
+            if (ColyseusContext.RegisterWebSocketForDispatch != null)
+            {
+                // External dispatcher (MonoGame, Godot, etc.) handles DispatchMessageQueue
+                ColyseusContext.RegisterWebSocketForDispatch(_ws);
+            }
 #if !UNITY_WEBGL || UNITY_EDITOR
-            ProcessMessageQueue();
+            else
+            {
+                // Fallback: self-dispatch via Task.Yield() loop
+                ProcessMessageQueue();
+            }
 #endif
+
             await _ws.Connect();
         }
 

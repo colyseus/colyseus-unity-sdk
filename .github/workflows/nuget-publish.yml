@@ -55,7 +55,9 @@ jobs:
 
       - name: Pack
         if: steps.version.outputs.changed == 'true'
-        run: dotnet pack nuget/Colyseus.csproj -c Release -o packages/
+        run: |
+          dotnet pack nuget/Colyseus.csproj -c Release -o packages/
+          dotnet pack nuget-monogame/Colyseus.MonoGame.csproj -c Release -o packages/
 
       - name: Publish to NuGet
         if: steps.version.outputs.changed == 'true'
