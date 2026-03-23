@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -53,10 +54,17 @@ namespace Colyseus
         private async void ProcessMessageQueue()
         {
             _processingMessages = true;
-            while (_processingMessages)
+            try
             {
-                _ws?.DispatchMessageQueue();
-                await Task.Yield();
+                while (_processingMessages)
+                {
+                    _ws?.DispatchMessageQueue();
+                    await Task.Yield();
+                }
+            }
+            catch (Exception e)
+            {
+                ColyseusContext.Logger?.LogError($"ProcessMessageQueue error: {e.Message}");
             }
         }
 #endif

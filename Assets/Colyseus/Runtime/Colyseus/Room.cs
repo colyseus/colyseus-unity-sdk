@@ -286,13 +286,27 @@ namespace Colyseus
 
             if (RoomId != null)
             {
-                if (consented)
+                var tcs = new TaskCompletionSource<int>();
+                void onLeave(int code) { tcs.TrySetResult(code); }
+                OnLeave += onLeave;
+
+                try
                 {
-                    await Connection.Send(new[] {Protocol.LEAVE_ROOM});
+                    if (consented)
+                    {
+                        await Connection.Send(new[] {Protocol.LEAVE_ROOM});
+                    }
+                    else
+                    {
+                        await Connection.Close();
+                    }
+
+                    // Wait for the connection to fully close (with timeout to avoid hanging)
+                    await Task.WhenAny(tcs.Task, Task.Delay(5000));
                 }
-                else
+                finally
                 {
-                    await Connection.Close();
+                    OnLeave -= onLeave;
                 }
             }
             else
