@@ -300,7 +300,14 @@ namespace Colyseus
                     {
                         await Connection.Close();
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Connection already dropped — leave will complete via OnLeave
+                }
 
+                try
+                {
                     // Wait for the connection to fully close (with timeout to avoid hanging)
                     await Task.WhenAny(tcs.Task, Task.Delay(5000));
                 }
