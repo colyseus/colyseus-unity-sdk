@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using UnityEngine.Scripting;
 
 namespace Colyseus.Schema
 {

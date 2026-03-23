@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NativeWebSocket;
-using UnityEngine;
 
 // ReSharper disable InconsistentNaming
 
@@ -60,7 +58,7 @@ namespace Colyseus
 			Endpoint = new UriBuilder(endpoint);
 
 			// Create Settings object to pass to the ColyseusRequest object
-			Settings settings = ScriptableObject.CreateInstance<Settings>();
+			Settings settings = Settings.Create();
 			settings.colyseusServerAddress = $"{Endpoint.Host}{Endpoint.Path}";
 			settings.colyseusServerPort = Endpoint.Port.ToString();
 			settings.useSecureProtocol = string.Equals(Endpoint.Scheme, "wss") || string.Equals(Endpoint.Scheme, "https");
@@ -445,7 +443,7 @@ namespace Colyseus
 			{
 				var latency = await client.GetLatency(options);
 				var settings = client.Settings;
-				Debug.Log($"Endpoint Latency: {latency}ms - {settings.colyseusServerAddress}:{settings.colyseusServerPort}");
+				ColyseusContext.Logger.Log($"Endpoint Latency: {latency}ms - {settings.colyseusServerAddress}:{settings.colyseusServerPort}");
 				return (index, latency, success: true);
 			}
 			catch (Exception)

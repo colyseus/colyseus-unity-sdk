@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using UnityEngine;
-using UnityEngine.Networking;
 using System.IO;
 using GameDevWare.Serialization;
 
@@ -15,7 +13,7 @@ namespace Colyseus
 	}
 
     /// <summary>
-    /// Class for building out server requests using <see cref="UnityWebRequest"/>
+    /// Class for building out server requests
     /// </summary>
     public class HTTP
     {
@@ -39,9 +37,9 @@ namespace Colyseus
         }
 
         public async Task<string> Post(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
-		{
+        {
             return await Request("POST", uriPath, jsonBody, headers);
-		}
+        }
 
         public async Task<T> Post<T>(string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
         {
@@ -69,77 +67,41 @@ namespace Colyseus
         }
 
         public async Task<T> Request<T>(string uriMethod, string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
-		{
+        {
             return Json.Deserialize<T>(await Request(uriMethod, uriPath, jsonBody, headers));
         }
 
         public async Task<string> Request(string uriMethod, string uriPath, Dictionary<string, object> jsonBody = null, Dictionary<string, string> headers = null)
         {
-            using (UnityWebRequest req = new UnityWebRequest())
+            byte[] body = null;
+            if (jsonBody != null)
             {
-                req.method = uriMethod;
-                req.url = GetRequestURL(uriPath);
-                //Debug.Log($"Requesting from URL: {req.url}");
+                MemoryStream jsonBodyStream = new MemoryStream();
+                Json.Serialize(jsonBody, jsonBodyStream);
+                body = jsonBodyStream.ToArray();
+            }
 
-                // Send JSON on request body
-                if (jsonBody != null)
+            var allHeaders = new Dictionary<string, string>();
+
+            foreach (KeyValuePair<string, string> pair in _settings.Headers)
+            {
+                allHeaders[pair.Key] = pair.Value;
+            }
+
+            if (!string.IsNullOrEmpty(AuthToken))
+            {
+                allHeaders["Authorization"] = "Bearer " + AuthToken;
+            }
+
+            if (headers != null)
+            {
+                foreach (KeyValuePair<string, string> header in headers)
                 {
-                    MemoryStream jsonBodyStream = new MemoryStream();
-                    Json.Serialize(jsonBody, jsonBodyStream); //TODO: Replace GameDevWare serialization
-
-                    req.uploadHandler = new UploadHandlerRaw(jsonBodyStream.ToArray())
-                    {
-                        contentType = "application/json"
-                    };
+                    allHeaders[header.Key] = header.Value;
                 }
+            }
 
-                foreach (KeyValuePair<string, string> pair in _settings.Headers)
-                {
-                    req.SetRequestHeader(pair.Key, pair.Value);
-                }
-
-                if (!string.IsNullOrEmpty(AuthToken))
-                {
-                    req.SetRequestHeader("Authorization", "Bearer " + AuthToken);
-                }
-
-                if (headers != null)
-                {
-                    foreach (KeyValuePair<string, string> header in headers)
-                    {
-                        req.SetRequestHeader(header.Key, header.Value);
-                    }
-                }
-
-                req.downloadHandler = new DownloadHandlerBuffer();
-                await req.SendWebRequest();
-
-#if UNITY_2020_1_OR_NEWER
-                if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
-#else
-                if (req.isNetworkError || req.isHttpError)
-#endif
-                {
-                    var errorMessage = req.error;
-
-                    //
-                    // Parse JSON from response
-                    //
-                    if (!string.IsNullOrEmpty(req.downloadHandler.text))
-					{
-                        var data = Json.Deserialize<ErrorResponse>(req.downloadHandler.text);
-                        if (!string.IsNullOrEmpty(data.error))
-						{
-                            errorMessage = data.error;
-                            throw new HttpException((int)req.responseCode, errorMessage);
-                        }
-					}
-
-                    throw new HttpException((int)req.responseCode, errorMessage);
-                }
-
-                return req.downloadHandler.text;
-            };
+            return await ColyseusContext.HttpClient.Request(uriMethod, GetRequestURL(uriPath), body, allHeaders);
         }
 
         public string GetRequestURL(string pathWithQueryString)

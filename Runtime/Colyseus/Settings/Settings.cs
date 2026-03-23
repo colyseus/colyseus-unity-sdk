@@ -1,15 +1,23 @@
 using System;
 using System.Collections.Generic;
+
+#if UNITY_5_3_OR_NEWER
 using UnityEngine;
+#endif
 
 namespace Colyseus
 {
     /// <summary>
-    ///     <see cref="ScriptableObject" /> containing relevant Colyseus settings
+    ///     Contains relevant Colyseus settings
     /// </summary>
+#if UNITY_5_3_OR_NEWER
     [CreateAssetMenu(fileName = "MyServerSettings", menuName = "Colyseus/Server Settings Scriptable Object", order = 1)]
     [Serializable]
     public class Settings : ScriptableObject
+#else
+    [Serializable]
+    public class Settings
+#endif
     {
         /// <summary>
         ///     The server address
@@ -27,7 +35,7 @@ namespace Colyseus
         public bool useSecureProtocol = false;
 
         /// <summary>
-        /// Internal wrapper class for a <see cref="UnityEngine.Networking.UnityWebRequest"/> Request header since Unity cant serialize arrays
+        /// Internal wrapper class for a Request header
         /// </summary>
         [Serializable]
         public class RequestHeader
@@ -36,7 +44,9 @@ namespace Colyseus
             public string value;
         }
 
+#if UNITY_5_3_OR_NEWER
         [SerializeField]
+#endif
         private RequestHeader[] _requestHeaders;
 
         private Dictionary<string, string> _headersDictionary;
@@ -56,7 +66,7 @@ namespace Colyseus
         }
 
         /// <summary>
-        /// Convert the user-defined <see cref="_requestHeaders"/> into a dictionary to be used in a <see cref="UnityEngine.Networking.UnityWebRequest"/>
+        /// Convert the user-defined <see cref="_requestHeaders"/> into a dictionary
         /// </summary>
         public Dictionary<string, string> Headers
         {
@@ -88,7 +98,7 @@ namespace Colyseus
         }
 
         /// <summary>
-        ///     Centralized location to build and return an WebSocketEndpoint ignoring WS/WSS protocols for Unity Web Requests
+        ///     Centralized location to build and return an WebRequestEndpoint
         /// </summary>
         public string WebRequestEndpoint
         {
@@ -98,6 +108,15 @@ namespace Colyseus
 			}
         }
 
+        public static Settings Create()
+        {
+#if UNITY_5_3_OR_NEWER
+            return CreateInstance<Settings>();
+#else
+            return new Settings();
+#endif
+        }
+
         /// <summary>
         /// Create a copy of the provided <see cref="Settings"/> object
         /// </summary>
@@ -105,7 +124,7 @@ namespace Colyseus
         /// <returns>A new instance of <see cref="Settings"/> with values copied from the provided object</returns>
         public static Settings Clone(Settings orig)
         {
-            Settings clone = CreateInstance<Settings>();
+            Settings clone = Create();
             clone.colyseusServerAddress = orig.colyseusServerAddress;
             clone.colyseusServerPort = orig.colyseusServerPort;
             clone.useSecureProtocol = orig.useSecureProtocol;
@@ -155,7 +174,6 @@ namespace Colyseus
 	        }
 	        else
 	        {
-		        //Debug.LogError($"Get Web Request Endpoint - Error parsing server port: \"{colyseusServerPort}\"");
 		        return -1;
 	        }
         }

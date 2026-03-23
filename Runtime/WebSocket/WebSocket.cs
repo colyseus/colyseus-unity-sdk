@@ -1,410 +1,204 @@
+#if !UNITY_WEBGL || UNITY_EDITOR
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using AOT;
-using System.Runtime.InteropServices;
-using UnityEngine;
-using System.Collections;
-
-public class MainThreadUtil : MonoBehaviour
-{
-    public static MainThreadUtil Instance { get; private set; }
-    public static SynchronizationContext synchronizationContext { get; private set; }
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    public static void Setup()
-    {
-        Instance = new GameObject("MainThreadUtil")
-            .AddComponent<MainThreadUtil>();
-        synchronizationContext = SynchronizationContext.Current;
-    }
-
-    public static void Run(IEnumerator waitForUpdate)
-    {
-        synchronizationContext.Post(_ => Instance.StartCoroutine(
-                    waitForUpdate), null);
-    }
-
-    void Awake()
-    {
-        gameObject.hideFlags = HideFlags.HideAndDontSave;
-        DontDestroyOnLoad(gameObject);
-    }
-}
-
-public class MainThreadAwaiter : INotifyCompletion
-{
-    Action continuation;
-
-    public bool IsCompleted { get; set; }
-
-    public void GetResult() { }
-
-    public void Complete()
-    {
-        IsCompleted = true;
-        continuation?.Invoke();
-    }
-
-    void INotifyCompletion.OnCompleted(Action continuation)
-    {
-        this.continuation = continuation;
-    }
-}
-
-public class WaitForUpdate : CustomYieldInstruction
-{
-    public override bool keepWaiting
-    {
-        get { return false; }
-    }
-
-    public MainThreadAwaiter GetAwaiter()
-    {
-        var awaiter = new MainThreadAwaiter();
-        MainThreadUtil.Run(CoroutineWrapper(this, awaiter));
-        return awaiter;
-    }
-
-    public static IEnumerator CoroutineWrapper(IEnumerator theWorker, MainThreadAwaiter awaiter)
-    {
-        yield return theWorker;
-        awaiter.Complete();
-    }
-}
-
-/// <summary>
-/// Awaitable WaitForSeconds that works in WebGL (unlike Task.Delay).
-/// Use: await new WaitForSeconds(1.5f);
-/// </summary>
-public class WaitForSeconds
-{
-    private float _seconds;
-
-    public WaitForSeconds(float seconds)
-    {
-        _seconds = seconds;
-    }
-
-    public MainThreadAwaiter GetAwaiter()
-    {
-        var awaiter = new MainThreadAwaiter();
-        MainThreadUtil.Run(CoroutineWrapper(awaiter));
-        return awaiter;
-    }
-
-    private IEnumerator CoroutineWrapper(MainThreadAwaiter awaiter)
-    {
-        yield return new UnityEngine.WaitForSecondsRealtime(_seconds);
-        awaiter.Complete();
-    }
-}
-
 namespace NativeWebSocket
 {
-    public delegate void WebSocketOpenEventHandler();
-    public delegate void WebSocketMessageEventHandler(byte[] data);
-    public delegate void WebSocketErrorEventHandler(string errorMsg);
-    public delegate void WebSocketCloseEventHandler(int closeCode);
-
-    public enum WebSocketCloseCode
-    {
-        /* Do NOT use NotSet - it's only purpose is to indicate that the close code cannot be parsed. */
-        NotSet = 0,
-        Normal = 1000,
-        Away = 1001,
-        ProtocolError = 1002,
-        UnsupportedData = 1003,
-        Undefined = 1004,
-        NoStatus = 1005,
-        Abnormal = 1006,
-        InvalidData = 1007,
-        PolicyViolation = 1008,
-        TooBig = 1009,
-        MandatoryExtension = 1010,
-        ServerError = 1011,
-        TlsHandshakeFailure = 1015
-    }
-
-    public enum WebSocketState
-    {
-        Connecting,
-        Open,
-        Closing,
-        Closed
-    }
-
-    public interface IWebSocket
-    {
-        event WebSocketOpenEventHandler OnOpen;
-        event WebSocketMessageEventHandler OnMessage;
-        event WebSocketErrorEventHandler OnError;
-        event WebSocketCloseEventHandler OnClose;
-
-        WebSocketState State { get; }
-    }
-
-    public static class WebSocketHelpers
-    {
-        public static WebSocketCloseCode ParseCloseCodeEnum(int closeCode)
-        {
-
-            if (WebSocketCloseCode.IsDefined(typeof(WebSocketCloseCode), closeCode))
-            {
-                return (WebSocketCloseCode)closeCode;
-            }
-            else
-            {
-                return WebSocketCloseCode.Undefined;
-            }
-
-        }
-
-        public static WebSocketException GetErrorMessageFromCode(int errorCode, Exception inner)
-        {
-            switch (errorCode)
-            {
-                case -1:
-                    return new WebSocketUnexpectedException("WebSocket instance not found.", inner);
-                case -2:
-                    return new WebSocketInvalidStateException("WebSocket is already connected or in connecting state.", inner);
-                case -3:
-                    return new WebSocketInvalidStateException("WebSocket is not connected.", inner);
-                case -4:
-                    return new WebSocketInvalidStateException("WebSocket is already closing.", inner);
-                case -5:
-                    return new WebSocketInvalidStateException("WebSocket is already closed.", inner);
-                case -6:
-                    return new WebSocketInvalidStateException("WebSocket is not in open state.", inner);
-                case -7:
-                    return new WebSocketInvalidArgumentException("Cannot close WebSocket. An invalid code was specified or reason is too long.", inner);
-                default:
-                    return new WebSocketUnexpectedException("Unknown error.", inner);
-            }
-        }
-    }
-
-    public class WebSocketException : Exception
-    {
-        public WebSocketException() { }
-        public WebSocketException(string message) : base(message) { }
-        public WebSocketException(string message, Exception inner) : base(message, inner) { }
-    }
-
-    public class WebSocketUnexpectedException : WebSocketException
-    {
-        public WebSocketUnexpectedException() { }
-        public WebSocketUnexpectedException(string message) : base(message) { }
-        public WebSocketUnexpectedException(string message, Exception inner) : base(message, inner) { }
-    }
-
-    public class WebSocketInvalidArgumentException : WebSocketException
-    {
-        public WebSocketInvalidArgumentException() { }
-        public WebSocketInvalidArgumentException(string message) : base(message) { }
-        public WebSocketInvalidArgumentException(string message, Exception inner) : base(message, inner) { }
-    }
-
-    public class WebSocketInvalidStateException : WebSocketException
-    {
-        public WebSocketInvalidStateException() { }
-        public WebSocketInvalidStateException(string message) : base(message) { }
-        public WebSocketInvalidStateException(string message, Exception inner) : base(message, inner) { }
-    }
-
-    public class WaitForBackgroundThread
-    {
-        public ConfiguredTaskAwaitable.ConfiguredTaskAwaiter GetAwaiter()
-        {
-            return Task.Run(() => { }).ConfigureAwait(false).GetAwaiter();
-        }
-    }
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-
-  /// <summary>
-  /// WebSocket class bound to JSLIB.
-  /// </summary>
-  public class WebSocket : IWebSocket {
-
-    /* WebSocket JSLIB functions */
-    [DllImport ("__Internal")]
-    public static extern int WebSocketConnect (int instanceId);
-
-    [DllImport ("__Internal")]
-    public static extern int WebSocketClose (int instanceId, int code, string reason);
-
-    [DllImport ("__Internal")]
-    public static extern int WebSocketSend (int instanceId, byte[] dataPtr, int dataLength);
-
-    [DllImport ("__Internal")]
-    public static extern int WebSocketSendText (int instanceId, string message);
-
-    [DllImport ("__Internal")]
-    public static extern int WebSocketGetState (int instanceId);
-
-    protected int instanceId = -1;
-    protected Uri uri;
-
-    public event WebSocketOpenEventHandler OnOpen;
-    public event WebSocketMessageEventHandler OnMessage;
-    public event WebSocketErrorEventHandler OnError;
-    public event WebSocketCloseEventHandler OnClose;
-
-    public WebSocket (string url, Dictionary<string, string> headers = null) {
-      this.uri = new Uri(url);
-
-      if (!WebSocketFactory.isInitialized) {
-        WebSocketFactory.Initialize ();
-      }
-    }
-
-    ~WebSocket () {
-      WebSocketFactory.HandleInstanceDestroy (this.instanceId);
-    }
-
-    public int GetInstanceId () {
-      return this.instanceId;
-    }
-
-    public Task Connect () {
-      if (this.instanceId != -1) {
-        WebSocketFactory.HandleInstanceDestroy (this.instanceId);
-        WebSocketFactory.instances.Remove (this.instanceId);
-      }
-
-      this.instanceId = WebSocketFactory.WebSocketAllocate (this.uri.ToString());
-      WebSocketFactory.instances.Add (this.instanceId, this);
-
-      int ret = WebSocketConnect (this.instanceId);
-
-      if (ret < 0)
-        throw WebSocketHelpers.GetErrorMessageFromCode (ret, null);
-
-      return Task.CompletedTask;
-    }
-
-    public void CancelConnection () {
-        if (State == WebSocketState.Open)
-            Close (WebSocketCloseCode.Abnormal);
-    }
-
-    public Task Close (WebSocketCloseCode code = WebSocketCloseCode.Normal, string reason = null) {
-      int ret = WebSocketClose (this.instanceId, (int) code, reason);
-
-      if (ret < 0)
-        throw WebSocketHelpers.GetErrorMessageFromCode (ret, null);
-
-      return Task.CompletedTask;
-    }
-
-    public Task Send (byte[] data) {
-      int ret = WebSocketSend (this.instanceId, data, data.Length);
-
-      if (ret < 0)
-        throw WebSocketHelpers.GetErrorMessageFromCode (ret, null);
-
-      return Task.CompletedTask;
-    }
-
-    public Task SendText (string message) {
-      int ret = WebSocketSendText (this.instanceId, message);
-
-      if (ret < 0)
-        throw WebSocketHelpers.GetErrorMessageFromCode (ret, null);
-
-      return Task.CompletedTask;
-    }
-
-    public WebSocketState State {
-      get {
-        int state = WebSocketGetState (this.instanceId);
-
-        if (state < 0)
-          throw WebSocketHelpers.GetErrorMessageFromCode (state, null);
-
-        switch (state) {
-          case 0:
-            return WebSocketState.Connecting;
-
-          case 1:
-            return WebSocketState.Open;
-
-          case 2:
-            return WebSocketState.Closing;
-
-          case 3:
-            return WebSocketState.Closed;
-
-          default:
-            return WebSocketState.Closed;
-        }
-      }
-    }
-
-    public void DelegateOnOpenEvent () {
-        this.OnOpen?.Invoke ();
-    }
-
-    public void DelegateOnMessageEvent (byte[] data) {
-        this.OnMessage?.Invoke (data);
-    }
-
-    public void DelegateOnErrorEvent (string errorMsg) {
-        this.OnError?.Invoke (errorMsg);
-    }
-
-    public void DelegateOnCloseEvent (int closeCode) {
-        this.OnClose?.Invoke (closeCode);
-    }
-
-  }
-
-#else
-
     public class WebSocket : IWebSocket
     {
+        private static readonly SendOrPostCallback InvokeQueuedEventCallback = InvokeQueuedEvent;
+        private static readonly SendOrPostCallback DispatchQueuedMessagesCallback = DispatchQueuedMessagesOnSyncContext;
+
         public event WebSocketOpenEventHandler OnOpen;
         public event WebSocketMessageEventHandler OnMessage;
         public event WebSocketErrorEventHandler OnError;
         public event WebSocketCloseEventHandler OnClose;
 
-        protected Uri uri;
-        protected Dictionary<string, string> headers;
-        protected ClientWebSocket m_Socket = new ClientWebSocket();
+        private Uri uri;
+        private Dictionary<string, string> headers;
+        private List<string> subprotocols;
+        private ClientWebSocket m_Socket;
 
         private CancellationTokenSource m_TokenSource;
         private CancellationToken m_CancellationToken;
 
-        private readonly object OutgoingMessageLock = new object();
-        private readonly object IncomingMessageLock = new object();
+        private readonly SynchronizationContext _syncContext;
+        private List<Action> m_EventQueue = new List<Action>();
+        private List<Action> m_DispatchQueue = new List<Action>();
+        private readonly object EventQueueLock = new object();
 
+        private List<byte[]> m_MessageQueue = new List<byte[]>();
+        private List<byte[]> m_MessageDispatchQueue = new List<byte[]>();
+        private readonly object MessageQueueLock = new object();
+        private int isMessageDispatchScheduled = 0;
+
+        private readonly object OutgoingMessageLock = new object();
         private bool isSending = false;
-        private List<ArraySegment<byte>> sendBytesQueue = new List<ArraySegment<byte>>();
-        private List<ArraySegment<byte>> sendTextQueue = new List<ArraySegment<byte>>();
+        private Queue<ArraySegment<byte>> sendBytesQueue = new Queue<ArraySegment<byte>>();
+        private Queue<ArraySegment<byte>> sendTextQueue = new Queue<ArraySegment<byte>>();
 
         public WebSocket(string url, Dictionary<string, string> headers = null)
         {
             uri = new Uri(url);
-
-            if (headers == null)
-            {
-                this.headers = new Dictionary<string, string>();
-            }
-            else
-            {
-                this.headers = headers;
-            }
+            _syncContext = SynchronizationContext.Current;
+            this.headers = headers;
+            subprotocols = null;
 
             string protocol = uri.Scheme;
             if (!protocol.Equals("ws") && !protocol.Equals("wss"))
                 throw new ArgumentException("Unsupported protocol: " + protocol);
+        }
+
+        public WebSocket(string url, string subprotocol, Dictionary<string, string> headers = null)
+        {
+            uri = new Uri(url);
+            _syncContext = SynchronizationContext.Current;
+            this.headers = headers;
+            subprotocols = new List<string>(1) { subprotocol };
+
+            string protocol = uri.Scheme;
+            if (!protocol.Equals("ws") && !protocol.Equals("wss"))
+                throw new ArgumentException("Unsupported protocol: " + protocol);
+        }
+
+        public WebSocket(string url, List<string> subprotocols, Dictionary<string, string> headers = null)
+        {
+            uri = new Uri(url);
+            _syncContext = SynchronizationContext.Current;
+            this.headers = headers;
+            this.subprotocols = subprotocols;
+
+            string protocol = uri.Scheme;
+            if (!protocol.Equals("ws") && !protocol.Equals("wss"))
+                throw new ArgumentException("Unsupported protocol: " + protocol);
+        }
+
+        private void EnqueueEvent(Action action)
+        {
+            if (_syncContext != null)
+            {
+                _syncContext.Post(InvokeQueuedEventCallback, action);
+            }
+            else
+            {
+                lock (EventQueueLock)
+                {
+                    m_EventQueue.Add(action);
+                }
+            }
+        }
+
+        private void EnqueueMessage(byte[] data)
+        {
+            lock (MessageQueueLock)
+            {
+                m_MessageQueue.Add(data);
+            }
+
+            if (_syncContext != null && Interlocked.CompareExchange(ref isMessageDispatchScheduled, 1, 0) == 0)
+            {
+                _syncContext.Post(DispatchQueuedMessagesCallback, this);
+            }
+        }
+
+        private static void InvokeQueuedEvent(object action)
+        {
+            ((Action)action)();
+        }
+
+        private static void DispatchQueuedMessagesOnSyncContext(object socket)
+        {
+            ((WebSocket)socket).DispatchQueuedMessagesOnSyncContext();
+        }
+
+        private void DispatchQueuedMessagesOnSyncContext()
+        {
+            while (true)
+            {
+                DispatchQueuedMessages();
+                Interlocked.Exchange(ref isMessageDispatchScheduled, 0);
+
+                lock (MessageQueueLock)
+                {
+                    if (m_MessageQueue.Count == 0 || Interlocked.CompareExchange(ref isMessageDispatchScheduled, 1, 0) != 0)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        private void DispatchQueuedMessages()
+        {
+            if (m_MessageQueue.Count == 0)
+            {
+                return;
+            }
+
+            lock (MessageQueueLock)
+            {
+                if (m_MessageQueue.Count == 0)
+                {
+                    return;
+                }
+
+                var tmp = m_MessageDispatchQueue;
+                m_MessageDispatchQueue = m_MessageQueue;
+                m_MessageQueue = tmp;
+            }
+
+            for (int i = 0; i < m_MessageDispatchQueue.Count; i++)
+            {
+                OnMessage?.Invoke(m_MessageDispatchQueue[i]);
+            }
+
+            m_MessageDispatchQueue.Clear();
+        }
+
+        private void DispatchQueuedEvents()
+        {
+            if (m_EventQueue.Count == 0)
+            {
+                return;
+            }
+
+            lock (EventQueueLock)
+            {
+                if (m_EventQueue.Count == 0)
+                {
+                    return;
+                }
+
+                var tmp = m_DispatchQueue;
+                m_DispatchQueue = m_EventQueue;
+                m_EventQueue = tmp;
+            }
+
+            foreach (var action in m_DispatchQueue)
+            {
+                action();
+            }
+
+            m_DispatchQueue.Clear();
+        }
+
+        /// <summary>
+        /// Dispatches queued events when no SynchronizationContext is available.
+        /// Not needed when a SynchronizationContext is present (Unity, Godot, MonoGame with WebSocketGameComponent).
+        /// </summary>
+        public void DispatchMessageQueue()
+        {
+            // Hot path: dispatch messages without closure overhead
+            DispatchQueuedMessages();
+
+            // Rare events: OnOpen, OnError, OnClose
+            DispatchQueuedEvents();
         }
 
         public void CancelConnection()
@@ -421,20 +215,32 @@ namespace NativeWebSocket
 
                 m_Socket = new ClientWebSocket();
 
-                foreach (var header in headers)
+                if (headers != null)
                 {
-                    m_Socket.Options.SetRequestHeader(header.Key, header.Value);
+                    foreach (var header in headers)
+                    {
+                        m_Socket.Options.SetRequestHeader(header.Key, header.Value);
+                    }
                 }
 
-                await m_Socket.ConnectAsync(uri, m_CancellationToken);
-                OnOpen?.Invoke();
+                if (subprotocols != null)
+                {
+                    foreach (string subprotocol in subprotocols)
+                    {
+                        m_Socket.Options.AddSubProtocol(subprotocol);
+                    }
+                }
 
-                await Receive();
+                await m_Socket.ConnectAsync(uri, m_CancellationToken).ConfigureAwait(false);
+
+                EnqueueEvent(() => OnOpen?.Invoke());
+
+                await Receive().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                OnError?.Invoke(ex.Message);
-                OnClose?.Invoke((int)WebSocketCloseCode.Abnormal);
+                EnqueueEvent(() => OnError?.Invoke(ex.Message));
+                EnqueueEvent(() => OnClose?.Invoke(WebSocketCloseCode.Abnormal));
             }
             finally
             {
@@ -450,6 +256,11 @@ namespace NativeWebSocket
         {
             get
             {
+                if (m_Socket == null)
+                {
+                    return WebSocketState.Closed;
+                }
+
                 switch (m_Socket.State)
                 {
                     case System.Net.WebSockets.WebSocketState.Connecting:
@@ -473,177 +284,229 @@ namespace NativeWebSocket
 
         public Task Send(byte[] bytes)
         {
-            // return m_Socket.SendAsync(buffer, WebSocketMessageType.Binary, true, CancellationToken.None);
-            return SendMessage(sendBytesQueue, WebSocketMessageType.Binary, new ArraySegment<byte>(bytes));
+            if (bytes.Length == 0 || State != WebSocketState.Open)
+                return Task.CompletedTask;
+
+            var segment = new ArraySegment<byte>(bytes);
+
+            lock (OutgoingMessageLock)
+            {
+                if (isSending)
+                {
+                    sendBytesQueue.Enqueue(segment);
+                    return Task.CompletedTask;
+                }
+                isSending = true;
+            }
+
+            return SendAndDrainAsync(sendBytesQueue, WebSocketMessageType.Binary, segment);
         }
 
         public Task SendText(string message)
         {
+            if (State != WebSocketState.Open)
+                return Task.CompletedTask;
+
             var encoded = Encoding.UTF8.GetBytes(message);
+            if (encoded.Length == 0)
+                return Task.CompletedTask;
 
-            // m_Socket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
-            return SendMessage(sendTextQueue, WebSocketMessageType.Text, new ArraySegment<byte>(encoded, 0, encoded.Length));
-        }
-
-        private async Task SendMessage(List<ArraySegment<byte>> queue, WebSocketMessageType messageType, ArraySegment<byte> buffer)
-        {
-            // Return control to the calling method immediately.
-            // await Task.Yield ();
-
-            // Make sure we have data.
-            if (buffer.Count == 0)
-            {
-                return;
-            }
-
-            // The state of the connection is contained in the context Items dictionary.
-            bool sending;
+            var segment = new ArraySegment<byte>(encoded, 0, encoded.Length);
 
             lock (OutgoingMessageLock)
             {
-                sending = isSending;
-
-                // If not, we are now.
-                if (!isSending)
+                if (isSending)
                 {
-                    isSending = true;
+                    sendTextQueue.Enqueue(segment);
+                    return Task.CompletedTask;
                 }
+                isSending = true;
             }
 
-            if (!sending)
+            return SendAndDrainAsync(sendTextQueue, WebSocketMessageType.Text, segment);
+        }
+
+#if NET6_0_OR_GREATER
+        private Task SendAndDrainAsync(Queue<ArraySegment<byte>> queue, WebSocketMessageType messageType, ArraySegment<byte> buffer)
+        {
+            var sendTask = SendSocketAsync(buffer, messageType);
+            if (sendTask.IsCompletedSuccessfully)
             {
-                // Lock with a timeout, just in case.
-                if (!Monitor.TryEnter(m_Socket, 1000))
-                {
-                    // If we couldn't obtain exclusive access to the socket in one second, something is wrong.
-                    await m_Socket.CloseAsync(WebSocketCloseStatus.InternalServerError, string.Empty, m_CancellationToken);
-                    return;
-                }
-
-                try
-                {
-                    // Send the message synchronously.
-                    var t = m_Socket.SendAsync(buffer, messageType, true, m_CancellationToken);
-                    t.Wait(m_CancellationToken);
-                }
-                finally
-                {
-                    Monitor.Exit(m_Socket);
-
-					// Note that we've finished sending.
-					lock (OutgoingMessageLock)
-					{
-						isSending = false;
-					}
-                }
-
-                // Handle any queued messages.
-                await HandleQueue(queue, messageType);
+                return DrainQueueSync(queue, messageType);
             }
-            else
+
+            return AwaitAndDrainAsync(sendTask, queue, messageType);
+        }
+
+        private Task DrainQueueSync(Queue<ArraySegment<byte>> queue, WebSocketMessageType messageType)
+        {
+            while (true)
             {
-                // Add the message to the queue.
+                ArraySegment<byte> next;
                 lock (OutgoingMessageLock)
                 {
-                    queue.Add(buffer);
-                }
-            }
-        }
+                    if (queue.Count == 0)
+                    {
+                        isSending = false;
+                        return Task.CompletedTask;
+                    }
 
-        private async Task HandleQueue(List<ArraySegment<byte>> queue, WebSocketMessageType messageType)
-        {
-            var buffer = new ArraySegment<byte>();
-            lock (OutgoingMessageLock)
-            {
-                // Check for an item in the queue.
-                if (queue.Count > 0)
+                    next = queue.Dequeue();
+                }
+
+                var sendTask = SendSocketAsync(next, messageType);
+                if (!sendTask.IsCompletedSuccessfully)
                 {
-                    // Pull it off the top.
-                    buffer = queue[0];
-                    queue.RemoveAt(0);
+                    return AwaitAndDrainAsync(sendTask, queue, messageType);
                 }
             }
-
-            // Send that message.
-            if (buffer.Count > 0)
-            {
-                await SendMessage(queue, messageType, buffer);
-            }
         }
 
-        private List<byte[]> m_MessageList = new List<byte[]>();
-
-        // simple dispatcher for queued messages.
-        public void DispatchMessageQueue()
+        private async Task AwaitAndDrainAsync(ValueTask pendingSend, Queue<ArraySegment<byte>> queue, WebSocketMessageType messageType)
         {
-            if (m_MessageList.Count == 0)
+            try
             {
-                return;
+                await pendingSend.ConfigureAwait(false);
+
+                while (true)
+                {
+                    ArraySegment<byte> next;
+                    lock (OutgoingMessageLock)
+                    {
+                        if (queue.Count == 0)
+                            break;
+
+                        next = queue.Dequeue();
+                    }
+
+                    await SendSocketAsync(next, messageType).ConfigureAwait(false);
+                }
             }
-
-            List<byte[]> messageListCopy;
-
-            lock (IncomingMessageLock)
+            finally
             {
-                messageListCopy = new List<byte[]>(m_MessageList);
-                m_MessageList.Clear();
-            }
-
-            var len = messageListCopy.Count;
-            for (int i = 0; i < len; i++)
-            {
-                OnMessage?.Invoke(messageListCopy[i]);
+                lock (OutgoingMessageLock)
+                {
+                    isSending = false;
+                }
             }
         }
+
+        private ValueTask SendSocketAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType)
+        {
+            return m_Socket.SendAsync(
+                new ReadOnlyMemory<byte>(buffer.Array, buffer.Offset, buffer.Count),
+                messageType,
+                true,
+                m_CancellationToken);
+        }
+#else
+        private Task SendAndDrainAsync(Queue<ArraySegment<byte>> queue, WebSocketMessageType messageType, ArraySegment<byte> buffer)
+        {
+            // Try synchronous fast path: avoid async state machine when SendAsync completes inline
+            var sendTask = m_Socket.SendAsync(buffer, messageType, true, m_CancellationToken);
+            if (sendTask.Status == TaskStatus.RanToCompletion)
+            {
+                return DrainQueueSync(queue, messageType);
+            }
+
+            return AwaitAndDrainAsync(sendTask, queue, messageType);
+        }
+
+        private Task DrainQueueSync(Queue<ArraySegment<byte>> queue, WebSocketMessageType messageType)
+        {
+            while (true)
+            {
+                ArraySegment<byte> next;
+                lock (OutgoingMessageLock)
+                {
+                    if (queue.Count == 0)
+                    {
+                        isSending = false;
+                        return Task.CompletedTask;
+                    }
+
+                    next = queue.Dequeue();
+                }
+
+                var sendTask = m_Socket.SendAsync(next, messageType, true, m_CancellationToken);
+                if (sendTask.Status != TaskStatus.RanToCompletion)
+                {
+                    // This send went async — fall through to async drain
+                    return AwaitAndDrainAsync(sendTask, queue, messageType);
+                }
+            }
+        }
+
+        private async Task AwaitAndDrainAsync(Task pendingSend, Queue<ArraySegment<byte>> queue, WebSocketMessageType messageType)
+        {
+            try
+            {
+                await pendingSend.ConfigureAwait(false);
+
+                while (true)
+                {
+                    ArraySegment<byte> next;
+                    lock (OutgoingMessageLock)
+                    {
+                        if (queue.Count == 0)
+                            break;
+
+                        next = queue.Dequeue();
+                    }
+
+                    await m_Socket.SendAsync(next, messageType, true, m_CancellationToken).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                lock (OutgoingMessageLock)
+                {
+                    isSending = false;
+                }
+            }
+        }
+#endif
 
         public async Task Receive()
         {
-            int closeCode = (int)WebSocketCloseCode.Abnormal;
-            await new WaitForBackgroundThread();
-
-            ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[8192]);
+            WebSocketCloseCode closeCode = WebSocketCloseCode.Abnormal;
+            ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[65536]);
             try
             {
                 while (m_Socket.State == System.Net.WebSockets.WebSocketState.Open)
                 {
-                    WebSocketReceiveResult result = null;
+                    var result = await m_Socket.ReceiveAsync(buffer, m_CancellationToken).ConfigureAwait(false);
 
-                    using (var ms = new MemoryStream())
+                    if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        do
+                        await Close().ConfigureAwait(false);
+                        closeCode = WebSocketHelpers.ParseCloseCodeEnum((int)result.CloseStatus);
+                        break;
+                    }
+
+                    if (result.EndOfMessage)
+                    {
+                        // Fast path: single-frame message, avoid MemoryStream
+                        var data = new byte[result.Count];
+                        Buffer.BlockCopy(buffer.Array, buffer.Offset, data, 0, result.Count);
+                        EnqueueMessage(data);
+                    }
+                    else
+                    {
+                        // Multi-frame message: accumulate in MemoryStream
+                        using (var ms = new MemoryStream())
                         {
-                            result = await m_Socket.ReceiveAsync(buffer, m_CancellationToken);
                             ms.Write(buffer.Array, buffer.Offset, result.Count);
-                        }
-                        while (!result.EndOfMessage);
 
-                        ms.Seek(0, SeekOrigin.Begin);
-
-                        if (result.MessageType == WebSocketMessageType.Text)
-                        {
-                            lock (IncomingMessageLock)
+                            do
                             {
-                                m_MessageList.Add(ms.ToArray());
+                                result = await m_Socket.ReceiveAsync(buffer, m_CancellationToken).ConfigureAwait(false);
+                                ms.Write(buffer.Array, buffer.Offset, result.Count);
                             }
+                            while (!result.EndOfMessage);
 
-                            //using (var reader = new StreamReader(ms, Encoding.UTF8))
-                            //{
-                            //    string message = reader.ReadToEnd();
-                            //    OnMessage?.Invoke(this, new MessageEventArgs(message));
-                            //}
-                        }
-                        else if (result.MessageType == WebSocketMessageType.Binary)
-                        {
-                            lock (IncomingMessageLock)
-                            {
-                                m_MessageList.Add(ms.ToArray());
-                            }
-                        }
-                        else if (result.MessageType == WebSocketMessageType.Close)
-                        {
-                            await Close();
-                            closeCode = (int)result.CloseStatus;
-                            break;
+                            var data = ms.ToArray();
+                            EnqueueMessage(data);
                         }
                     }
                 }
@@ -654,140 +517,24 @@ namespace NativeWebSocket
             }
             finally
             {
-                await new WaitForUpdate();
-                OnClose?.Invoke(closeCode);
+                EnqueueEvent(() => OnClose?.Invoke(closeCode));
             }
         }
 
-        public async Task Close()
+        public async Task Close(WebSocketCloseCode code = WebSocketCloseCode.Normal, string reason = null)
         {
-            if (State == WebSocketState.Open)
-            {
-                await m_Socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, m_CancellationToken);
-            }
+            if (State != WebSocketState.Open)
+                return;
+
+            await m_Socket.CloseAsync((WebSocketCloseStatus)(int)code, reason ?? string.Empty, CancellationToken.None).ConfigureAwait(false);
         }
     }
-#endif
-
-    ///
-    /// Factory
-    ///
 
     /// <summary>
-    /// Class providing static access methods to work with JSLIB WebSocket or WebSocketSharp interface
+    /// Factory for creating WebSocket instances.
     /// </summary>
     public static class WebSocketFactory
     {
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-    /* Map of websocket instances */
-    public static Dictionary<Int32, WebSocket> instances = new Dictionary<Int32, WebSocket> ();
-
-    /* Delegates */
-    public delegate void OnOpenCallback (int instanceId);
-    public delegate void OnMessageCallback (int instanceId, System.IntPtr msgPtr, int msgSize);
-    public delegate void OnErrorCallback (int instanceId, System.IntPtr errorPtr);
-    public delegate void OnCloseCallback (int instanceId, int closeCode);
-
-    /* WebSocket JSLIB callback setters and other functions */
-    [DllImport ("__Internal")]
-    public static extern int WebSocketAllocate (string url);
-
-    [DllImport ("__Internal")]
-    public static extern void WebSocketFree (int instanceId);
-
-    [DllImport ("__Internal")]
-    public static extern void WebSocketSetOnOpen (OnOpenCallback callback);
-
-    [DllImport ("__Internal")]
-    public static extern void WebSocketSetOnMessage (OnMessageCallback callback);
-
-    [DllImport ("__Internal")]
-    public static extern void WebSocketSetOnError (OnErrorCallback callback);
-
-    [DllImport ("__Internal")]
-    public static extern void WebSocketSetOnClose (OnCloseCallback callback);
-
-    /* If callbacks was initialized and set */
-    public static bool isInitialized = false;
-
-    /*
-     * Initialize WebSocket callbacks to JSLIB
-     */
-    public static void Initialize () {
-
-      WebSocketSetOnOpen (DelegateOnOpenEvent);
-      WebSocketSetOnMessage (DelegateOnMessageEvent);
-      WebSocketSetOnError (DelegateOnErrorEvent);
-      WebSocketSetOnClose (DelegateOnCloseEvent);
-
-      isInitialized = true;
-
-    }
-
-    /// <summary>
-    /// Called when instance is destroyed (by destructor)
-    /// Method removes instance from map and free it in JSLIB implementation
-    /// </summary>
-    /// <param name="instanceId">Instance identifier.</param>
-    public static void HandleInstanceDestroy (int instanceId) {
-
-      instances.Remove (instanceId);
-      WebSocketFree (instanceId);
-
-    }
-
-    [MonoPInvokeCallback (typeof (OnOpenCallback))]
-    public static void DelegateOnOpenEvent (int instanceId) {
-
-      WebSocket instanceRef;
-
-      if (instances.TryGetValue (instanceId, out instanceRef)) {
-        instanceRef.DelegateOnOpenEvent ();
-      }
-
-    }
-
-    [MonoPInvokeCallback (typeof (OnMessageCallback))]
-    public static void DelegateOnMessageEvent (int instanceId, System.IntPtr msgPtr, int msgSize) {
-
-      WebSocket instanceRef;
-
-      if (instances.TryGetValue (instanceId, out instanceRef)) {
-        byte[] msg = new byte[msgSize];
-        Marshal.Copy (msgPtr, msg, 0, msgSize);
-
-        instanceRef.DelegateOnMessageEvent (msg);
-      }
-
-    }
-
-    [MonoPInvokeCallback (typeof (OnErrorCallback))]
-    public static void DelegateOnErrorEvent (int instanceId, System.IntPtr errorPtr) {
-
-      WebSocket instanceRef;
-
-      if (instances.TryGetValue (instanceId, out instanceRef)) {
-
-        string errorMsg = Marshal.PtrToStringAuto (errorPtr);
-        instanceRef.DelegateOnErrorEvent (errorMsg);
-
-      }
-
-    }
-
-    [MonoPInvokeCallback (typeof (OnCloseCallback))]
-    public static void DelegateOnCloseEvent (int instanceId, int closeCode) {
-
-      WebSocket instanceRef;
-
-      if (instances.TryGetValue (instanceId, out instanceRef)) {
-        instanceRef.DelegateOnCloseEvent (closeCode);
-      }
-
-    }
-#endif
-
         /// <summary>
         /// Create WebSocket client instance
         /// </summary>
@@ -797,7 +544,7 @@ namespace NativeWebSocket
         {
             return new WebSocket(url);
         }
-
     }
-
 }
+
+#endif

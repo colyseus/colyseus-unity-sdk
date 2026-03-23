@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using UnityEngine;
 using GameDevWare.Serialization;
 
 namespace Colyseus
@@ -77,7 +76,7 @@ namespace Colyseus
 					}
 					catch (Exception e)
 					{
-						Debug.LogWarning("Colyseus.Auth: cannot convert " + targetType.ToString() + " property '" + field.Name + "' from " + rawUser.Values[i].GetType() + " to " + field.FieldType + " (" + e.Message + ")");
+						ColyseusContext.Logger.LogWarning("Colyseus.Auth: cannot convert " + targetType.ToString() + " property '" + field.Name + "' from " + rawUser.Values[i].GetType() + " to " + field.FieldType + " (" + e.Message + ")");
 					}
 				}
 			}
@@ -120,7 +119,7 @@ namespace Colyseus
 		public Auth(Client client)
 		{
 			_client = client;
-			Token = PlayerPrefs.GetString(TOKEN_CACHE_KEY);
+			Token = ColyseusContext.TokenStorage.GetToken(TOKEN_CACHE_KEY);
 		}
 
 		public string Token
@@ -150,7 +149,7 @@ namespace Colyseus
 					});
 				} catch (Exception e)
 				{
-					Debug.LogWarning(e);
+					ColyseusContext.Logger.LogWarning(e.ToString());
 					emitChange(new AuthData<object> { user = null, token = null });
 				}
 			}
@@ -255,11 +254,11 @@ namespace Colyseus
 
 			if (!string.IsNullOrEmpty(Token))
 			{
-				PlayerPrefs.SetString(TOKEN_CACHE_KEY, authData.Token);
+				ColyseusContext.TokenStorage.SetToken(TOKEN_CACHE_KEY, authData.Token);
 			}
 			else
 			{
-				PlayerPrefs.DeleteKey(TOKEN_CACHE_KEY);
+				ColyseusContext.TokenStorage.DeleteToken(TOKEN_CACHE_KEY);
 			}
 
 			OnChangeHandlers.ForEach((handler) =>
@@ -281,7 +280,7 @@ namespace Colyseus
 				}
 				else
 				{
-					Debug.Log("Not triggering...");
+					ColyseusContext.Logger.Log("Not triggering...");
 				}
 			});
 		}
