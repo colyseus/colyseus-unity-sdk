@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-NATIVEWEBSOCKET_BRANCH="upm-2.0"
+NATIVEWEBSOCKET_BRANCH="upm-2"
 NATIVEWEBSOCKET_REPO="https://github.com/endel/NativeWebSocket.git"
 NATIVEWEBSOCKET_DIR="Assets/Colyseus/Runtime/WebSocket"
 
