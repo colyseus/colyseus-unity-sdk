@@ -18,7 +18,12 @@
     <PackageProjectUrl>https://colyseus.io/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/colyseus/colyseus-unity-sdk</RepositoryUrl>
     <PackageTags>colyseus;multiplayer;networking;authoritative;netcode;gamedev</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Colyseus.NativeWebSocket" Version="2.0.0" />
