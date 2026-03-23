@@ -1,8 +1,6 @@
-using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NativeWebSocket;
 // ReSharper disable InconsistentNaming
 
 namespace Colyseus
@@ -10,51 +8,59 @@ namespace Colyseus
     /// <summary>
     ///     WebSocket connection representation with some custom functionality
     /// </summary>
-    public class Connection : WebSocket
+    public class Connection
     {
+        public event WebSocketOpenEventHandler OnOpen;
+        public event WebSocketMessageEventHandler OnMessage;
+        public event WebSocketErrorEventHandler OnError;
+        public event WebSocketCloseEventHandler OnClose;
+
         /// <summary>
         ///     Is the connection currently open
         /// </summary>
         public bool IsOpen;
 
-        /// <summary>
-        ///     Flag to keep processing function alive
-        /// </summary>
-        /// <remarks>Set to true via <see cref="_OnOpen" />, false via <see cref="_OnClose" /></remarks>
-        protected bool ProcessingMessageQueue;
+        private WebSocketTransport _transport;
+        private string _url;
+        private Dictionary<string, string> _headers;
 
-        public Connection(string url, Dictionary<string, string> headers) : base(url, headers)
+        public Connection(string url, Dictionary<string, string> headers)
         {
-            Initialize();
+            _url = url;
+            _headers = headers;
         }
 
-        private void Initialize()
+        public async Task Connect()
         {
-            OnOpen += _OnOpen;
-            OnClose += _OnClose;
+            _transport = new WebSocketTransport();
+
+            _transport.OnOpen += () => { IsOpen = true; OnOpen?.Invoke(); };
+            _transport.OnMessage += (data) => OnMessage?.Invoke(data);
+            _transport.OnError += (msg) => OnError?.Invoke(msg);
+            _transport.OnClose += (code) => { IsOpen = false; OnClose?.Invoke(code); };
+
+            await _transport.Connect(_url, _headers);
         }
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-#else
-        /// <summary>
-        ///     A while loop that runs as long as the connection is open, triggering <see cref="WebSocket.DispatchMessageQueue" />
-        /// </summary>
-        public async void ProcessMessageQueue()
+        public Task Send(byte[] data)
         {
-            ProcessingMessageQueue = true;
-            while (ProcessingMessageQueue)
-            {
-                DispatchMessageQueue();
-
-                // Switch context
-                await Task.Yield();
-            }
+            return _transport.Send(data);
         }
-#endif
+
+        public Task Close()
+        {
+            return _transport.Close();
+        }
+
 		public void Drop()
 		{
 			CancelConnection();
 		}
+
+        public void CancelConnection()
+        {
+            _transport?.CancelConnection();
+        }
 
         /// <summary>
         ///     Reconnect to the same endpoint with a new reconnection token
@@ -62,7 +68,7 @@ namespace Colyseus
         /// <param name="reconnectionToken">The token to use for reconnection</param>
         public async Task Reconnect(string reconnectionToken)
         {
-            // Build query string manually (System.Web.HttpUtility is not available in Unity)
+            var uri = new Uri(_url);
             var queryParams = new List<string>();
 
             // Preserve existing query parameters
@@ -87,39 +93,10 @@ namespace Colyseus
             queryParams.Add("skipHandshake=1");
 
             var uriBuilder = new UriBuilder(uri) { Query = string.Join("&", queryParams) };
-            uri = uriBuilder.Uri;
+            _url = uriBuilder.ToString();
 
-            Debug.Log($"Reconnecting to {uri}");
+            ColyseusContext.Logger.Log($"Reconnecting to {_url}");
             await Connect();
         }
-
-        /// <summary>
-        ///     Functionality to run when connection is opened
-        /// </summary>
-        /// <remarks>Kick starts the <see cref="ProcessMessageQueue" /> while loop</remarks>
-        protected void _OnOpen()
-        {
-            IsOpen = true;
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-#else
-            ProcessMessageQueue();
-#endif
-        }
-
-        /// <summary>
-        ///     Functionality to run when a connection closes
-        /// </summary>
-        /// <remarks>
-        ///     Sets the <see cref="ProcessingMessageQueue" /> flag to false, stopping the
-        ///     <see cref="ProcessingMessageQueue" /> while loop
-        /// </remarks>
-        /// <param name="code">The cause of the socket closure</param>
-        protected void _OnClose(int code)
-        {
-            ProcessingMessageQueue = false;
-            IsOpen = false;
-        }
-
     }
 }

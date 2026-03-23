@@ -1,6 +1,9 @@
 # Server build files
 Server/build
 
+# NuGet Dependencies
+/Assets/Colyseus/Runtime/WebSocket
+
 #User Specific
 *.userprefs
 *.usertasks
@@ -37,6 +40,7 @@ package-lock.json
 ExportedObj/
 .consulo/
 *.csproj
+!nuget/**/*.csproj
 *.unityproj
 *.sln
 *.suo
@@ -46,6 +50,9 @@ ExportedObj/
 *.pidb
 *.booproj
 *.svd
+
+# Godot
+*.uid
 
 # Unity3D Generated File On Crash Reports
 sysinfo.txt

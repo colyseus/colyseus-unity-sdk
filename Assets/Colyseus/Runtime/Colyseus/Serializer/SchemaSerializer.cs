@@ -49,11 +49,6 @@ namespace Colyseus
 		/// <inheritdoc />
 		public void Handshake(byte[] bytes, int offset)
 		{
-			System.Type targetType = typeof(T);
-
-			System.Type[] allTypes = targetType.Assembly.GetTypes();
-			List<System.Type> namespaceSchemaTypes = new List<System.Type>(Array.FindAll(allTypes, t => t.Namespace == targetType.Namespace && typeof(Schema.Schema).IsAssignableFrom( targetType)));
-
 			Iterator it = new Iterator { Offset = offset };
 
 			var reflectionDecoder = new Decoder<Reflection>();
@@ -61,6 +56,17 @@ namespace Colyseus
 
 			var reflection = reflectionDecoder.State;
 			var types = reflection.types.items.ToArray();
+
+			if (typeof(T) == typeof(DynamicSchema))
+			{
+				HandshakeDynamic(reflection, types);
+				return;
+			}
+
+			System.Type targetType = typeof(T);
+
+			System.Type[] allTypes = targetType.Assembly.GetTypes();
+			List<System.Type> namespaceSchemaTypes = new List<System.Type>(Array.FindAll(allTypes, t => t.Namespace == targetType.Namespace && typeof(Schema.Schema).IsAssignableFrom( targetType)));
 
 			for (int i = 0; i < reflection.types.Count; i++)
 			{
@@ -79,8 +85,45 @@ namespace Colyseus
 				}
 				else
 				{
-					UnityEngine.Debug.LogWarning(
+					ColyseusContext.Logger.LogWarning(
 						"Local schema mismatch from server. Use \"schema-codegen\" to generate up-to-date local definitions.");
+				}
+			}
+		}
+
+		private void HandshakeDynamic(Reflection reflection, ReflectionType[] types)
+		{
+			Decoder.DynamicDefinitions = new Dictionary<float, DynamicTypeDefinition>();
+
+			for (int i = 0; i < reflection.types.Count; i++)
+			{
+				var reflectionType = reflection.types[i];
+				var reflectionFields = GetFieldsFromType(reflectionType, types);
+
+				var definition = new DynamicTypeDefinition();
+				definition.TypeId = reflectionType.id;
+
+				for (int j = 0; j < reflectionFields.Count; j++)
+				{
+					var field = reflectionFields[j];
+					definition.ParseFieldType(j, field.name, field.type, field.referencedType);
+				}
+
+				Decoder.DynamicDefinitions[reflectionType.id] = definition;
+				Decoder.Context.SetTypeId(typeof(DynamicSchema), reflectionType.id);
+			}
+
+			// Assign root definition
+			var rootTypeId = reflection.rootType >= 0
+				? reflection.rootType
+				: (reflection.types.Count > 0 ? reflection.types[0].id : -1);
+
+			if (rootTypeId >= 0)
+			{
+				var rootState = Decoder.State as DynamicSchema;
+				if (rootState != null && Decoder.DynamicDefinitions.TryGetValue(rootTypeId, out var rootDef))
+				{
+					rootState.Definition = rootDef;
 				}
 			}
 		}

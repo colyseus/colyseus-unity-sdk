@@ -26,8 +26,13 @@ jobs:
     needs: [checkSemver]
     if: needs.checkSemver.outputs.semver-updated == 'true'
     steps:
-      # Copy correct directory into upm branch
       - uses: actions/checkout@v2
+
+      - name: Fetch NativeWebSocket
+        run: bash unity-setup.sh
+
+      - name: Remove test symlink
+        run: rm -rf Assets/Colyseus/Tests
 
       - name: Push package directory to subtree
         uses: s0/git-publish-subdir-action@develop
@@ -44,6 +49,10 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2
+    - name: Fetch NativeWebSocket
+      run: bash unity-setup.sh
+    - name: Remove test symlink
+      run: rm -rf Assets/Colyseus/Tests
     - name: Gather files
       run: |
         echo "Assets/Colyseus.meta" > metaList

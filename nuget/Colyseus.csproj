@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>Colyseus</AssemblyName>
+    <RootNamespace>Colyseus</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>true</IsPackable>
+
+    <!-- NuGet package metadata (version is read from Assets/Colyseus/package.json) -->
+    <PackageId>Colyseus</PackageId>
+    <Authors>Endel Dreyer</Authors>
+    <Description>Colyseus Multiplayer SDK — engine-agnostic core (Schema serialization, matchmaking, rooms).</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://colyseus.io/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/colyseus/colyseus-unity-sdk</RepositoryUrl>
+    <PackageTags>colyseus;multiplayer;networking;authoritative;netcode;gamedev</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Colyseus.NativeWebSocket" Version="2.0.0" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+  </ItemGroup>
+
+  <!-- Core SDK files (engine-agnostic) -->
+  <ItemGroup>
+    <Compile Include="../Assets/Colyseus/Runtime/Colyseus/**/*.cs"
+             Exclude="../Assets/Colyseus/Runtime/Colyseus/Unity/**/*.cs;../Assets/Colyseus/Runtime/Colyseus/Manager.cs;../Assets/Colyseus/Runtime/Colyseus/Utils/UnityWebRequestAwaiter.cs;../Assets/Colyseus/Runtime/Colyseus/Utils/ExtensionMethods.cs" />
+    <Compile Include="../Assets/Colyseus/Runtime/GameDevWare.Serialization/**/*.cs" />
+  </ItemGroup>
+
+  <!-- Test files -->
+  <ItemGroup>
+    <Compile Include="**/*.cs" Exclude="obj/**;bin/**" />
+  </ItemGroup>
+
+  <!-- Read version from UPM package.json -->
+  <Target Name="SetVersionFromPackageJson" BeforeTargets="PrepareForBuild;GenerateNuspec">
+    <Exec Command="python3 -c &quot;import json; print(json.load(open('$(MSBuildProjectDirectory)/../Assets/Colyseus/package.json'))['version'])&quot;" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="PackageVersion" />
+    </Exec>
+  </Target>
+
+</Project>

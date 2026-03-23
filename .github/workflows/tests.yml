@@ -1,0 +1,72 @@
+name: Tests
+
+on:
+  push:
+    branches: [master, universal]
+  pull_request:
+    branches: [master, universal]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Run unit tests
+        run: dotnet test nuget/Colyseus.csproj --filter "FullyQualifiedName!~IntegrationTest" --verbosity normal
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Clone test server
+        run: git clone https://github.com/colyseus/sdks-test-server.git sdks-test-server
+
+      - name: Install test server dependencies
+        working-directory: sdks-test-server
+        run: npm install
+
+      - name: Start test server
+        working-directory: sdks-test-server
+        run: npx tsx src/index.ts > ../server.log 2>&1 &
+
+      - name: Wait for server to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:2567 > /dev/null 2>&1; then
+              echo "Server is ready!"
+              exit 0
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 1
+          done
+          echo "Server failed to start"
+          cat server.log
+          exit 1
+
+      - name: Run integration tests
+        run: dotnet test nuget/Colyseus.csproj --filter "FullyQualifiedName~IntegrationTest" --verbosity normal
+
+      - name: Print server logs
+        if: always()
+        run: cat server.log || true

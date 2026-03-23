@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Colyseus.Schema
 {
@@ -84,7 +83,7 @@ namespace Colyseus.Schema
         {
             if (!refCounts.ContainsKey(refId))
             {
-                Debug.Log("trying to remove refId that doesn't exist: " + refId);
+                ColyseusContext.Logger.Log("trying to remove refId that doesn't exist: " + refId);
                 return false;
             }
 
