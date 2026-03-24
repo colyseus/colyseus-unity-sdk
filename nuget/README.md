@@ -15,6 +15,12 @@ Works with Unity, Godot (C#), MonoGame, and any .NET project.
 dotnet add package Colyseus
 ```
 
+## Threading
+
+When the client is created on a thread with a `SynchronizationContext` (Unity, Godot C#), Colyseus posts WebSocket callbacks back to that context automatically.
+
+For engines without one, either register an external dispatcher through `ColyseusContext.RegisterWebSocketForDispatch`, or call `room.Connection.DispatchMessageQueue()` from your update loop.
+
 ## Quick Example
 
 ```csharp

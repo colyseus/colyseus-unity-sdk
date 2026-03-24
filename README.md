@@ -34,9 +34,11 @@ bash unity-setup.sh
 
 This is required before opening the project in Unity. The fetched files are gitignored and bundled automatically during CI for UPM and `.unitypackage` releases.
 
-### NuGet / MonoGame
+### NuGet / Godot / MonoGame
 
 External dependencies are resolved via NuGet packages — no setup script needed. The SDK is available as the `Colyseus` NuGet package, which depends on `Colyseus.NativeWebSocket`.
+
+When the client is created on an engine main thread with a `SynchronizationContext` (Unity, Godot C#), WebSocket callbacks are marshaled back there automatically. Engines without one can register an external dispatcher through `ColyseusContext.RegisterWebSocketForDispatch`, or call `room.Connection.DispatchMessageQueue()` from their update loop.
 
 ## Running the test server
 
