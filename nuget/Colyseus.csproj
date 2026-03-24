@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>netstandard2.1;net8.0;net10.0</TargetFrameworks>
     <LangVersion>9.0</LangVersion>
     <AssemblyName>Colyseus</AssemblyName>
     <RootNamespace>Colyseus</RootNamespace>
