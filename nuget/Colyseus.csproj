@@ -3,6 +3,7 @@
   <PropertyGroup>
     <!-- <TargetFrameworks>netstandard2.1;net8.0;net10.0</TargetFrameworks> -->
     <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+    <NoWarn>NU5128</NoWarn>
     <LangVersion>9.0</LangVersion>
     <AssemblyName>Colyseus</AssemblyName>
     <RootNamespace>Colyseus</RootNamespace>
@@ -10,6 +11,8 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <IsTestProject Condition="'$(TargetFramework)' != 'netstandard2.1'">true</IsTestProject>
     <IsPackable>true</IsPackable>
+    <!-- Only ship the netstandard2.1 library in the NuGet package (net8.0 is for tests only) -->
+    <IncludeBuildOutput Condition="'$(TargetFramework)' == 'net8.0'">false</IncludeBuildOutput>
 
     <!-- NuGet package metadata (version is read from Assets/Colyseus/package.json) -->
     <PackageId>Colyseus</PackageId>
@@ -43,9 +46,9 @@
     <Compile Include="../Assets/Colyseus/Runtime/GameDevWare.Serialization/**/*.cs" />
   </ItemGroup>
 
-  <!-- Test files (only for runnable targets) -->
+  <!-- Test files (compile for testing, but exclude from NuGet package) -->
   <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
-    <Compile Include="**/*.cs" Exclude="obj/**;bin/**" />
+    <Compile Include="tests/**/*.cs" />
   </ItemGroup>
 
   <!-- Read version from UPM package.json -->
