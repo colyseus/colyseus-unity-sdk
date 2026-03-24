@@ -62,6 +62,17 @@ namespace Colyseus
             _transport?.CancelConnection();
         }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
+        /// <summary>
+        /// Dispatch queued WebSocket callbacks manually from a custom game loop.
+        /// This is only needed when no SynchronizationContext or external dispatcher is available.
+        /// </summary>
+        public void DispatchMessageQueue()
+        {
+            _transport?.DispatchMessageQueue();
+        }
+#endif
+
         /// <summary>
         ///     Reconnect to the same endpoint with a new reconnection token
         /// </summary>

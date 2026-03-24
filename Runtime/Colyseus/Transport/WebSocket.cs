@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Colyseus
@@ -11,37 +12,53 @@ namespace Colyseus
         public event WebSocketErrorEventHandler OnError;
         public event WebSocketCloseEventHandler OnClose;
 
+        private readonly object _dispatchLock = new object();
         private NativeWebSocket.WebSocket _ws;
-        private bool _processingMessages;
+        private bool _usesSharedDispatchLoop;
+
+        internal static bool ShouldUseSharedDispatchLoop(SynchronizationContext synchronizationContext)
+        {
+            return ColyseusContext.RegisterWebSocketForDispatch == null && synchronizationContext == null;
+        }
 
         public async Task Connect(string url, Dictionary<string, string> headers)
         {
-            _ws = new NativeWebSocket.WebSocket(url, headers);
+            var synchronizationContext = SynchronizationContext.Current;
+            var socket = new NativeWebSocket.WebSocket(url, headers);
+            _ws = socket;
+            _usesSharedDispatchLoop = false;
 
-            _ws.OnOpen += () => OnOpen?.Invoke();
-            _ws.OnMessage += (data) => OnMessage?.Invoke(data);
-            _ws.OnError += (msg) => OnError?.Invoke(msg);
-            _ws.OnClose += (code) =>
+            socket.OnOpen += () => OnOpen?.Invoke();
+            socket.OnMessage += (data) => OnMessage?.Invoke(data);
+            socket.OnError += (msg) => OnError?.Invoke(msg);
+            socket.OnClose += (code) =>
             {
-                _processingMessages = false;
-                ColyseusContext.UnregisterWebSocketForDispatch?.Invoke(_ws);
+                ColyseusContext.UnregisterWebSocketForDispatch?.Invoke(socket);
+#if !UNITY_WEBGL || UNITY_EDITOR
+                lock (_dispatchLock)
+                {
+                    _usesSharedDispatchLoop = false;
+                }
+
+                WebSocketDispatchLoop.Unregister(this);
+#endif
                 OnClose?.Invoke((int)code);
             };
 
             if (ColyseusContext.RegisterWebSocketForDispatch != null)
             {
-                // External dispatcher (MonoGame, Godot, etc.) handles DispatchMessageQueue
-                ColyseusContext.RegisterWebSocketForDispatch(_ws);
+                // External dispatcher (MonoGame, custom engine loop, etc.) handles DispatchMessageQueue
+                ColyseusContext.RegisterWebSocketForDispatch(socket);
             }
 #if !UNITY_WEBGL || UNITY_EDITOR
-            else
+            else if (ShouldUseSharedDispatchLoop(synchronizationContext))
             {
-                // Fallback: self-dispatch via Task.Yield() loop
-                ProcessMessageQueue();
+                _usesSharedDispatchLoop = true;
+                WebSocketDispatchLoop.Register(this);
             }
 #endif
 
-            await _ws.Connect();
+            await socket.Connect();
         }
 
         public Task Send(byte[] data) => _ws.Send(data);
@@ -51,20 +68,30 @@ namespace Colyseus
         public void CancelConnection() => _ws.CancelConnection();
 
 #if !UNITY_WEBGL || UNITY_EDITOR
-        private async void ProcessMessageQueue()
+        public void DispatchMessageQueue()
         {
-            _processingMessages = true;
-            try
+            lock (_dispatchLock)
             {
-                while (_processingMessages)
+                if (_usesSharedDispatchLoop)
                 {
-                    _ws?.DispatchMessageQueue();
-                    await Task.Yield();
+                    _usesSharedDispatchLoop = false;
+                    WebSocketDispatchLoop.Unregister(this);
                 }
+
+                _ws?.DispatchMessageQueue();
             }
-            catch (Exception e)
+        }
+
+        internal void DispatchMessageQueueFromSharedLoop()
+        {
+            lock (_dispatchLock)
             {
-                ColyseusContext.Logger?.LogError($"ProcessMessageQueue error: {e.Message}");
+                if (!_usesSharedDispatchLoop)
+                {
+                    return;
+                }
+
+                _ws?.DispatchMessageQueue();
             }
         }
 #endif

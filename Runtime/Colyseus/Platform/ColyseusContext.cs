@@ -10,7 +10,8 @@ namespace Colyseus
 
         /// <summary>
         /// When set, WebSocketTransport registers websockets here for external
-        /// dispatching (e.g. MonoGame game loop) instead of its own Task.Yield() loop.
+        /// dispatching (e.g. MonoGame or a custom engine loop) instead of relying
+        /// on SynchronizationContext dispatch or the shared fallback dispatcher.
         /// </summary>
         public static Action<NativeWebSocket.WebSocket> RegisterWebSocketForDispatch { get; set; }
         public static Action<NativeWebSocket.WebSocket> UnregisterWebSocketForDispatch { get; set; }
