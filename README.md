@@ -14,11 +14,9 @@
     <img src="https://img.shields.io/discord/525739117951320081.svg?style=for-the-badge&colorB=7581dc&logo=discord&logoColor=white">
   </a>
   <h3>
-     Colyseus Multiplayer SDK for <a href="https://unity3d.com/">Unity</a> <br /><a href="https://docs.colyseus.io/getting-started/unity">View documentation</a>
+     Colyseus Multiplayer SDK for C# <br />For <a href="https://docs.colyseus.io/getting-started/unity">Unity</a>, <a href="https://docs.colyseus.io/getting-started/monogame">MonoGame</a>, Godot Mono, etc.<br />
   </h3>
 </div>
-
-## Colyseus C#/Mono SDK (Unity, Godot Mono, MonoGame, etc.)
 
 > **Note:** This README covers development and contributing to the SDK. For end-user installation and usage, see the [Documentation](https://docs.colyseus.io/) ([Unity](https://docs.colyseus.io/getting-started/unity) | [MonoGame](https://docs.colyseus.io/getting-started/monogame) | [Godot](https://docs.colyseus.io/getting-started/godot)).
 
