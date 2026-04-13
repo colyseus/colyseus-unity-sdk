@@ -4,6 +4,9 @@ using GameDevWare.Serialization.MessagePack;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for <see cref="MessagePackTimestamp"/> values.
+	/// </summary>
 	public class MsgPackTimestampSerializer : TypeSerializer
 	{
 		private const string SECONDS_MEMBER_NAME = "$seconds";
@@ -12,6 +15,7 @@ namespace GameDevWare.Serialization.Serializers
 		/// <inheritdoc />
 		public override Type SerializedType { get { return typeof(MessagePackTimestamp); } }
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader.RawValue is MessagePackTimestamp)
@@ -47,6 +51,7 @@ namespace GameDevWare.Serialization.Serializers
 			var value = new MessagePackTimestamp(seconds, nanoSeconds);
 			return value;
 		}
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (value == null)

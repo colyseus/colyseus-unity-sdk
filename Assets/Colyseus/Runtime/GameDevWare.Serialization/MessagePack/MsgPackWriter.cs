@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -20,8 +20,14 @@ using System.Linq;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.MessagePack
 {
+	/// <summary>
+	/// Represents a writer that provides fast, non-cached, forward-only access to MessagePack encoded data.
+	/// </summary>
 	public class MsgPackWriter : IJsonWriter
 	{
+		/// <summary>
+		/// The default size of the internal buffer.
+		/// </summary>
 		public const int DEFAULT_BUFFER_SIZE = 32;
 
 		private readonly SerializationContext context;
@@ -30,11 +36,17 @@ namespace GameDevWare.Serialization.MessagePack
 		private readonly EndianBitConverter bitConverter;
 		private long bytesWritten;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="MsgPackWriter"/> class.
+		/// </summary>
+		/// <param name="stream">The stream to write to.</param>
+		/// <param name="context">The serialization context.</param>
+		/// <param name="buffer">The byte buffer to use for writing.</param>
 		public MsgPackWriter(Stream stream, SerializationContext context, byte[] buffer = null)
 		{
 			if (stream == null) throw new ArgumentNullException("stream");
 			if (context == null) throw new ArgumentNullException("context");
-			if (!stream.CanWrite) throw JsonSerializationException.StreamIsNotReadable();
+			if (!stream.CanWrite) throw JsonSerializationException.StreamIsNotWriteable();
 			if (buffer != null && buffer.Length < 32) throw new ArgumentOutOfRangeException("buffer", "Buffer should be at least 32 bytes long.");
 
 			this.context = context;
@@ -44,21 +56,34 @@ namespace GameDevWare.Serialization.MessagePack
 			this.bytesWritten = 0;
 		}
 
+		/// <summary>
+		/// Gets the serialization context.
+		/// </summary>
 		public SerializationContext Context
 		{
 			get { return this.context; }
 		}
 
+		/// <summary>
+		/// Gets the number of bytes written.
+		/// </summary>
 		public long CharactersWritten
 		{
 			get { return this.bytesWritten; }
 		}
 
+		/// <summary>
+		/// Flushes the underlying stream.
+		/// </summary>
 		public void Flush()
 		{
 			this.outputStream.Flush();
 		}
 
+		/// <summary>
+		/// Writes a string value in MessagePack format.
+		/// </summary>
+		/// <param name="value">The string value to write.</param>
 		public void Write(string value)
 		{
 			if (value == null)
@@ -101,6 +126,10 @@ namespace GameDevWare.Serialization.MessagePack
 			this.bytesWritten += bytes.Length;
 		}
 
+		/// <summary>
+		/// Writes a member name in MessagePack format.
+		/// </summary>
+		/// <param name="value">The member name to write.</param>
 		public void Write(JsonMember value)
 		{
 			var name = value.NameString;
@@ -110,6 +139,10 @@ namespace GameDevWare.Serialization.MessagePack
 			this.WriteString(name);
 		}
 
+		/// <summary>
+		/// Writes a 32-bit signed integer in MessagePack format.
+		/// </summary>
+		/// <param name="number">The integer value to write.</param>
 		public void Write(int number)
 		{
 			if (number >= -32 && number < 0)
@@ -149,6 +182,10 @@ namespace GameDevWare.Serialization.MessagePack
 			}
 		}
 
+		/// <summary>
+		/// Writes a 32-bit unsigned integer in MessagePack format.
+		/// </summary>
+		/// <param name="number">The unsigned integer value to write.</param>
 		public void Write(uint number)
 		{
 			if (number < 128)
@@ -181,6 +218,10 @@ namespace GameDevWare.Serialization.MessagePack
 			}
 		}
 
+		/// <summary>
+		/// Writes a 64-bit signed integer in MessagePack format.
+		/// </summary>
+		/// <param name="number">The 64-bit signed integer value to write.</param>
 		public void Write(long number)
 		{
 			if (number <= int.MaxValue && number >= int.MinValue)
@@ -195,6 +236,10 @@ namespace GameDevWare.Serialization.MessagePack
 			this.bytesWritten += 8;
 		}
 
+		/// <summary>
+		/// Writes a 64-bit unsigned integer in MessagePack format.
+		/// </summary>
+		/// <param name="number">The 64-bit unsigned integer value to write.</param>
 		public void Write(ulong number)
 		{
 			if (number <= uint.MaxValue)
@@ -209,6 +254,10 @@ namespace GameDevWare.Serialization.MessagePack
 			this.bytesWritten += 8;
 		}
 
+		/// <summary>
+		/// Writes a single-precision floating-point number in MessagePack format.
+		/// </summary>
+		/// <param name="number">The single-precision floating-point value to write.</param>
 		public void Write(float number)
 		{
 			this.WriteType(MsgPackType.Float32);
@@ -217,6 +266,10 @@ namespace GameDevWare.Serialization.MessagePack
 			this.bytesWritten += 4;
 		}
 
+		/// <summary>
+		/// Writes a double-precision floating-point number in MessagePack format.
+		/// </summary>
+		/// <param name="number">The double-precision floating-point value to write.</param>
 		public void Write(double number)
 		{
 			this.WriteType(MsgPackType.Float64);
@@ -225,6 +278,10 @@ namespace GameDevWare.Serialization.MessagePack
 			this.bytesWritten += 8;
 		}
 
+		/// <summary>
+		/// Writes a decimal number in MessagePack format.
+		/// </summary>
+		/// <param name="number">The decimal value to write.</param>
 		public void Write(decimal number)
 		{
 			var extensionData = this.GetWriteBuffer();
@@ -240,6 +297,10 @@ namespace GameDevWare.Serialization.MessagePack
 			}
 		}
 
+		/// <summary>
+		/// Writes a boolean value in MessagePack format.
+		/// </summary>
+		/// <param name="value">The boolean value to write.</param>
 		public void Write(bool value)
 		{
 			if (value)
@@ -248,6 +309,10 @@ namespace GameDevWare.Serialization.MessagePack
 				this.WriteType(MsgPackType.False);
 		}
 
+		/// <summary>
+		/// Writes a <see cref="DateTime"/> value in MessagePack format.
+		/// </summary>
+		/// <param name="dateTime">The <see cref="DateTime"/> value to write.</param>
 		public void Write(DateTime dateTime)
 		{
 			var extensionData = this.GetWriteBuffer();
@@ -258,9 +323,6 @@ namespace GameDevWare.Serialization.MessagePack
 			}
 			else
 			{
-				if (dateTime.Kind == DateTimeKind.Unspecified)
-					dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
-
 				var dateTimeFormat = this.Context.DateTimeFormats.FirstOrDefault() ?? "o";
 				if (dateTimeFormat.IndexOf('z') >= 0 && dateTime.Kind != DateTimeKind.Local)
 					dateTime = dateTime.ToLocalTime();
@@ -271,6 +333,10 @@ namespace GameDevWare.Serialization.MessagePack
 			}
 		}
 
+		/// <summary>
+		/// Writes a <see cref="DateTimeOffset"/> value in MessagePack format.
+		/// </summary>
+		/// <param name="dateTimeOffset">The <see cref="DateTimeOffset"/> value to write.</param>
 		public void Write(DateTimeOffset dateTimeOffset)
 		{
 			var extensionData = this.GetWriteBuffer();
@@ -287,6 +353,10 @@ namespace GameDevWare.Serialization.MessagePack
 			}
 		}
 
+		/// <summary>
+		/// Writes a byte array in MessagePack format.
+		/// </summary>
+		/// <param name="value">The byte array to write.</param>
 		public void Write(byte[] value)
 		{
 			if (value == null)
@@ -320,6 +390,11 @@ namespace GameDevWare.Serialization.MessagePack
 			this.bytesWritten += value.Length;
 		}
 
+		/// <summary>
+		/// Writes an extension type and its data in MessagePack format.
+		/// </summary>
+		/// <param name="type">The extension type code.</param>
+		/// <param name="data">The extension data.</param>
 		public void Write(sbyte type, ArraySegment<byte> data)
 		{
 			if (data.Array == null)
@@ -379,6 +454,10 @@ namespace GameDevWare.Serialization.MessagePack
 			this.bytesWritten += data.Count;
 		}
 
+		/// <summary>
+		/// Writes the beginning of an object in MessagePack format.
+		/// </summary>
+		/// <param name="numberOfMembers">The number of members in the object.</param>
 		public void WriteObjectBegin(int numberOfMembers)
 		{
 			if (numberOfMembers < 0) throw new ArgumentOutOfRangeException("numberOfMembers");
@@ -406,10 +485,17 @@ namespace GameDevWare.Serialization.MessagePack
 			}
 		}
 
+		/// <summary>
+		/// Writes the end of an object. In MessagePack, this is a no-op as objects have fixed length.
+		/// </summary>
 		public void WriteObjectEnd()
 		{
 		}
 
+		/// <summary>
+		/// Writes the beginning of an array in MessagePack format.
+		/// </summary>
+		/// <param name="numberOfMembers">The number of elements in the array.</param>
 		public void WriteArrayBegin(int numberOfMembers)
 		{
 			if (numberOfMembers < 0) throw new ArgumentOutOfRangeException("numberOfMembers");
@@ -437,10 +523,16 @@ namespace GameDevWare.Serialization.MessagePack
 			}
 		}
 
+		/// <summary>
+		/// Writes the end of an array. In MessagePack, this is a no-op as arrays have fixed length.
+		/// </summary>
 		public void WriteArrayEnd()
 		{
 		}
 
+		/// <summary>
+		/// Writes a null value in MessagePack format.
+		/// </summary>
 		public void WriteNull()
 		{
 			this.WriteType(MsgPackType.Nil);
@@ -453,16 +545,25 @@ namespace GameDevWare.Serialization.MessagePack
 			this.bytesWritten++;
 		}
 
+		/// <summary>
+		/// Not supported for MessagePack.
+		/// </summary>
 		public void WriteJson(string jsonString)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Not supported for MessagePack.
+		/// </summary>
 		public void WriteJson(char[] jsonString, int index, int charCount)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Resets the writer's state.
+		/// </summary>
 		public void Reset()
 		{
 			this.bytesWritten = 0;

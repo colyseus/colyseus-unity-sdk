@@ -1,5 +1,5 @@
 /* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -20,10 +20,15 @@ using UnityEngine;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for <see cref="Vector2"/> values.
+	/// </summary>
 	public sealed class Vector2Serializer : TypeSerializer
 	{
+		/// <inheritdoc />
 		public override Type SerializedType { get { return typeof(Vector2); } }
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
@@ -46,6 +51,8 @@ namespace GameDevWare.Serialization.Serializers
 			reader.ReadObjectEnd(nextToken: false);
 			return value;
 		}
+
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");

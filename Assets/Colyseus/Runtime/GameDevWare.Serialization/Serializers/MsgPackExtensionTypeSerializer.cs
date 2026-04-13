@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -20,6 +20,9 @@ using GameDevWare.Serialization.MessagePack;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for <see cref="MessagePackExtensionType"/> values.
+	/// </summary>
 	public sealed class MsgPackExtensionTypeSerializer : TypeSerializer
 	{
 		private const string DATA_MEMBER_NAME = "$data";
@@ -28,6 +31,7 @@ namespace GameDevWare.Serialization.Serializers
 		/// <inheritdoc />
 		public override Type SerializedType { get { return typeof(MessagePackExtensionType); } }
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader.Token == JsonToken.Null)
@@ -80,6 +84,7 @@ namespace GameDevWare.Serialization.Serializers
 			var value = new MessagePackExtensionType(binaryType, binary);
 			return value;
 		}
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (value == null)

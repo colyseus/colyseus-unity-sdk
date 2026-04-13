@@ -1,16 +1,16 @@
-﻿/* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+/*
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
-	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND 
-	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE 
-	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY, 
-	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE 
+	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND
+	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE
+	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY,
+	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE
 	AND THOSE ARISING BY STATUTE OR FROM CUSTOM OR USAGE OF TRADE OR COURSE OF DEALING.
-	
-	This source code is distributed via Unity Asset Store, 
-	to use it in your project you should accept Terms of Service and EULA 
+
+	This source code is distributed via Unity Asset Store,
+	to use it in your project you should accept Terms of Service and EULA
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
@@ -18,13 +18,21 @@ using System;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for primitive types.
+	/// </summary>
 	public sealed class PrimitiveSerializer : TypeSerializer
 	{
 		private readonly Type primitiveType;
 		private readonly TypeCode primitiveTypeCode;
 
+		/// <inheritdoc />
 		public override Type SerializedType { get { return this.primitiveType; } }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="PrimitiveSerializer"/> class.
+		/// </summary>
+		/// <param name="primitiveType">The primitive type to serialize or deserialize.</param>
 		public PrimitiveSerializer(Type primitiveType)
 		{
 			if (primitiveType == null) throw new ArgumentNullException("primitiveType");
@@ -40,6 +48,7 @@ namespace GameDevWare.Serialization.Serializers
 				throw JsonSerializationException.TypeIsNotValid(this.GetType(), "be a primitive type");
 		}
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
@@ -94,6 +103,11 @@ namespace GameDevWare.Serialization.Serializers
 				case TypeCode.UInt64:
 					value = reader.ReadUInt64(false);
 					break;
+				case TypeCode.Empty:
+				case TypeCode.Object:
+				case TypeCode.DBNull:
+				case TypeCode.Char:
+				case TypeCode.String:
 				default:
 					var valueStr = reader.ReadString(false);
 					value = Convert.ChangeType(valueStr, this.primitiveType, reader.Context.Format);
@@ -102,6 +116,7 @@ namespace GameDevWare.Serialization.Serializers
 			return value;
 		}
 
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");
@@ -148,6 +163,11 @@ namespace GameDevWare.Serialization.Serializers
 				case TypeCode.UInt64:
 					writer.WriteNumber((ulong)value);
 					break;
+				case TypeCode.Empty:
+				case TypeCode.Object:
+				case TypeCode.DBNull:
+				case TypeCode.Char:
+				case TypeCode.String:
 				default:
 					var valueStr = default(string);
 

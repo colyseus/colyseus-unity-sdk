@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -22,8 +22,14 @@ using System.IO;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.MessagePack
 {
+	/// <summary>
+	/// Represents a reader that provides fast, non-cached, forward-only access to MessagePack encoded data.
+	/// </summary>
 	public class MsgPackReader : IJsonReader
 	{
+		/// <summary>
+		/// The default size of the internal buffer.
+		/// </summary>
 		public const int DEFAULT_BUFFER_SIZE = 1024 * 8;
 
 		private static readonly object TrueObject = true;
@@ -158,7 +164,11 @@ namespace GameDevWare.Serialization.MessagePack
 		private bool isEndOfStream;
 		private int totalBytesRead;
 
+		/// <summary>
+		/// Gets the serialization context.
+		/// </summary>
 		public SerializationContext Context { get; private set; }
+		/// <inheritdoc />
 		JsonToken IJsonReader.Token
 		{
 			get
@@ -171,6 +181,7 @@ namespace GameDevWare.Serialization.MessagePack
 				return this.Value.Token;
 			}
 		}
+		/// <inheritdoc />
 		object IJsonReader.RawValue
 		{
 			get
@@ -181,6 +192,7 @@ namespace GameDevWare.Serialization.MessagePack
 				return this.Value.Raw;
 			}
 		}
+		/// <inheritdoc />
 		IValueInfo IJsonReader.Value
 		{
 			get
@@ -193,6 +205,13 @@ namespace GameDevWare.Serialization.MessagePack
 		}
 		internal MsgPackValueInfo Value { get; private set; }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="MsgPackReader"/> class.
+		/// </summary>
+		/// <param name="stream">The stream to read from.</param>
+		/// <param name="context">The serialization context.</param>
+		/// <param name="endianness">The endianness of the data.</param>
+		/// <param name="buffer">The byte buffer to use for reading.</param>
 		public MsgPackReader(Stream stream, SerializationContext context, Endianness endianness = Endianness.BigEndian, byte[] buffer = null)
 		{
 			if (stream == null) throw new ArgumentNullException("stream");
@@ -212,6 +231,10 @@ namespace GameDevWare.Serialization.MessagePack
 			this.Value = new MsgPackValueInfo(this);
 		}
 
+		/// <summary>
+		/// Advances the reader to the next token from the stream.
+		/// </summary>
+		/// <returns>true if the next token was read successfully; false if there are no more tokens to read.</returns>
 		public bool NextToken()
 		{
 			this.Value.Reset();
@@ -474,6 +497,9 @@ namespace GameDevWare.Serialization.MessagePack
 
 			return true;
 		}
+		/// <summary>
+		/// Resets the reader's state.
+		/// </summary>
 		public void Reset()
 		{
 			Array.Clear(this.buffer, 0, this.buffer.Length);
@@ -483,6 +509,10 @@ namespace GameDevWare.Serialization.MessagePack
 			this.totalBytesRead = 0;
 			this.Value.Reset();
 		}
+		/// <summary>
+		/// Gets a value indicating whether the reader is at the end of the stream.
+		/// </summary>
+		/// <returns>true if the reader is at the end of the stream; otherwise, false.</returns>
 		public bool IsEndOfStream()
 		{
 			return this.isEndOfStream;
