@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 // ReSharper disable InconsistentNaming
@@ -20,6 +21,12 @@ namespace Colyseus
 		///     Number of pings to send (default: 1). Returns the average latency when > 1.
 		/// </summary>
 		public int PingCount { get; set; } = 1;
+
+		/// <summary>
+		///     Milliseconds to wait for the measurement before failing (default: 1500).
+		///     Bounds unreachable/blackholed endpoints so they can't stall selection.
+		/// </summary>
+		public int Timeout { get; set; } = 1500;
 	}
 
 	/// <summary>
@@ -393,7 +400,7 @@ namespace Colyseus
 		///     Select the endpoint with the lowest latency.
 		/// </summary>
 		/// <param name="endpoints">Array of endpoints to select from.</param>
-		/// <param name="latencyOptions">Latency measurement options (protocol, pingCount).</param>
+		/// <param name="latencyOptions">Latency measurement options (protocol, pingCount, timeout) — forwarded to each <see cref="GetLatency"/> call.</param>
 		/// <returns>The client with the lowest latency.</returns>
 		public static async Task<Client> SelectByLatency(string[] endpoints, LatencyOptions latencyOptions = null)
 		{
@@ -454,8 +461,11 @@ namespace Colyseus
 
 		/// <summary>
 		///     Create a new connection with the server, and measure the latency.
+		///
+		///     Always settles: resolves with the (average) round-trip time, or fails on
+		///     connection error, server-side close before all pongs arrive, or timeout.
 		/// </summary>
-		/// <param name="options">Latency measurement options (protocol, pingCount).</param>
+		/// <param name="options">Latency measurement options (protocol, pingCount, timeout).</param>
 		/// <returns>The average latency in milliseconds.</returns>
 		public Task<double> GetLatency(LatencyOptions options = null)
 		{
@@ -466,6 +476,7 @@ namespace Colyseus
 
 			var protocol = options.Protocol ?? "ws";
 			var pingCount = options.PingCount > 0 ? options.PingCount : 1;
+			var timeout = options.Timeout > 0 ? options.Timeout : 1500;
 
 			if (protocol == "h3")
 			{
@@ -477,6 +488,30 @@ namespace Colyseus
 			long pingStart = 0;
 
 			var conn = new Connection(Endpoint.ToString(), null);
+			var cts = new CancellationTokenSource();
+			int settled = 0;
+
+			// run exactly once — cleans up handlers/timeout regardless of how we finish,
+			// and guards against late events (our own Close() firing OnClose, error+close races)
+			void Settle(Action complete)
+			{
+				if (Interlocked.Exchange(ref settled, 1) == 1) { return; }
+
+				conn.OnOpen -= OnOpen;
+				conn.OnMessage -= OnMessage;
+				conn.OnError -= OnError;
+				conn.OnClose -= OnClose;
+
+				cts.Cancel();
+				cts.Dispose();
+
+				_ = conn.Close();
+
+				complete();
+			}
+
+			void Fail(string message) =>
+				Settle(() => tcs.TrySetException(new MatchMakeException((int)CloseCode.ABNORMAL_CLOSURE, $"Failed to get latency: {message}")));
 
 			void OnOpen()
 			{
@@ -497,33 +532,30 @@ namespace Colyseus
 				else
 				{
 					// Done, calculate average and close
-					conn.OnOpen -= OnOpen;
-					conn.OnMessage -= OnMessage;
-					conn.OnError -= OnError;
-
-					_ = conn.Close();
-
 					double sum = 0;
 					for (int i = 0; i < latencies.Count; i++)
 					{
 						sum += latencies[i];
 					}
-					tcs.TrySetResult(sum / latencies.Count);
+					Settle(() => tcs.TrySetResult(sum / latencies.Count));
 				}
 			}
 
-			void OnError(string errorMsg)
-			{
-				conn.OnOpen -= OnOpen;
-				conn.OnMessage -= OnMessage;
-				conn.OnError -= OnError;
+			void OnError(string errorMsg) => Fail(errorMsg);
 
-				tcs.TrySetException(new MatchMakeException((int)CloseCode.ABNORMAL_CLOSURE, $"Failed to get latency: {errorMsg}"));
-			}
+			// server closed the socket before all pongs arrived — fires without OnError on a clean close
+			void OnClose(int code) => Fail($"connection closed ({code})");
 
 			conn.OnOpen += OnOpen;
 			conn.OnMessage += OnMessage;
 			conn.OnError += OnError;
+			conn.OnClose += OnClose;
+
+			// bound blackholed/filtered hosts that never fire OnOpen/OnError within the OS TCP timeout
+			_ = Task.Delay(timeout, cts.Token).ContinueWith(t =>
+			{
+				if (!t.IsCanceled) { Fail($"timed out after {timeout}ms"); }
+			}, TaskScheduler.Default);
 
 			_ = conn.Connect();
 
