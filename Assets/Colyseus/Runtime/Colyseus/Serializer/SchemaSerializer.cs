@@ -23,7 +23,16 @@ namespace Colyseus
 		public void SetState(byte[] data, int offset = 0)
 		{
 			It.Offset = offset;
-			Decoder.Decode(data, It);
+			if (Decoder.Refs.refs.Count > 1)
+			{
+				// rejoin over live state: reconcile ghosts (deletions that
+				// happened while off the wire) instead of decoding additively
+				Decoder.DecodeResync(data, It);
+			}
+			else
+			{
+				Decoder.Decode(data, It);
+			}
 		}
 
 		/// <inheritdoc />

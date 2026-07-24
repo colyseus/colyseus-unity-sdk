@@ -192,6 +192,7 @@ namespace Colyseus.Schema
 		void OnDecodeEnd();
 		void SetByIndex(int index, object value, byte operation);
 		void Reverse();
+		void ResyncPrune(HashSet<object> visited, Action<object, object> prune, Action<object> keep);
 	}
 
 	[SuppressMessage("ReSharper", "MissingXmlDoc")]
@@ -200,6 +201,7 @@ namespace Colyseus.Schema
 		void SetIndex(int index, object dynamicIndex);
 		object GetIndex(int index);
 		void SetByIndex(int index, object dynamicIndex, object value);
+		void ResyncPrune(HashSet<object> visited, Action<object, object> prune, Action<object> keep);
 	}
 
 	/// <summary>

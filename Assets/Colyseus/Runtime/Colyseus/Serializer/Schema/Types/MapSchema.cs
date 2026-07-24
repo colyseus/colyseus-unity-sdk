@@ -137,6 +137,46 @@ namespace Colyseus.Schema
         }
 
         /// <summary>
+        ///     Resync sweep (see <c>Decoder.DecodeResync</c>): remove every entry
+        ///     whose KEY the snapshot did not visit — maps prune by string key,
+        ///     NOT wire index (the decoder-side <see cref="Indexes" /> journal
+        ///     never evicts stale index→key mappings on re-indexing). Also scrubs
+        ///     ALL index→key rows of swept keys.
+        /// </summary>
+        public void ResyncPrune(HashSet<object> visited, Action<object, object> prune, Action<object> keep)
+        {
+            List<string> keys = new List<string>(items.Count);
+            foreach (DictionaryEntry entry in items) { keys.Add((string)entry.Key); }
+
+            List<string> deletedKeys = null;
+            foreach (string key in keys)
+            {
+                object value = items[key];
+                if (visited.Contains(key)) { keep(value); continue; }
+                (deletedKeys ??= new List<string>()).Add(key);
+                prune(value, key);
+            }
+
+            if (deletedKeys != null)
+            {
+                foreach (string key in deletedKeys)
+                {
+                    items.Remove(key);
+
+                    List<int> staleIndexes = null;
+                    foreach (var kv in Indexes)
+                    {
+                        if (kv.Value == key) { (staleIndexes ??= new List<int>()).Add(kv.Key); }
+                    }
+                    if (staleIndexes != null)
+                    {
+                        foreach (int i in staleIndexes) { Indexes.Remove(i); }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         ///     Clone this <see cref="MapSchema{T}" />
         /// </summary>
         /// <returns>A copy of this <see cref="MapSchema{T}" /></returns>

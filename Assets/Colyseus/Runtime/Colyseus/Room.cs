@@ -606,7 +606,13 @@ namespace Colyseus
                 {
                     try
                     {
-                        Serializer = new SchemaSerializer<T>();
+                        // keep the existing serializer across in-place reconnects —
+                        // recreating it would destroy state identity, and the
+                        // rejoin snapshot could no longer reconcile (DecodeResync)
+                        if (Serializer == null || !(Serializer is SchemaSerializer<T>))
+                        {
+                            Serializer = new SchemaSerializer<T>();
+                        }
                     }
                     catch (Exception e)
                     {

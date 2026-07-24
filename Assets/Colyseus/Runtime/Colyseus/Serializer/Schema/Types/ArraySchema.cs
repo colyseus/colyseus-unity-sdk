@@ -274,5 +274,26 @@ namespace Colyseus.Schema
 			deletedKeys.Clear();
 		}
 
+		/// <summary>
+		///     Resync sweep (see <c>Decoder.DecodeResync</c>): remove every entry
+		///     whose index the snapshot did not visit. <c>items</c> is hole-free
+		///     here (decode-end compaction already ran; full-sync emits dense
+		///     ADDs). Visited indexes may be sparse — ADD_BY_REFID resolves to
+		///     the current client-side index.
+		/// </summary>
+		public void ResyncPrune(HashSet<object> visited, Action<object, object> prune, Action<object> keep)
+		{
+			bool removed = false;
+			for (int i = 0; i < items.Count; i++)
+			{
+				object value = items[i];
+				if (visited.Contains(i)) { keep(value); continue; }
+				removed = true;
+				prune(value, i);
+				DeleteByIndex(i);
+			}
+			if (removed) { OnDecodeEnd(); } // compact the holes
+		}
+
 	}
 }
