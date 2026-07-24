@@ -43,16 +43,17 @@ namespace Colyseus.Schema
 
 		public void SetByIndex(int index, object value, byte operation)
 		{
-			deletedKeys.Remove(index);
+			bool wasDeleted = deletedKeys.Remove(index); // consult + clear in one call
 
+			// strict ADD only: MOVE_AND_ADD/DELETE_AND_ADD/ADD_BY_REFID must not insert
 			if (
-				index == 0 &&
 				operation == (byte)OPERATION.ADD &&
-				items.Count > 0
+				index < items.Count &&
+				!wasDeleted
 			)
 			{
-				// handle decoding unshift
-				items.Insert(0, (T)value);
+				// ADD at an occupied index = insert: shift existing items up.
+				items.Insert(index, (T)value);
 			}
 			else if (operation == (byte)OPERATION.DELETE_AND_MOVE)
 			{

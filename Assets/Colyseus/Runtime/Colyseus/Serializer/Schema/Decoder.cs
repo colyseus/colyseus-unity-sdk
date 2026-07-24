@@ -404,9 +404,16 @@ namespace Colyseus.Schema
 			}
 			else if (operation == (byte)OPERATION.DELETE_BY_REFID)
 			{
-				// TODO: refactor here, try to follow same flow as below
 				int refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
 				object itemByRefId = Refs.Get(refId);
+
+				// stale DELETE — refId unknown to this decoder (mid-tick joiner)
+				if (itemByRefId == null) { return true; }
+
+				// ref-count decrement — must run even when the item is absent from
+				// THIS array (view churn); this branch never reaches DecodeValue()
+				Refs.Remove(refId);
+
 				int i = 0;
 				index = -1;
 				foreach (var item in refArray.GetItems())
@@ -418,6 +425,9 @@ namespace Colyseus.Schema
 					}
 					i++;
 				}
+
+				if (index == -1) { return true; }
+
 				refArray.DeleteByIndex(index);
 				AllChanges.Add(new DataChange
 				{
