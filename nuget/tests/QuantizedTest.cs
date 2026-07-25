@@ -244,5 +244,33 @@ wrap32_angle, -Infinity, 0, 0";
 			Assert.AreEqual(-1.5, state.Get<double>("pitch"));
 			Assert.AreEqual(4, state.Get<ArraySchema<object>>("nums").Count);
 		}
+
+		[Test]
+		public void StaticClassQuantizedStateTest()
+		{
+			// same wire fixtures through a schema-codegen generated class
+			// (locks the Type attribute's Quantize* named args → metadata path)
+			var serializer = new SchemaSerializer<SchemaTest.Quantized.QState>();
+
+			serializer.SetState(new byte[] { 128, 238, 50, 129, 187, 130, 55, 221, 154, 31, 131, 1, 132, 2, 133, 5, 134, 4, 135, 161, 113, 255, 1, 128, 0, 1, 128, 1, 202, 0, 0, 32, 64, 128, 2, 3, 255, 2, 128, 0, 161, 97, 161, 120, 255, 5, 128, 7, 255, 4, 128, 0, 6, 128, 1, 7, 255, 6, 128, 1, 255, 7, 128, 2 });
+
+			var state = serializer.GetState();
+
+			Assert.AreEqual(1.2500025945283118, state.yaw);
+			Assert.AreEqual(0.6999999999999997, state.pitch);
+			Assert.AreEqual(0.12345678897655028, state.precise);
+			Assert.AreEqual("q", state.label);
+			Assert.AreEqual(3, state.nums.Count);
+			Assert.AreEqual(2.5f, state.nums[1]);
+			Assert.AreEqual("x", state.tags["a"]);
+			Assert.AreEqual(7f, state.child.v);
+			Assert.AreEqual(2, state.items.Count);
+
+			serializer.Patch(new byte[] { 128, 250, 162, 129, 0, 255, 1, 128, 3, 4 });
+
+			Assert.AreEqual(4.000046652010295, state.yaw);
+			Assert.AreEqual(-1.5, state.pitch);
+			Assert.AreEqual(4, state.nums.Count);
+		}
 	}
 }

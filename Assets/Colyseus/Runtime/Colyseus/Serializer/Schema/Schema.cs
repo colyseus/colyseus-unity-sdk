@@ -68,6 +68,16 @@ namespace Colyseus.Schema
 		/// </summary>
 		public int Index;
 
+		/// <summary>
+		///     <c>t.quantized()</c> options — only meaningful when
+		///     <see cref="FieldType" /> is <c>"quantized"</c> (named args, see
+		///     <see cref="Utils.Quantize.Resolve" />).
+		/// </summary>
+		public double QuantizeMin;
+		public double QuantizeMax;
+		public int QuantizeBits = 16;
+		public bool QuantizeWrap;
+
 		public Type(int index, string type, System.Type childType = null, string childPrimitiveType = null)
 		{
 			Index = index; // GetType().GetFields() doesn't guarantee order of fields, need to manually track them here!
@@ -244,14 +254,11 @@ namespace Colyseus.Schema
 		internal virtual Dictionary<int, string> fieldsByIndex => _metadata.FieldsByIndex;
 
 		/// <summary>
-		///     Resolved <c>t.quantized()</c> descriptors by field name. Empty for
-		///     generated classes today (quantized rides the reflection path);
-		///     <see cref="DynamicSchema" /> overrides with its definition's.
+		///     Resolved <c>t.quantized()</c> descriptors by field name — built from
+		///     the <see cref="Type" /> attribute's Quantize* args for generated
+		///     classes; <see cref="DynamicSchema" /> overrides with its definition's.
 		/// </summary>
-		internal virtual Dictionary<string, Utils.QuantizeDescriptor> fieldQuantizedDescriptors => _emptyQuantizedDescriptors;
-
-		private static readonly Dictionary<string, Utils.QuantizeDescriptor> _emptyQuantizedDescriptors =
-			new Dictionary<string, Utils.QuantizeDescriptor>();
+		internal virtual Dictionary<string, Utils.QuantizeDescriptor> fieldQuantizedDescriptors => _metadata.FieldQuantizedDescriptors;
 
 		/// <summary>
 		///     Map of the field types in this schema
@@ -291,6 +298,12 @@ namespace Colyseus.Schema
 					if (t.ChildType != null)
 					{
 						metadata.FieldChildTypes.Add(field.Name, t.ChildType);
+					}
+
+					if (t.FieldType == "quantized")
+					{
+						metadata.FieldQuantizedDescriptors.Add(field.Name,
+							Utils.Quantize.Resolve(t.QuantizeMin, t.QuantizeMax, (byte)t.QuantizeBits, t.QuantizeWrap));
 					}
 				}
 			}
@@ -398,6 +411,12 @@ namespace Colyseus.Schema
 			///     Map of the field types in this schema
 			/// </summary>
 			public Dictionary<string, string> FieldTypes = new Dictionary<string, string>();
+
+			/// <summary>
+			///     Resolved <c>t.quantized()</c> descriptors of this schema's fields
+			/// </summary>
+			public Dictionary<string, Utils.QuantizeDescriptor> FieldQuantizedDescriptors =
+				new Dictionary<string, Utils.QuantizeDescriptor>();
 		}
 	}
 }
