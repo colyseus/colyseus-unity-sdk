@@ -244,6 +244,16 @@ namespace Colyseus.Schema
 		internal virtual Dictionary<int, string> fieldsByIndex => _metadata.FieldsByIndex;
 
 		/// <summary>
+		///     Resolved <c>t.quantized()</c> descriptors by field name. Empty for
+		///     generated classes today (quantized rides the reflection path);
+		///     <see cref="DynamicSchema" /> overrides with its definition's.
+		/// </summary>
+		internal virtual Dictionary<string, Utils.QuantizeDescriptor> fieldQuantizedDescriptors => _emptyQuantizedDescriptors;
+
+		private static readonly Dictionary<string, Utils.QuantizeDescriptor> _emptyQuantizedDescriptors =
+			new Dictionary<string, Utils.QuantizeDescriptor>();
+
+		/// <summary>
 		///     Map of the field types in this schema
 		/// </summary>
 		internal virtual Dictionary<string, string> fieldTypes => _metadata.FieldTypes;

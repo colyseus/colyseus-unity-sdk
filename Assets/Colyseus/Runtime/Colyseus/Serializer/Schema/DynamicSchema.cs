@@ -16,17 +16,28 @@ namespace Colyseus.Schema
 		public Dictionary<string, System.Type> FieldChildTypes = new Dictionary<string, System.Type>();
 		public Dictionary<string, string> FieldChildPrimitiveTypes = new Dictionary<string, string>();
 		public Dictionary<string, float> FieldReferencedTypes = new Dictionary<string, float>();
+		public Dictionary<string, Utils.QuantizeDescriptor> FieldQuantizedDescriptors = new Dictionary<string, Utils.QuantizeDescriptor>();
 
 		/// <summary>
-		///     Parses a ReflectionField into the appropriate dictionaries.
+		///     Parses a ReflectionField into the appropriate dictionaries (5.0
+		///     reflection format — see PORTING/sdk-ports-quantized-reflection.md).
 		/// </summary>
-		/// <param name="fieldIndex">The field index from the reflection data</param>
-		/// <param name="fieldName">The field name</param>
-		/// <param name="fieldType">The field type string (e.g. "ref", "map", "array", "string", "int32")</param>
-		/// <param name="referencedType">The referenced type id, or -1 for primitives</param>
-		public void ParseFieldType(int fieldIndex, string fieldName, string fieldType, float referencedType)
+		public void ParseFieldType(ReflectionField field, int fieldIndex)
 		{
+			var fieldName = field.name;
+			var fieldType = field.type;
+			var referencedType = field.referencedType;
+
 			FieldsByIndex[fieldIndex] = fieldName;
+
+			if (field.quantized != null)
+			{
+				// schema-typed descriptor → resolved codec
+				FieldTypes[fieldName] = "quantized";
+				FieldQuantizedDescriptors[fieldName] = Utils.Quantize.Resolve(
+					field.quantized.min, field.quantized.max, field.quantized.bits, field.quantized.mode == 1);
+				return;
+			}
 
 			if (referencedType >= 0)
 			{
@@ -57,29 +68,20 @@ namespace Colyseus.Schema
 					FieldChildTypes[fieldName] = typeof(ArraySchema<DynamicSchema>);
 				}
 			}
-			else if (fieldType.Contains(":"))
-			{
-				// Collection of primitives: "map:string", "array:number", etc.
-				var parts = fieldType.Split(':');
-				var collectionType = parts[0];
-				var primitiveType = parts[1];
-
-				FieldTypes[fieldName] = collectionType;
-				FieldChildPrimitiveTypes[fieldName] = primitiveType;
-
-				if (collectionType == "map")
-				{
-					FieldChildTypes[fieldName] = typeof(MapSchema<object>);
-				}
-				else if (collectionType == "array")
-				{
-					FieldChildTypes[fieldName] = typeof(ArraySchema<object>);
-				}
-			}
 			else
 			{
 				// Primitive types: "string", "int32", "float32", "number", "boolean", etc.
 				FieldTypes[fieldName] = fieldType;
+			}
+
+			// 5.0: primitive collection children ride their own childPrimitive
+			// slot (the 4.x "array:string" colon packing is gone)
+			if (referencedType < 0 && (fieldType == "map" || fieldType == "array"))
+			{
+				FieldChildPrimitiveTypes[fieldName] = field.childPrimitive;
+				FieldChildTypes[fieldName] = fieldType == "map"
+					? typeof(MapSchema<object>)
+					: typeof(ArraySchema<object>);
 			}
 		}
 	}
@@ -124,6 +126,12 @@ namespace Colyseus.Schema
 
 		internal override Dictionary<string, string> fieldChildPrimitiveTypes =>
 			Definition?.FieldChildPrimitiveTypes ?? _emptyFieldChildPrimitiveTypes;
+
+		internal override Dictionary<string, Utils.QuantizeDescriptor> fieldQuantizedDescriptors =>
+			Definition?.FieldQuantizedDescriptors ?? _emptyFieldQuantizedDescriptors;
+
+		private static readonly Dictionary<string, Utils.QuantizeDescriptor> _emptyFieldQuantizedDescriptors =
+			new Dictionary<string, Utils.QuantizeDescriptor>();
 
 		/// <summary>
 		///     Typed convenience accessor for field values.

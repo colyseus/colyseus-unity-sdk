@@ -372,6 +372,20 @@ namespace Colyseus.Schema
 				}
 
 			}
+			else if (fieldType == "quantized")
+			{
+				// Quantized scalar: read the unsigned int of the descriptor's
+				// wire width, then dequantize — the instance only ever holds
+				// the wire-exact double (see Utils.Quantize).
+				var schemaRef = (Schema)_ref;
+				var desc = schemaRef.fieldQuantizedDescriptors[schemaRef.fieldsByIndex[fieldIndex]];
+
+				uint q = desc.Bits == 8 ? Utils.Decode.DecodeUint8(bytes, it)
+					: desc.Bits == 16 ? Utils.Decode.DecodeUint16(bytes, it)
+					: Utils.Decode.DecodeUint32(bytes, it);
+
+				value = Utils.Quantize.Dequantize(desc, q);
+			}
 			else if (childType == null)
 			{
 				// primitive values

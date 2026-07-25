@@ -114,8 +114,7 @@ namespace Colyseus
 
 				for (int j = 0; j < reflectionFields.Count; j++)
 				{
-					var field = reflectionFields[j];
-					definition.ParseFieldType(j, field.name, field.type, field.referencedType);
+					definition.ParseFieldType(reflectionFields[j], j);
 				}
 
 				Decoder.DynamicDefinitions[reflectionType.id] = definition;
