@@ -20,6 +20,12 @@ namespace Colyseus
 		///     Number of pings to send (default: 1). Returns the average latency when > 1.
 		/// </summary>
 		public int PingCount { get; set; } = 1;
+
+		/// <summary>
+		///     Milliseconds to wait for the measurement before failing (default: 1500).
+		///     Bounds unreachable/blackholed endpoints so they can't stall selection.
+		/// </summary>
+		public int Timeout { get; set; } = 1500;
 	}
 
 	/// <summary>
@@ -393,7 +399,7 @@ namespace Colyseus
 		///     Select the endpoint with the lowest latency.
 		/// </summary>
 		/// <param name="endpoints">Array of endpoints to select from.</param>
-		/// <param name="latencyOptions">Latency measurement options (protocol, pingCount).</param>
+		/// <param name="latencyOptions">Latency measurement options (protocol, pingCount, timeout).</param>
 		/// <returns>The client with the lowest latency.</returns>
 		public static async Task<Client> SelectByLatency(string[] endpoints, LatencyOptions latencyOptions = null)
 		{
@@ -455,7 +461,7 @@ namespace Colyseus
 		/// <summary>
 		///     Create a new connection with the server, and measure the latency.
 		/// </summary>
-		/// <param name="options">Latency measurement options (protocol, pingCount).</param>
+		/// <param name="options">Latency measurement options (protocol, pingCount, timeout).</param>
 		/// <returns>The average latency in milliseconds.</returns>
 		public Task<double> GetLatency(LatencyOptions options = null)
 		{
@@ -466,6 +472,7 @@ namespace Colyseus
 
 			var protocol = options.Protocol ?? "ws";
 			var pingCount = options.PingCount > 0 ? options.PingCount : 1;
+			var timeoutMs = options.Timeout > 0 ? options.Timeout : 1500;
 
 			if (protocol == "h3")
 			{
@@ -477,6 +484,13 @@ namespace Colyseus
 			long pingStart = 0;
 
 			var conn = new Connection(Endpoint.ToString(), null);
+
+			void Unsubscribe()
+			{
+				conn.OnOpen -= OnOpen;
+				conn.OnMessage -= OnMessage;
+				conn.OnError -= OnError;
+			}
 
 			void OnOpen()
 			{
@@ -497,10 +511,7 @@ namespace Colyseus
 				else
 				{
 					// Done, calculate average and close
-					conn.OnOpen -= OnOpen;
-					conn.OnMessage -= OnMessage;
-					conn.OnError -= OnError;
-
+					Unsubscribe();
 					_ = conn.Close();
 
 					double sum = 0;
@@ -514,16 +525,23 @@ namespace Colyseus
 
 			void OnError(string errorMsg)
 			{
-				conn.OnOpen -= OnOpen;
-				conn.OnMessage -= OnMessage;
-				conn.OnError -= OnError;
-
+				Unsubscribe();
 				tcs.TrySetException(new MatchMakeException((int)CloseCode.ABNORMAL_CLOSURE, $"Failed to get latency: {errorMsg}"));
 			}
 
 			conn.OnOpen += OnOpen;
 			conn.OnMessage += OnMessage;
 			conn.OnError += OnError;
+
+			// bound the whole measurement — TrySet* guards make late events harmless
+			_ = Task.Delay(timeoutMs).ContinueWith(_ =>
+			{
+				if (tcs.TrySetException(new MatchMakeException((int)CloseCode.ABNORMAL_CLOSURE, $"Failed to get latency: timeout after {timeoutMs}ms")))
+				{
+					Unsubscribe();
+					_ = conn.Close();
+				}
+			});
 
 			_ = conn.Connect();
 
