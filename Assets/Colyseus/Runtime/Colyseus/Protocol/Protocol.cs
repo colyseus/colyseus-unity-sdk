@@ -134,6 +134,30 @@ namespace Colyseus
     }
 
     /// <summary>
+    ///     Bit flags in the leading byte of the
+    ///     <see cref="HandshakeSection.INPUT_OPTIONS" /> section. Some flags
+    ///     imply a trailing varint in the section payload, appended in bit order.
+    /// </summary>
+    [System.Flags]
+    public enum InputFlags : byte
+    {
+        /// <summary>Reliable inputs carry the SNAPSHOT-timeline stamp (renderTime).</summary>
+        RENDER_TIME = 1,
+
+        /// <summary>A [tickRate varint] (Hz) follows — the server's fixed step rate.</summary>
+        FIXED_TIMESTEP = 2,
+
+        /// <summary>A [patchRate varint] (ms) follows — the state-patch interval.</summary>
+        PATCH_RATE = 4,
+
+        /// <summary>A [subSteps varint] follows — physics sub-steps per input tick.</summary>
+        SUB_STEPS = 8,
+
+        /// <summary>Reliable inputs carry the RECKON-timeline stamp (reckonTime).</summary>
+        RECKON_TIME = 16,
+    }
+
+    /// <summary>
     ///     Error thrown when a <c>Room.Request()</c> is answered with
     ///     <see cref="ResponseStatus.REJECTED" /> or <see cref="ResponseStatus.ERROR" />.
     /// </summary>

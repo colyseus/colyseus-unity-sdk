@@ -189,7 +189,40 @@ namespace Colyseus
 			return true;
 		}
 
-		private List<ReflectionField> GetFieldsFromType(ReflectionType reflectionType, ReflectionType[] types)
+		/// <summary>
+		///     Decode reflection bytes and build the ROOT type's
+		///     <see cref="DynamicTypeDefinition" /> — used by the Room to
+		///     synthesize the input schema from the INPUT_REFLECTION handshake
+		///     section.
+		/// </summary>
+		internal static DynamicTypeDefinition BuildDynamicDefinition(byte[] bytes, int offset)
+		{
+			var it = new Iterator { Offset = offset };
+			var reflectionDecoder = new Decoder<Reflection>();
+			reflectionDecoder.Decode(bytes, it);
+
+			var reflection = reflectionDecoder.State;
+			var types = reflection.types.items.ToArray();
+
+			var rootTypeId = reflection.rootType >= 0
+				? reflection.rootType
+				: (reflection.types.Count > 0 ? reflection.types[0].id : -1);
+			var rootType = Array.Find(types, t => t.id == rootTypeId);
+			if (rootType == null)
+			{
+				throw new Exception("BuildDynamicDefinition: reflection has no root type");
+			}
+
+			var fields = GetFieldsFromType(rootType, types);
+			var definition = new DynamicTypeDefinition { TypeId = rootType.id };
+			for (int j = 0; j < fields.Count; j++)
+			{
+				definition.ParseFieldType(fields[j], j);
+			}
+			return definition;
+		}
+
+		private static List<ReflectionField> GetFieldsFromType(ReflectionType reflectionType, ReflectionType[] types)
 		{
 			var reflectionFields = new List<ReflectionField>();
 
