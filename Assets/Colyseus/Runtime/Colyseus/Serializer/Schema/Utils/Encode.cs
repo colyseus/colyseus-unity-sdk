@@ -41,6 +41,28 @@ namespace Colyseus.Schema.Utils
             return initialBytes;
         }
 
+        /// <summary>
+        ///     The schema "number" codec for non-negative integers
+        ///     (msgpack-style, little-endian): positive fixint &lt; 0x80, then
+        ///     uint8 / uint16 / uint32 prefixes.
+        /// </summary>
+        public static byte[] EncodeUintNumber(uint value)
+        {
+            if (value < 0x80)
+            {
+                return new[] { (byte)value };
+            }
+            if (value < 0x100)
+            {
+                return new byte[] { 0xcc, (byte)value };
+            }
+            if (value < 0x10000)
+            {
+                return uint16(new byte[] { 0xcd }, (int)value);
+            }
+            return uint32(new byte[] { 0xce }, (int)value);
+        }
+
         private static byte[] addByteToArray(byte[] byteArray, byte[] newBytes)
         {
             byte[] bytes = new byte[byteArray.Length + newBytes.Length];

@@ -3,23 +3,22 @@
 namespace Colyseus
 {
     /// <summary>
-    ///     Colyseus server protocol codes mapping.
+    ///     Colyseus protocol codes.
+    ///
+    ///     Codes occupy bits 0..4 of the leading message byte (values 0..31).
+    ///     Bits 5..7 carry <see cref="ProtocolModifier" /> decorations, OR'd
+    ///     onto the base code at send time. Decoders strip the modifier bits
+    ///     before dispatching:
+    ///     <code>
+    ///         var code = (byte)(bytes[0] &amp; Protocol.CODE_MASK);
+    ///         var modifiers = (byte)(bytes[0] &amp; Protocol.MODIFIER_MASK);
+    ///     </code>
     /// </summary>
     public class Protocol
     {
-        /// <summary>
-        ///     When client receives its unique id.
-        /// </summary>
-        public static byte USER_ID = 1;
-
         //
-        // Room-related (9~19)
+        // Room-related (10~18)
         //
-
-        /// <summary>
-        ///     When JOIN is requested.
-        /// </summary>
-        public static byte JOIN_REQUEST = 9;
 
         /// <summary>
         ///     When JOIN request is accepted.
@@ -47,37 +46,113 @@ namespace Colyseus
         public static byte ROOM_STATE = 14;
 
         /// <summary>
-        ///     When server sends <see cref="Room{T}" /> state to its clients.
+        ///     When server sends <see cref="Room{T}" /> state patches to its clients.
         /// </summary>
         public static byte ROOM_STATE_PATCH = 15;
 
         /// <summary>
-        ///     When server sends a Schema-encoded message.
+        ///     Deprecated in 0.18 (schema instances via room.send) — never dispatched.
         /// </summary>
         public static byte ROOM_DATA_SCHEMA = 16;
 
         public static byte ROOM_DATA_BYTES = 17;
 
         /// <summary>
-        ///     Ping message for measuring round-trip latency.
+        ///     Ping message for measuring round-trip latency. Ping and pong
+        ///     share this code — the server echoes it.
         /// </summary>
         public static byte PING = 18;
 
         //
-        // Matchmaking messages (20~30)
-        //
-        public static byte ROOM_LIST = 20;
-
-        //
-        // Generic messages (50~60)
+        // Input-related (19~20) — consumed by the input layer (not ported yet)
         //
 
+        /// <summary>[byte, stamp?, input bytes] — client→server single input.</summary>
+        public static byte ROOM_INPUT_RELIABLE = 19;
+
+        /// <summary>[byte, len|input, ...] — client→server length-framed ring.</summary>
+        public static byte ROOM_INPUT_UNRELIABLE = 20;
+
+        //
+        // Request/response (21~22)
+        //
+
+        /// <summary>[byte, requestId varint, type(str|num), msgpack payload?] — expects a reply.</summary>
+        public static byte ROOM_REQUEST = 21;
+
+        /// <summary>[byte, requestId varint, status uint8, msgpack payload?] — reply to a request.</summary>
+        public static byte ROOM_RESPONSE = 22;
+
+        /// <summary>Isolates the base protocol code (low 5 bits, values 0..31).</summary>
+        public const byte CODE_MASK = 0x1F;
+
+        /// <summary>Isolates modifier bits (high 3 bits; only TIMED is assigned today).</summary>
+        public const byte MODIFIER_MASK = 0xE0;
+    }
+
+    /// <summary>
+    ///     Modifier bits OR'd into the leading protocol byte. Composable — the
+    ///     decoder strips them in a preamble step that precedes the
+    ///     protocol-code dispatch.
+    /// </summary>
+    public enum ProtocolModifier : byte
+    {
         /// <summary>
-        ///     When server doesn't understand a request, it returns <see cref="BAD_REQUEST" /> to the <see cref="Client" />
+        ///     A <c>[uint32 sNow][uint32 inputSeq]</c> prefix precedes the body —
+        ///     server time (ms since room start) + this client's last PROCESSED
+        ///     input seq. Set by the server on ROOM_STATE / ROOM_STATE_PATCH
+        ///     whenever the room called <c>defineInput()</c>.
         /// </summary>
-        public static byte BAD_REQUEST = 50;
+        TIMED = 0x80,
+    }
 
-        // public Protocol (){}
+    /// <summary>Status byte of a ROOM_RESPONSE reply.</summary>
+    public enum ResponseStatus : byte
+    {
+        OK = 0,
+
+        /// <summary>Deliberate, typed rejection — the authored reason rides as the payload.</summary>
+        REJECTED = 1,
+
+        /// <summary>Handler fault (threw / no handler) — payload is <c>{name, message, code?}</c>.</summary>
+        ERROR = 2,
+    }
+
+    /// <summary>
+    ///     Section tags for trailing tagged blobs in the JOIN_ROOM handshake:
+    ///     <c>[tag uint8][length varint][payload]</c>, repeated until
+    ///     end-of-buffer. Unknown tags are skipped via <c>length</c>
+    ///     (forward-compatible).
+    /// </summary>
+    public enum HandshakeSection : byte
+    {
+        /// <summary>Reflection bytes for the room's input schema (<c>defineInput()</c>).</summary>
+        INPUT_REFLECTION = 1,
+
+        /// <summary>Input feature flags + rates the client mirrors (<c>defineInput()</c>).</summary>
+        INPUT_OPTIONS = 2,
+    }
+
+    /// <summary>
+    ///     Error thrown when a <c>Room.Request()</c> is answered with
+    ///     <see cref="ResponseStatus.REJECTED" /> or <see cref="ResponseStatus.ERROR" />.
+    /// </summary>
+    public class RequestError : System.Exception
+    {
+        /// <summary>The reply payload: the authored rejection reason, or <c>{name, message, code?}</c> for faults.</summary>
+        public readonly object Payload;
+
+        /// <summary>True when the server handler threw (or none was registered) — a fault, not a typed rejection.</summary>
+        public readonly bool Faulted;
+
+        public RequestError(object payload, bool faulted)
+            : base(payload is System.Collections.IDictionary dict && dict.Contains("message")
+                ? dict["message"]?.ToString()
+                : payload?.ToString() ?? "request failed")
+        {
+            Payload = payload;
+            Faulted = faulted;
+        }
     }
 
 	public enum CloseCode

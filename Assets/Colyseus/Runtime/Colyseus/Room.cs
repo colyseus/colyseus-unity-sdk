@@ -196,6 +196,27 @@ namespace Colyseus
         private long _lastPingTime = 0;
 
         /// <summary>
+        ///     Default <see cref="Request{TResponse}(string, object, int)" /> timeout, in milliseconds.
+        /// </summary>
+        public static int DefaultRequestTimeout = 10000;
+
+        // request/response (ROOM_REQUEST / ROOM_RESPONSE) correlation state
+        private uint _nextRequestId;
+        private readonly Dictionary<uint, PendingRequest> _pendingRequests = new Dictionary<uint, PendingRequest>();
+
+        private class PendingRequest
+        {
+            /// <summary>Called once with the decoded reply outcome: (ok, payload, faulted).</summary>
+            public Action<bool, object, bool> OnReply;
+
+            /// <summary>Called when the connection closes before a reply arrives.</summary>
+            public Action<string> OnClose;
+
+            /// <summary>OK payloads deserialize into this type.</summary>
+            public System.Type ResponseType;
+        }
+
+        /// <summary>
         ///     Callback to invoke when ping response is received.
         /// </summary>
         private Action<int> _pingCallback = null;
@@ -355,6 +376,9 @@ namespace Colyseus
 	        Connection = connection;
 
 	        Connection.OnClose += code => {
+				// in-flight requests can't be answered on a closed socket
+				RejectAllPendingRequests("connection closed before a response was received.");
+
 				if (JoinedAtTime == 0) {
 					OnError?.Invoke(code, "Connection closed before joining room");
 					return;
@@ -540,6 +564,156 @@ namespace Colyseus
         }
 
         /// <summary>
+        ///     Send a message and await the server's reply — the value the server
+        ///     returns from its matching <c>onMessage(type, ...)</c> handler.
+        /// </summary>
+        /// <remarks>
+        ///     Throws <see cref="RequestError" /> when the handler rejects (the
+        ///     authored reason) or throws (<c>{name, message, code?}</c>), and
+        ///     plain exceptions when the connection closes first or no reply
+        ///     arrives within <paramref name="timeoutMs" />
+        ///     (default: <see cref="DefaultRequestTimeout" />).
+        /// </remarks>
+        public Task<TResponse> Request<TResponse>(string type, object payload = null, int timeoutMs = 0)
+        {
+            return RequestInternal<TResponse>(type, payload, timeoutMs);
+        }
+
+        /// <inheritdoc cref="Request{TResponse}(string, object, int)" />
+        public Task<TResponse> Request<TResponse>(byte type, object payload = null, int timeoutMs = 0)
+        {
+            return RequestInternal<TResponse>(type, payload, timeoutMs);
+        }
+
+        private async Task<TResponse> RequestInternal<TResponse>(object type, object payload, int timeoutMs)
+        {
+            if (Connection == null || !Connection.IsOpen)
+            {
+                throw new Exception($"cannot send request \"{type}\": connection is not open.");
+            }
+
+            var tcs = new TaskCompletionSource<TResponse>();
+            // the timeout task lives in this closure — the shared pending
+            // registry stays unaware of timeouts; reply and close cancel it
+            var timeoutCancellation = new System.Threading.CancellationTokenSource();
+
+            uint requestId = await SendRequest(type, payload, typeof(TResponse),
+                (ok, replyPayload, faulted) =>
+                {
+                    timeoutCancellation.Cancel();
+                    if (ok)
+                    {
+                        tcs.TrySetResult(replyPayload == null ? default : (TResponse)replyPayload);
+                    }
+                    else
+                    {
+                        tcs.TrySetException(new RequestError(replyPayload, faulted));
+                    }
+                },
+                reason =>
+                {
+                    timeoutCancellation.Cancel();
+                    tcs.TrySetException(new Exception(reason));
+                });
+
+            int ms = timeoutMs > 0 ? timeoutMs : DefaultRequestTimeout;
+            _ = Task.Delay(ms, timeoutCancellation.Token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    _pendingRequests.Remove(requestId);
+                    tcs.TrySetException(new TimeoutException($"request \"{type}\" timed out after {ms}ms."));
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
+
+            return await tcs.Task;
+        }
+
+        /// <summary>
+        ///     Low-level round-trip primitive: registers <paramref name="onReply" />
+        ///     (called once with the decoded outcome when the server replies) and
+        ///     transmits a ROOM_REQUEST frame. <see cref="Request{TResponse}(string, object, int)" />
+        ///     wraps it with a timeout. Returns the request id.
+        /// </summary>
+        protected async Task<uint> SendRequest(object type, object payload, System.Type responseType, Action<bool, object, bool> onReply, Action<string> onClose)
+        {
+            uint requestId = _nextRequestId++;
+
+            byte[] header;
+            byte[] requestIdBytes = Encode.EncodeUintNumber(requestId);
+
+            if (type is string stringType)
+            {
+                byte[] encodedType = Encoding.UTF8.GetBytes(stringType);
+                byte[] typeHeader = Encode.getInitialBytesFromEncodedType(encodedType, Protocol.ROOM_REQUEST);
+
+                // [ROOM_REQUEST][requestId varint][type fixstr header][type bytes]
+                header = new byte[1 + requestIdBytes.Length + (typeHeader.Length - 1) + encodedType.Length];
+                header[0] = Protocol.ROOM_REQUEST;
+                Buffer.BlockCopy(requestIdBytes, 0, header, 1, requestIdBytes.Length);
+                Buffer.BlockCopy(typeHeader, 1, header, 1 + requestIdBytes.Length, typeHeader.Length - 1);
+                Buffer.BlockCopy(encodedType, 0, header, 1 + requestIdBytes.Length + typeHeader.Length - 1, encodedType.Length);
+            }
+            else
+            {
+                header = new byte[2 + requestIdBytes.Length];
+                header[0] = Protocol.ROOM_REQUEST;
+                Buffer.BlockCopy(requestIdBytes, 0, header, 1, requestIdBytes.Length);
+                header[header.Length - 1] = (byte)type;
+            }
+
+            byte[] bytesToSend;
+            if (payload != null)
+            {
+                MemoryStream serializationOutput = new MemoryStream();
+                MsgPack.Serialize(payload, serializationOutput, SerializationOptions.SuppressTypeInformation);
+                byte[] encodedPayload = serializationOutput.ToArray();
+
+                bytesToSend = new byte[header.Length + encodedPayload.Length];
+                Buffer.BlockCopy(header, 0, bytesToSend, 0, header.Length);
+                Buffer.BlockCopy(encodedPayload, 0, bytesToSend, header.Length, encodedPayload.Length);
+            }
+            else
+            {
+                bytesToSend = header;
+            }
+
+            _pendingRequests[requestId] = new PendingRequest
+            {
+                OnReply = onReply,
+                OnClose = onClose,
+                ResponseType = responseType,
+            };
+
+            // reliable + offline: buffer so it flushes on (re)connect
+            if (!Connection.IsOpen)
+            {
+                EnqueueMessage(bytesToSend);
+            }
+            else
+            {
+                await Connection.Send(bytesToSend);
+            }
+
+            return requestId;
+        }
+
+        private void RejectAllPendingRequests(string reason)
+        {
+            if (_pendingRequests.Count == 0)
+            {
+                return;
+            }
+
+            foreach (PendingRequest entry in _pendingRequests.Values)
+            {
+                entry.OnClose?.Invoke(reason);
+            }
+
+            _pendingRequests.Clear();
+        }
+
+        /// <summary>
         ///     Send a ping to the server and measure round-trip latency.
         /// </summary>
         /// <param name="callback">Callback invoked with the round-trip time in milliseconds</param>
@@ -590,17 +764,29 @@ namespace Colyseus
         /// <param name="bytes">The message as provided from the <see cref="Connection" /></param>
         protected async void ParseMessage(byte[] bytes)
         {
-            byte code = bytes[0];
+            Iterator it = new Iterator { Offset = 1 };
+
+            // Strip modifier bits (bits 5..7) so the dispatch below stays
+            // modifier-agnostic; consume any modifier-attached prefix bytes here.
+            byte rawByte = bytes[0];
+            byte code = (byte)(rawByte & Protocol.CODE_MASK);
+
+            if ((rawByte & (byte)ProtocolModifier.TIMED) != 0)
+            {
+                // [uint32 sNow][uint32 inputSeq] — server time (ms since room
+                // start) + last PROCESSED input seq. Consumed here; feeds the
+                // room clock + input ack once the input layer is ported.
+                Decode.DecodeUint32(bytes, it);
+                Decode.DecodeUint32(bytes, it);
+            }
 
             if (code == Protocol.JOIN_ROOM)
             {
-                int offset = 1;
+                var reconnectionToken = Encoding.UTF8.GetString(bytes, it.Offset + 1, bytes[it.Offset]);
+                it.Offset += reconnectionToken.Length + 1;
 
-                var reconnectionToken = Encoding.UTF8.GetString(bytes, offset + 1, bytes[offset]);
-                offset += reconnectionToken.Length + 1;
-
-                SerializerId = Encoding.UTF8.GetString(bytes, offset + 1, bytes[offset]);
-                offset += SerializerId.Length + 1;
+                SerializerId = Encoding.UTF8.GetString(bytes, it.Offset + 1, bytes[it.Offset]);
+                it.Offset += SerializerId.Length + 1;
 
                 if (SerializerId == "schema")
                 {
@@ -631,10 +817,18 @@ namespace Colyseus
                     Serializer = (ISerializer<T>) new NoneSerializer();
                 }
 
-                if (bytes.Length > offset)
+                // State reflection is length-prefixed: the schema handshake must
+                // not read past it into the trailing tagged-section bytes. A zero
+                // length means reconnect (the serializer already has state).
+                int stateReflectionLen = (int)Decode.DecodeNumber(bytes, it);
+                if (stateReflectionLen > 0)
                 {
+                    int reflectionEnd = it.Offset + stateReflectionLen;
 	                try {
-		                Serializer.Handshake(bytes, offset);
+		                // bounded slice — the reflection decoder reads until end-of-array
+		                byte[] reflectionBytes = new byte[reflectionEnd];
+		                Buffer.BlockCopy(bytes, 0, reflectionBytes, 0, reflectionEnd);
+		                Serializer.Handshake(reflectionBytes, it.Offset);
 	                }
 	                catch (Exception e)
 	                {
@@ -642,6 +836,18 @@ namespace Colyseus
 		                OnError?.Invoke(ErrorCode.SCHEMA_MISMATCH, e.Message);
 		                return;
 	                }
+                    it.Offset = reflectionEnd;
+                }
+
+                // Trailing tagged sections: [tag byte][length varint][payload].
+                // Unknown tags are skipped via length (forward-compatible).
+                // INPUT_REFLECTION / INPUT_OPTIONS are consumed by the input
+                // layer once ported.
+                while (it.Offset < bytes.Length)
+                {
+                    it.Offset++; // tag (see HandshakeSection)
+                    int sectionLen = (int)Decode.DecodeNumber(bytes, it);
+                    it.Offset += sectionLen;
                 }
 
                 ReconnectionToken = new ReconnectionToken()
@@ -672,7 +878,6 @@ namespace Colyseus
             }
             else if (code == Protocol.ERROR)
             {
-                Iterator it = new Iterator {Offset = 1};
                 float errorCode = Decode.DecodeNumber(bytes, it);
                 string errorMessage = Decode.DecodeString(bytes, it);
                 OnError?.Invoke((int) errorCode, errorMessage);
@@ -683,11 +888,11 @@ namespace Colyseus
             }
             else if (code == Protocol.ROOM_STATE)
             {
-	            SetState(bytes, 1);
+	            SetState(bytes, it.Offset);
             }
             else if (code == Protocol.ROOM_STATE_PATCH)
             {
-                Patch(bytes, 1);
+                Patch(bytes, it.Offset);
             }
             else if (code == Protocol.PING)
             {
@@ -695,12 +900,35 @@ namespace Colyseus
                 _pingCallback?.Invoke((int)(now - _lastPingTime));
                 _pingCallback = null;
             }
+            else if (code == Protocol.ROOM_RESPONSE)
+            {
+                // reply to a pending Request()
+                uint requestId = (uint) Decode.DecodeNumber(bytes, it);
+                var status = (ResponseStatus) bytes[it.Offset++];
+
+                // already answered (e.g. timed out) or unknown id — ignore
+                if (_pendingRequests.TryGetValue(requestId, out PendingRequest entry))
+                {
+                    _pendingRequests.Remove(requestId);
+
+                    object payload = null;
+                    if (bytes.Length > it.Offset)
+                    {
+                        // OK replies deserialize into the request's response type;
+                        // REJECTED/ERROR payloads are shapeless (reason / {name, message})
+                        System.Type payloadType = status == ResponseStatus.OK ? entry.ResponseType : typeof(object);
+                        payload = MsgPack.Deserialize(payloadType,
+                            new MemoryStream(bytes, it.Offset, bytes.Length - it.Offset, false));
+                    }
+
+                    // the ONE place the wire's three statuses collapse to (ok, payload, faulted):
+                    entry.OnReply(status == ResponseStatus.OK, payload, status == ResponseStatus.ERROR);
+                }
+            }
             else if (code == Protocol.ROOM_DATA || code == Protocol.ROOM_DATA_BYTES)
             {
                 IMessageHandler handler = null;
                 object type;
-
-                Iterator it = new Iterator {Offset = 1};
 
                 if (Decode.NumberCheck(bytes, it))
                 {

@@ -42,7 +42,7 @@ namespace Colyseus
             await _transport.Connect(_url, _headers);
         }
 
-        public Task Send(byte[] data)
+        public virtual Task Send(byte[] data)
         {
             return _transport.Send(data);
         }
