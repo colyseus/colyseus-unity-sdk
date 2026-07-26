@@ -11,7 +11,9 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "COLYSEUS_SDK_TESTS"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }

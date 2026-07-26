@@ -34,12 +34,31 @@ namespace Colyseus
         {
             _transport = new WebSocketTransport();
 
-            _transport.OnOpen += () => { IsOpen = true; OnOpen?.Invoke(); };
-            _transport.OnMessage += (data) => OnMessage?.Invoke(data);
-            _transport.OnError += (msg) => OnError?.Invoke(msg);
-            _transport.OnClose += (code) => { IsOpen = false; OnClose?.Invoke(code); };
+            _transport.OnOpen += RaiseOpen;
+            _transport.OnMessage += RaiseMessage;
+            _transport.OnError += RaiseError;
+            _transport.OnClose += RaiseClose;
 
             await _transport.Connect(_url, _headers);
+        }
+
+        /// <summary>
+        ///     Raise points for the socket's events. Overridable so a subclass can
+        ///     sit between the socket and the room — a latency simulator queues
+        ///     inbound frames here and calls base later, which is the only seam
+        ///     for that: the transport itself is private and Connect() owns the
+        ///     wiring. Overrides MUST eventually call base or the room stalls.
+        /// </summary>
+        protected virtual void RaiseOpen() { IsOpen = true; OnOpen?.Invoke(); }
+
+        protected virtual void RaiseMessage(byte[] data) { OnMessage?.Invoke(data); }
+
+        protected virtual void RaiseError(string message) { OnError?.Invoke(message); }
+
+        protected virtual void RaiseClose(int code)
+        {
+            IsOpen = false;
+            OnClose?.Invoke(code);
         }
 
         public virtual Task Send(byte[] data)
