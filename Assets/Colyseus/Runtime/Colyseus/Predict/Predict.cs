@@ -55,7 +55,7 @@ namespace Colyseus.Predict
 	///     the room clock and adopt the fixed step for <see cref="Tick" />'s
 	///     send budget.
 	/// </summary>
-	public class Predict
+	public class Predict : IDisposable
 	{
 		private const int RingCap = 16;
 		private const double GapResumeMult = 3;
@@ -107,6 +107,8 @@ namespace Colyseus.Predict
 		private readonly Dictionary<int, Dictionary<string, Slot>> slotsByRef = new Dictionary<int, Dictionary<string, Slot>>();
 		private readonly Dictionary<int, SimState> simsByRef = new Dictionary<int, SimState>();
 		private readonly List<object> driven = new List<object>();
+		// Every AttachAll* off, so Dispose can unhook what the caller never held.
+		private readonly List<Action> attachments = new List<Action>();
 
 		// room-wide fixed-step accumulator (send budget)
 		private double? fixedStepMs;
@@ -123,6 +125,16 @@ namespace Colyseus.Predict
 			this.callbacks = callbacks;
 			this.clock = clock;
 		}
+
+		/// <summary>
+		///     The one-liner every caller wants: a <see cref="Predict" /> over a
+		///     room's callbacks and clock. Equivalent to
+		///     <c>new Predict(new PredictCallbacks&lt;T&gt;(Callbacks.Get(room)), room.Clock)</c>,
+		///     which is the same two collaborators every time and no decision the
+		///     caller is better placed to make.
+		/// </summary>
+		public static Predict For<TState>(Room<TState> room) where TState : Schema.Schema
+			=> new Predict(new PredictCallbacks<TState>(Schema.Callbacks.Get(room)), room.Clock);
 
 		private static int? RefIdOf(Schema.Schema instance) => instance?.__refId;
 
@@ -241,15 +253,55 @@ namespace Colyseus.Predict
 		}
 
 		/// <summary>
+		///     Release everything this Predict registered: tracked fields, reckon
+		///     sims, AttachAll wiring, and every driven child.
+		///
+		///     This matters more than it looks. Callbacks live on the ROOM, so a
+		///     Predict that outlives its owner keeps firing handlers into freed
+		///     state — attach/detach are not symmetric unless someone closes the
+		///     loop, and the AttachAll offs are held here, not by the caller.
+		///     Dispose is that loop; call it when the screen using this goes away.
+		/// </summary>
+		public void Dispose()
+		{
+			foreach (var off in attachments) { off?.Invoke(); }
+			attachments.Clear();
+
+			foreach (var perRef in slotsByRef.Values)
+			{
+				foreach (var slot in perRef.Values) { slot.Detach?.Invoke(); }
+			}
+			slotsByRef.Clear();
+			simsByRef.Clear();
+
+			foreach (var child in driven) { (child as IDisposable)?.Dispose(); }
+			driven.Clear();
+			fixedStepMs = null;
+		}
+
+		/// <summary>
 		///     Attach prediction to every child of a root-level collection:
 		///     wires onAdd → track(fields) and onRemove → detach.
 		/// </summary>
 		public Action AttachAll(string collection, IReadOnlyList<string> fields, PredictFieldOptions options = null)
+			=> AttachEach(collection, child => { foreach (var f in fields) { Track(child, f, options); } });
+
+		/// <summary>
+		///     The reckon twin of <see cref="AttachAll" />: forward-simulate every
+		///     child of a collection with the shared step, instead of smoothing it
+		///     toward the past. Same add/remove wiring, so a collection whose
+		///     members come and go needs no bookkeeping from the caller.
+		/// </summary>
+		public Action AttachAllReckon<T>(string collection, ReckonOptions<T> options) where T : Schema.Schema
+			=> AttachEach(collection, child => TrackReckon((T)child, options));
+
+		/// <summary>Shared add/remove wiring behind both AttachAll flavours.</summary>
+		private Action AttachEach(string collection, Action<Schema.Schema> attach)
 		{
 			var tracked = new List<Schema.Schema>();
 			var addOff = callbacks.OnAdd(collection, (Schema.Schema child, object key) =>
 			{
-				foreach (var f in fields) { Track(child, f, options); }
+				attach(child);
 				tracked.Add(child);
 			});
 			var removeOff = callbacks.OnRemove(collection, (Schema.Schema child, object key) =>
@@ -257,13 +309,15 @@ namespace Colyseus.Predict
 				tracked.Remove(child);
 				Detach(child);
 			});
-			return () =>
+			Action off = () =>
 			{
 				addOff?.Invoke();
 				removeOff?.Invoke();
 				foreach (var child in tracked) { Detach(child); }
 				tracked.Clear();
 			};
+			attachments.Add(off);
+			return off;
 		}
 
 		// --- Factories --------------------------------------------------------
@@ -272,10 +326,38 @@ namespace Colyseus.Predict
 		public Reconciler<S, I> MakeReconciler<S, I>(S instance, ReconcilerOptions<S, I> opts) where S : Schema.Schema
 		{
 			opts.Clock = opts.Clock ?? clock;
+			BindRenderDelay(opts.Input);
 			var recon = new Reconciler<S, I>(instance, opts);
 			AdoptFixedStep(recon.StepMs);
 			driven.Add(recon);
 			return recon;
+		}
+
+		/// <summary>
+		///     Tell the input handle how far in the past this client draws, taken
+		///     from the lerp delay already attached here.
+		///
+		///     Worth doing automatically because the failure is silent and
+		///     expensive: a lag-compensating server rewinds to
+		///     <c>serverNow − (renderDelay + rtt/2)</c>, so leaving renderDelay at
+		///     zero makes every rewound read land one full render-delay early, and
+		///     shots miss by exactly that much with nothing in the logs to say so.
+		///     An explicit <see cref="InputOptions.RenderDelay" /> still wins.
+		/// </summary>
+		private void BindRenderDelay(InputHandle input)
+		{
+			if (input == null || input.RenderDelay > 0) { return; }
+			foreach (var perRef in slotsByRef.Values)
+			{
+				foreach (var slot in perRef.Values)
+				{
+					if (slot.Opts != null && slot.Opts.Mode == PredictMode.Lerp && slot.Opts.Delay > 0)
+					{
+						input.RenderDelay = slot.Opts.Delay;
+						return;
+					}
+				}
+			}
 		}
 
 		/// <summary>Spawn a driven <see cref="PredictedEventChannel{T}" />.</summary>

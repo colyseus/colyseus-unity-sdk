@@ -63,13 +63,27 @@ namespace Colyseus
 		/// <summary>Monotonic reset counter — rollback controllers poll it and self-reset.</summary>
 		public int Epoch { get; private set; }
 
+		/// <summary>
+		///     How far in the PAST this client draws remote entities, in ms. A
+		///     lag-compensating server rewinds its targets by this much plus half
+		///     the RTT, so it reads the world at the instant you actually saw —
+		///     get it wrong and every shot misses by exactly the difference.
+		///     <see cref="Predict.MakeReconciler{S,I}" /> binds it from the lerp
+		///     delay you already attached with; set it yourself only to override.
+		/// </summary>
+		public double RenderDelay
+		{
+			get => renderDelay;
+			set => renderDelay = Math.Max(0, value);
+		}
+
 		private readonly InputEncoder encoder;
 		private readonly Func<Connection> getConnection;
 		private readonly Func<RoomClock> getClock;
 
 		private readonly bool stampRender;
 		private readonly bool stampReckon;
-		private readonly double renderDelay;
+		private double renderDelay;
 		private readonly Func<object, bool> allowRewind;
 		private double lastStamp;      // delta-coded stamp baseline
 		private double pendingReckon;

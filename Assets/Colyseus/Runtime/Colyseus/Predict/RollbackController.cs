@@ -91,7 +91,7 @@ namespace Colyseus.Predict
 	///     <see cref="Tick" /> and rewinds-to-truth + replays on new acks,
 	///     absorbing mispredictions into per-field visual offsets that decay.
 	/// </summary>
-	public abstract class RollbackController
+	public abstract class RollbackController : IDisposable
 	{
 		/// <summary>Per-numeric-field correction injected by the most recent reconcile.</summary>
 		public readonly Dictionary<string, double> LastCorrection = new Dictionary<string, double>();

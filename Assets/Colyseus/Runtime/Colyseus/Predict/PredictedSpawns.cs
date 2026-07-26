@@ -42,7 +42,7 @@ namespace Colyseus.Predict
 	///     authoritative entity on its add (fifo or predicate) and collapsed
 	///     onto one logical entry with a STABLE id — the handoff is invisible.
 	/// </summary>
-	public class PredictedSpawns<S, L> : IDrivenChild where S : class where L : class
+	public class PredictedSpawns<S, L> : IDrivenChild, IDisposable where S : class where L : class
 	{
 		private readonly PredictedSpawnsOptions<S, L> opts;
 		private readonly RoomClock clock;

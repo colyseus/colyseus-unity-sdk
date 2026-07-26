@@ -35,7 +35,7 @@ namespace Colyseus.Predict
 	///     on the authoritative signal, sim-born grace-tick auto-reject, UI-born
 	///     wall-clock TTL.
 	/// </summary>
-	public class PredictedEventChannel<T> : IPredictSink<T>, IDrivenChild
+	public class PredictedEventChannel<T> : IPredictSink<T>, IDrivenChild, IDisposable
 	{
 		private class Entry
 		{
