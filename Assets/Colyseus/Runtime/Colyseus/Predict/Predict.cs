@@ -327,7 +327,7 @@ namespace Colyseus.Predict
 		// --- Factories --------------------------------------------------------
 
 		/// <summary>Spawn a driven <see cref="Reconciler{S,I}" /> (clock injected, fixed step adopted).</summary>
-		public Reconciler<S, I> MakeReconciler<S, I>(S instance, ReconcilerOptions<S, I> opts) where S : Schema.Schema
+		public Reconciler<S, I> Reconciler<S, I>(S instance, ReconcilerOptions<S, I> opts) where S : Schema.Schema
 		{
 			opts.Clock = opts.Clock ?? clock;
 			BindRenderDelay(opts.Input);
@@ -368,7 +368,7 @@ namespace Colyseus.Predict
 		///     Spawn a driven <see cref="SimReconciler{I}" /> — the composite face,
 		///     for a world of parts rather than one entity's fields.
 		/// </summary>
-		public SimReconciler<W, I> MakeSimReconciler<W, I>(SimReconcilerOptions<W, I> opts)
+		public SimReconciler<W, I> Sim<W, I>(SimReconcilerOptions<W, I> opts)
 			where W : class
 		{
 			opts.Clock = opts.Clock ?? clock;

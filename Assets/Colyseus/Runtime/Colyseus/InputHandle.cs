@@ -68,7 +68,7 @@ namespace Colyseus
 		///     lag-compensating server rewinds its targets by this much plus half
 		///     the RTT, so it reads the world at the instant you actually saw —
 		///     get it wrong and every shot misses by exactly the difference.
-		///     <see cref="Predict.MakeReconciler{S,I}" /> binds it from the lerp
+		///     <see cref="Predict.Reconciler{S,I}" /> binds it from the lerp
 		///     delay you already attached with; set it yourself only to override.
 		/// </summary>
 		public double RenderDelay
