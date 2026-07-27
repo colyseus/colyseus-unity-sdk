@@ -38,15 +38,6 @@ namespace Colyseus
 	public class Client
 	{
 		/// <summary>
-		///     How the client builds a room's <see cref="Connection"/>. Replace it
-		///     to decorate the socket — a latency simulator, a recorder, a test
-		///     double. The C SDK has the same seam (colyseus_transport_factory_fn);
-		///     without one, a decorated Connection has no way to be used.
-		/// </summary>
-		public static Func<string, Dictionary<string, string>, Connection> ConnectionFactory =
-			(url, headers) => new Connection(url, headers);
-
-		/// <summary>
 		///     Authentication tools, see: https://docs.colyseus.io/auth/
 		/// </summary>
 		public Auth Auth;
@@ -401,7 +392,7 @@ namespace Colyseus
 				Query = string.Join("&", list.ToArray())
 			};
 
-			return ConnectionFactory(uriBuilder.ToString(), headers);
+			return new Connection(uriBuilder.ToString(), headers);
 		}
 
 		/// <summary>
