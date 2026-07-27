@@ -158,7 +158,7 @@ namespace Colyseus.Predict
 		///     latest steps plus the decaying correction offset. Numeric fields
 		///     only; others return the current value.
 		/// </summary>
-		public double Value(string field)
+		public override double Value(string field)
 		{
 			var current = mirror[field];
 			if (!IsNumeric(current)) { return AsScalar(current); }
@@ -167,6 +167,17 @@ namespace Colyseus.Predict
 			double p = prev.TryGetValue(field, out var pv) ? pv : smoothed;
 			return p + (smoothed - p) * RenderAlpha();
 		}
+
+		/// <summary>
+		///     Flat face: the pose key IS the field name, so the two lists match —
+		///     kept separate to share one overlay path with the composite face.
+		/// </summary>
+		public override IReadOnlyList<BoundRegistration> BoundRegistrations =>
+			numericFields.Count == 0
+				? Array.Empty<BoundRegistration>()
+				: new[] { new BoundRegistration {
+					Source = instance, Fields = numericFields, PoseKeys = numericFields,
+				} };
 
 		// --- RollbackController hooks -----------------------------------------
 

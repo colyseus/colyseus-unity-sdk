@@ -76,6 +76,11 @@ namespace Colyseus.Predict
 			public int RingHead;
 			public int RingCount;
 			public Action Detach;
+			/// <summary>Non-null only on a controller-bound slot: its owner and pose key.</summary>
+			public RollbackController Ctrl;
+			public string PoseKey;
+			/// <summary>The passive slot this binding displaced; restored on dispose.</summary>
+			public Slot Stash;
 		}
 
 		private class SimState
@@ -333,8 +338,66 @@ namespace Colyseus.Predict
 			BindRenderDelay(opts.Input);
 			var recon = new Reconciler<S, I>(instance, opts);
 			AdoptFixedStep(recon.StepMs);
+			InstallBoundOverlay(recon);
 			driven.Add(recon);
 			return recon;
+		}
+
+		/// <summary>
+		///     Route <see cref="Value" /> at every field a controller predicts, so
+		///     ONE read idiom covers the whole render layer: passively-smoothed
+		///     remotes and controller-owned entities alike, with the caller never
+		///     naming a pose key.
+		///
+		///     Any passive slot already on that field is STASHED, not dropped — its
+		///     listener keeps sampling, and Dispose() puts it back.
+		/// </summary>
+		private void InstallBoundOverlay(RollbackController ctrl)
+		{
+			var regs = ctrl.BoundRegistrations;
+			if (regs.Count == 0) { return; }
+			var touched = new List<(Dictionary<string, Slot> perRef, string field)>();
+			foreach (var reg in regs)
+			{
+				if (reg.Source == null) { continue; }
+				if (!slotsByRef.TryGetValue(reg.Source.__refId, out var perRef))
+				{
+					perRef = new Dictionary<string, Slot>();
+					slotsByRef[reg.Source.__refId] = perRef;
+				}
+				for (int k = 0; k < reg.Fields.Count; k++)
+				{
+					string field = reg.Fields[k];
+					perRef.TryGetValue(field, out var stash);
+					if (stash != null && stash.Ctrl != null)
+					{
+						ColyseusContext.Logger.LogWarning(
+							$"Colyseus Predict: \"{field}\" is already bound to a controller — " +
+							"the newer registration wins.");
+						stash = stash.Stash;
+					}
+					perRef[field] = new Slot
+					{
+						Field = field,
+						Instance = reg.Source,
+						Ctrl = ctrl,
+						PoseKey = reg.PoseKeys[k],
+						Stash = stash,
+					};
+					touched.Add((perRef, field));
+				}
+			}
+			ctrl.OnDisposed(() =>
+			{
+				foreach (var (perRef, field) in touched)
+				{
+					if (perRef.TryGetValue(field, out var slot) && slot.Ctrl != null)
+					{
+						if (slot.Stash != null) { perRef[field] = slot.Stash; }
+						else { perRef.Remove(field); }
+					}
+				}
+			});
 		}
 
 		/// <summary>
@@ -375,6 +438,7 @@ namespace Colyseus.Predict
 			BindRenderDelay(opts.Input);
 			var recon = new SimReconciler<W, I>(opts);
 			AdoptFixedStep(recon.StepMs);
+			InstallBoundOverlay(recon);
 			driven.Add(recon);
 			return recon;
 		}
@@ -554,6 +618,9 @@ namespace Colyseus.Predict
 			{
 				return ToNumber(instance[field]);
 			}
+			// Controller-owned: a reconciler claimed this field, so the pose comes
+			// from its rollback rather than a smoothing curve over the server stream.
+			if (slot.Ctrl != null) { return slot.Ctrl.Value(slot.PoseKey); }
 			switch (slot.Opts.Mode)
 			{
 				case PredictMode.Lerp: return ComputeLerp(slot);

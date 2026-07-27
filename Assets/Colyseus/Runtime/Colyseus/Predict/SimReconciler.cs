@@ -63,6 +63,8 @@ namespace Colyseus.Predict
 		/// <summary>A bound field: its source, the mirror that replaced it, its poses.</summary>
 		private class Bound
 		{
+			/// <summary>World field this entry came from — the prefix of its pose keys.</summary>
+			public string Name;
 			public Schema.Schema Source;
 			public Schema.Schema Mirror;
 			public List<string> Fields;
@@ -112,7 +114,7 @@ namespace Colyseus.Predict
 			// mirror, so a step writes `world.paddle.vy = …` against a real
 			// instance rather than a dictionary.
 			var mirror = (Schema.Schema)Activator.CreateInstance(source.GetType());
-			var b = new Bound { Source = source, Mirror = mirror, Fields = new List<string>() };
+			var b = new Bound { Name = field.Name, Source = source, Mirror = mirror, Fields = new List<string>() };
 
 			foreach (var pair in source.fieldTypes)
 			{
@@ -175,7 +177,7 @@ namespace Colyseus.Predict
 		///     value interpolated between the two latest steps plus the decaying
 		///     correction offset. NaN for an unknown key.
 		/// </summary>
-		public double Value(string poseKey)
+		public override double Value(string poseKey)
 		{
 			double current = ReadPose(poseKey);
 			if (double.IsNaN(current)) { return double.NaN; }
@@ -186,6 +188,41 @@ namespace Colyseus.Predict
 
 		/// <summary>Every pose key this world exposes — useful when one reads NaN.</summary>
 		public IReadOnlyList<string> PoseKeys => poseKeys;
+
+		/// <summary>
+		///     Composite face: each bound field keeps its ORIGINAL decoded instance
+		///     as the source (not the mirror that replaced it), so
+		///     <c>Predict.Value(state.puck, "x")</c> resolves without the caller
+		///     ever naming "puck.x".
+		/// </summary>
+		public override IReadOnlyList<BoundRegistration> BoundRegistrations
+		{
+			get
+			{
+				var outList = new List<BoundRegistration>();
+				foreach (var b in bound)
+				{
+					var fields = new List<string>();
+					var keys = new List<string>();
+					foreach (var f in b.Fields)
+					{
+						string key = b.Name + "." + f;
+						if (poseOf.ContainsKey(key) && IsNumeric(b.Mirror[f]))
+						{
+							fields.Add(f);
+							keys.Add(key);
+						}
+					}
+					if (fields.Count > 0)
+					{
+						outList.Add(new BoundRegistration {
+							Source = b.Source, Fields = fields, PoseKeys = keys,
+						});
+					}
+				}
+				return outList;
+			}
+		}
 
 		// --- RollbackController hooks -----------------------------------------
 

@@ -91,6 +91,19 @@ namespace Colyseus.Predict
 	///     <see cref="Tick" /> and rewinds-to-truth + replays on new acks,
 	///     absorbing mispredictions into per-field visual offsets that decay.
 	/// </summary>
+	/// <summary>
+	///     One controller-owned instance and the pose keys its numeric fields map
+	///     to. <c>Fields[i]</c> is read back as <c>PoseKeys[i]</c> — the two differ
+	///     only on the composite face, where a key is
+	///     "&lt;worldField&gt;.&lt;schemaField&gt;".
+	/// </summary>
+	public class BoundRegistration
+	{
+		public Schema.Schema Source;
+		public IReadOnlyList<string> Fields;
+		public IReadOnlyList<string> PoseKeys;
+	}
+
 	public abstract class RollbackController : IDisposable
 	{
 		/// <summary>Per-numeric-field correction injected by the most recent reconcile.</summary>
@@ -348,6 +361,24 @@ namespace Colyseus.Predict
 			memos.Clear();
 			MarkDirty();
 		}
+
+		/// <summary>
+		///     Rendered pose for one key. Overridden by both faces —
+		///     <see cref="Reconciler{S,I}" /> keys by schema field,
+		///     <see cref="SimReconciler{W,I}" /> by "&lt;worldField&gt;.&lt;schemaField&gt;".
+		///     Declared here so the bound overlay can read a pose without knowing
+		///     which face it holds.
+		/// </summary>
+		public virtual double Value(string key) => double.NaN;
+
+		/// <summary>
+		///     What <c>Predict.Value(instance, field)</c> needs to reach this
+		///     controller's poses: the ORIGINAL decoded instance per bound entry
+		///     (not the mirror), its numeric fields, and the pose key each maps to.
+		///     Empty when nothing is bound.
+		/// </summary>
+		public virtual IReadOnlyList<BoundRegistration> BoundRegistrations =>
+			Array.Empty<BoundRegistration>();
 
 		public void OnDisposed(Action hook) => disposedHooks.Add(hook);
 
