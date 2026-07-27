@@ -178,10 +178,14 @@ namespace Colyseus.Predict
 			{
 				switch (pair.Value)
 				{
+					// Every primitive, strings included: the scratch is documented as a
+					// FULL copy of the entity so the shared step can read descriptors it
+					// never attached (a bot's `kind`). Dropping strings makes step
+					// functions that branch on one silently take the default branch — and
+					// AttachAllReckon gives the caller no live instance to fall back on.
 					case "ref":
 					case "array":
 					case "map":
-					case "string":
 						break;
 					default:
 						copyFields.Add(pair.Key);
