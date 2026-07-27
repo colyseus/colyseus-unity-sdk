@@ -31,6 +31,15 @@ namespace Colyseus.Predict
 		public bool Angle;
 	}
 
+	/// <summary>
+	///     Per-field smoothing config: field name -> a <see cref="PredictMode" />
+	///     or a full <see cref="PredictFieldOptions" />. The reference spells this
+	///     as a TypeScript union; here the two arms are separate
+	///     <c>Attach</c>/<c>AttachAll</c> overloads, which keeps the reckon step
+	///     signature type-checked.
+	/// </summary>
+	public class AttachConfig : Dictionary<string, object> { }
+
 	/// <summary>Options for a reckon attach.</summary>
 	public class ReckonOptions<T>
 	{
@@ -145,8 +154,12 @@ namespace Colyseus.Predict
 
 		// --- Attach -----------------------------------------------------------
 
-		/// <summary>Track one numeric field for smoothing.</summary>
-		public Action Track(Schema.Schema instance, string field, PredictFieldOptions options = null)
+		/// <summary>
+		///     Track one numeric field for smoothing. Internal primitive under
+		///     <see cref="Attach(Schema.Schema, AttachConfig)" /> — PORTING.md
+		///     strips track/untrack/trackStepped from the published surface.
+		/// </summary>
+		private Action Track(Schema.Schema instance, string field, PredictFieldOptions options = null)
 		{
 			var opts = options ?? new PredictFieldOptions();
 			int refId = instance.__refId;
@@ -173,8 +186,13 @@ namespace Colyseus.Predict
 			return () => Untrack(instance, field);
 		}
 
-		/// <summary>Dead-reckon fields of an instance with a step SHARED with the server.</summary>
-		public Action TrackReckon<T>(T instance, ReckonOptions<T> options) where T : Schema.Schema
+		/// <summary>
+		///     Dead-reckon fields of an instance with a step SHARED with the
+		///     server. Internal primitive under
+		///     <see cref="Attach{T}(T, ReckonOptions{T})" />; named for the
+		///     reference's <c>trackStepped</c>.
+		/// </summary>
+		private Action TrackStepped<T>(T instance, ReckonOptions<T> options) where T : Schema.Schema
 		{
 			int refId = instance.__refId;
 			var scratch = (Schema.Schema)Activator.CreateInstance(instance.GetType());
@@ -187,7 +205,7 @@ namespace Colyseus.Predict
 					// FULL copy of the entity so the shared step can read descriptors it
 					// never attached (a bot's `kind`). Dropping strings makes step
 					// functions that branch on one silently take the default branch — and
-					// AttachAllReckon gives the caller no live instance to fall back on.
+					// an attach-all reckon gives the caller no live instance to fall back on.
 					case "ref":
 					case "array":
 					case "map":
@@ -292,19 +310,56 @@ namespace Colyseus.Predict
 		///     Attach prediction to every child of a root-level collection:
 		///     wires onAdd → track(fields) and onRemove → detach.
 		/// </summary>
-		public Action AttachAll(string collection, IReadOnlyList<string> fields, PredictFieldOptions options = null)
-			=> AttachEach(collection, child => { foreach (var f in fields) { Track(child, f, options); } });
+		public Action AttachAll(string collection, AttachConfig config)
+			=> AttachEach(collection, child => Attach(child, config));
 
 		/// <summary>
-		///     The reckon twin of <see cref="AttachAll" />: forward-simulate every
-		///     child of a collection with the shared step, instead of smoothing it
-		///     toward the past. Same add/remove wiring, so a collection whose
-		///     members come and go needs no bookkeeping from the caller.
+		///     Attach prediction to every child of a collection with dead
+		///     reckoning — the same call, not a separate flavour, matching the
+		///     reference's single <c>attachAll(key, config)</c> over a config union.
 		/// </summary>
-		public Action AttachAllReckon<T>(string collection, ReckonOptions<T> options) where T : Schema.Schema
-			=> AttachEach(collection, child => TrackReckon((T)child, options));
+		public Action AttachAll<T>(string collection, ReckonOptions<T> options) where T : Schema.Schema
+			=> AttachEach(collection, child => Attach((T)child, options));
 
-		/// <summary>Shared add/remove wiring behind both AttachAll flavours.</summary>
+		/// <summary>
+		///     Attach prediction to ONE instance from a declarative config — the
+		///     per-field smoothing map:
+		///     <code>
+		///     predict.Attach(boss, new AttachConfig {
+		///         ["x"] = PredictMode.Lerp,
+		///         ["yaw"] = new PredictFieldOptions { Mode = PredictMode.Damped, Angle = true },
+		///     });
+		///     </code>
+		///     Fields the instance's schema doesn't declare are DROPPED, not an
+		///     error: one config can cover a heterogeneous collection, and a field
+		///     that isn't there would subscribe to nothing.
+		/// </summary>
+		public Action Attach(Schema.Schema instance, AttachConfig config)
+		{
+			var offs = new List<Action>();
+			foreach (var pair in config)
+			{
+				if (!instance.fieldTypes.ContainsKey(pair.Key)) { continue; }
+				var opts = pair.Value as PredictFieldOptions
+					?? new PredictFieldOptions { Mode = (PredictMode)pair.Value };
+				offs.Add(Track(instance, pair.Key, opts));
+			}
+			return () => { foreach (var off in offs) { off(); } };
+		}
+
+		/// <summary>
+		///     Attach dead reckoning to ONE instance — the reckon arm of the
+		///     reference's config union, expressed here as an overload so the step
+		///     signature stays type-checked.
+		/// </summary>
+		public Action Attach<T>(T instance, ReckonOptions<T> options) where T : Schema.Schema
+			=> TrackStepped(instance, options);
+
+		/// <summary>
+		///     Shared add/remove wiring behind the AttachAll overloads: a
+		///     collection whose members come and go needs no bookkeeping from the
+		///     caller.
+		/// </summary>
 		private Action AttachEach(string collection, Action<Schema.Schema> attach)
 		{
 			var tracked = new List<Schema.Schema>();

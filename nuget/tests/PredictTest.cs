@@ -179,11 +179,14 @@ namespace Colyseus.Tests
 				clock.SetPatchInterval(50);
 				var ent = decoder.State;
 
-				predict.Track(ent, "a", new PredictFieldOptions { Mode = PredictMode.Lerp });
-				predict.Track(ent, "b", new PredictFieldOptions { Mode = PredictMode.Damped });
-				predict.Track(ent, "c", new PredictFieldOptions { Mode = PredictMode.Extrapolate, Damping = 0 });
-				predict.Track(ent, "d", new PredictFieldOptions { Mode = PredictMode.Raw });
-				predict.Track(ent, "yaw", new PredictFieldOptions { Mode = PredictMode.Lerp, Angle = true });
+				predict.Attach(ent, new AttachConfig
+				{
+					["a"] = PredictMode.Lerp,
+					["b"] = PredictMode.Damped,
+					["c"] = new PredictFieldOptions { Mode = PredictMode.Extrapolate, Damping = 0 },
+					["d"] = PredictMode.Raw,
+					["yaw"] = new PredictFieldOptions { Mode = PredictMode.Lerp, Angle = true },
+				});
 
 				void Patch(double sNow, byte[] bytes)
 				{
@@ -234,7 +237,7 @@ namespace Colyseus.Tests
 				var (decoder, _, clock, predict) = MakePassive<SchemaTest.Predict.ReckonBall>();
 				var ball = decoder.State;
 
-				predict.TrackReckon(ball, new ReckonOptions<SchemaTest.Predict.ReckonBall>
+				predict.Attach(ball, new ReckonOptions<SchemaTest.Predict.ReckonBall>
 				{
 					Fields = new[] { "x" },
 					Step = (s, dt, elapsed) => { s.x += s.vx * (float)dt; },
