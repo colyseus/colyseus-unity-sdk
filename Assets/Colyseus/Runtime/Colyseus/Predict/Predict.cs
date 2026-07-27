@@ -364,6 +364,20 @@ namespace Colyseus.Predict
 			}
 		}
 
+		/// <summary>
+		///     Spawn a driven <see cref="SimReconciler{I}" /> — the composite face,
+		///     for a world of parts rather than one entity's fields.
+		/// </summary>
+		public SimReconciler<I> MakeSimReconciler<I>(SimReconcilerOptions<I> opts)
+		{
+			opts.Clock = opts.Clock ?? clock;
+			BindRenderDelay(opts.Input);
+			var recon = new SimReconciler<I>(opts);
+			AdoptFixedStep(recon.StepMs);
+			driven.Add(recon);
+			return recon;
+		}
+
 		/// <summary>Spawn a driven <see cref="PredictedEventChannel{T}" />.</summary>
 		public PredictedEventChannel<T> DefineEvent<T>(PredictedEventChannelOptions<T> opts)
 		{
