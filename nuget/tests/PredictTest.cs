@@ -22,10 +22,8 @@ namespace Colyseus.Tests
 			public StubConnection() : base("ws://localhost", null)
 			{
 				IsOpen = true;
+				Transmit = _ => System.Threading.Tasks.Task.CompletedTask;
 			}
-
-			public override System.Threading.Tasks.Task Send(byte[] data) =>
-				System.Threading.Tasks.Task.CompletedTask;
 		}
 
 		private static InputHandle MakeHandle(Schema.Schema input)

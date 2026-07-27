@@ -46,12 +46,11 @@ namespace Colyseus.Tests
 			public StubConnection() : base("ws://localhost", null)
 			{
 				IsOpen = true;
-			}
-
-			public override Task Send(byte[] data)
-			{
-				Sent.Add((byte[])data.Clone());
-				return Task.CompletedTask;
+				Transmit = data =>
+				{
+					Sent.Add((byte[])data.Clone());
+					return Task.CompletedTask;
+				};
 			}
 		}
 
