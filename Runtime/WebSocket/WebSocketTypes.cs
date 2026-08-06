@@ -10,6 +10,13 @@ namespace NativeWebSocket
             {
                 return (WebSocketCloseCode)closeCode;
             }
+            else if (closeCode >= 1000 && closeCode <= 4999)
+            {
+                // valid close code without an enum member (RFC 6455 allows 1000-4999).
+                // application codes land here and must be preserved -- collapsing them
+                // into Undefined (1004) makes every application code indistinguishable.
+                return (WebSocketCloseCode)closeCode;
+            }
             else
             {
                 return WebSocketCloseCode.Undefined;

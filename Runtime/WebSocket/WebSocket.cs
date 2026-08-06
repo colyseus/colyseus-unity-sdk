@@ -479,8 +479,8 @@ namespace NativeWebSocket
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        await Close().ConfigureAwait(false);
-                        closeCode = WebSocketHelpers.ParseCloseCodeEnum((int)result.CloseStatus);
+                        closeCode = WebSocketHelpers.ParseCloseCodeEnum((int)(result.CloseStatus ?? WebSocketCloseStatus.Empty));
+                        await EchoCloseFrame(closeCode).ConfigureAwait(false);
                         break;
                     }
 
@@ -527,6 +527,33 @@ namespace NativeWebSocket
                 return;
 
             await m_Socket.CloseAsync((WebSocketCloseStatus)(int)code, reason ?? string.Empty, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Completes the closing handshake, echoing back the code the peer sent.
+        /// </summary>
+        /// <remarks>
+        /// Servers read their own close code from this response: replying with a
+        /// different code (or not replying at all, which leaves them with 1006)
+        /// makes a deliberate close look like a dropped connection. `Close()` can't
+        /// be used here -- the socket is in `CloseReceived` at this point, and it
+        /// would answer with `Normal` (1000) rather than the received code.
+        /// </remarks>
+        private async Task EchoCloseFrame(WebSocketCloseCode code)
+        {
+            // 1005/1006 mean "no code was received" -- they can't go back on the wire
+            var status = (code == WebSocketCloseCode.NoStatus || code == WebSocketCloseCode.Abnormal)
+                ? WebSocketCloseStatus.Empty
+                : (WebSocketCloseStatus)(int)code;
+
+            try
+            {
+                await m_Socket.CloseOutputAsync(status, string.Empty, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // peer may already be gone -- OnClose still reports the received code
+            }
         }
     }
 
