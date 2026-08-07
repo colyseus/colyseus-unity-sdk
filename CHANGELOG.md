@@ -2,6 +2,10 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.17.19
+
+- Fix `room.Leave()`, `room.Send()` and every other call guarded by `Connection.IsOpen` silently doing nothing on platforms without a `SynchronizationContext` (MonoGame, console apps, test hosts — Unity is unaffected). `Connection.IsOpen` is only set when the transport's `OnOpen` event is delivered, and the underlying `Colyseus.NativeWebSocket` dispatched queued messages before queued events, so `OnOpen` arrived *after* the first messages: a room could finish joining and start handling state while the connection still looked closed. A consented `room.Leave()` then returned without sending `LEAVE_ROOM`, leaving the room open until the server timed the connection out. Updates `Colyseus.NativeWebSocket` to [2.0.7](https://github.com/endel/NativeWebSocket/blob/master/CHANGELOG.md). Only 0.17.18 was affected — earlier releases pinned NativeWebSocket 2.0.0, before the regression.
+
 ## 0.17.18
 
 - Fix server-side `client.leave(code)` being reported to the client as close code `1004`, and being treated as a dropped connection by the server. Any close code without a matching `WebSocketCloseCode` member — which is every application code, including all of Colyseus' — was collapsed into `WebSocketCloseCode.Undefined` (1004) before reaching `OnLeave`. The client also never replied to the server's close frame, so the server fell back to `1006` (abnormal closure) and ran `onDrop()` — opening a reconnection window — instead of treating a `client.leave(4000)` (`CloseCode.CONSENTED`) as a consented leave. Updates `Colyseus.NativeWebSocket` to [2.0.5](https://github.com/endel/NativeWebSocket/blob/master/CHANGELOG.md). Fixes [#948](https://github.com/colyseus/colyseus/issues/948) — thanks @trueicecold for reporting!

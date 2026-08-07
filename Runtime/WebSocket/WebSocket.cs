@@ -29,9 +29,10 @@ namespace NativeWebSocket
         private CancellationToken m_CancellationToken;
 
         private readonly SynchronizationContext _syncContext;
-        private List<Action> m_EventQueue = new List<Action>();
-        private List<Action> m_DispatchQueue = new List<Action>();
-        private readonly object EventQueueLock = new object();
+        // Events are queued alongside messages -- a null entry in the message
+        // queue marks the position of the next event -- so both are delivered in
+        // arrival order. OnOpen must reach the consumer before the first message.
+        private readonly Queue<Action> m_EventQueue = new Queue<Action>();
 
         private List<byte[]> m_MessageQueue = new List<byte[]>();
         private List<byte[]> m_MessageDispatchQueue = new List<byte[]>();
@@ -87,9 +88,10 @@ namespace NativeWebSocket
             }
             else
             {
-                lock (EventQueueLock)
+                lock (MessageQueueLock)
                 {
-                    m_EventQueue.Add(action);
+                    m_EventQueue.Enqueue(action);
+                    m_MessageQueue.Add(null);
                 }
             }
         }
@@ -155,37 +157,34 @@ namespace NativeWebSocket
 
             for (int i = 0; i < m_MessageDispatchQueue.Count; i++)
             {
-                OnMessage?.Invoke(m_MessageDispatchQueue[i]);
+                var bytes = m_MessageDispatchQueue[i];
+                if (bytes != null)
+                {
+                    OnMessage?.Invoke(bytes);
+                }
+                else
+                {
+                    DispatchQueuedEvent();
+                }
             }
 
             m_MessageDispatchQueue.Clear();
         }
 
-        private void DispatchQueuedEvents()
+        private void DispatchQueuedEvent()
         {
-            if (m_EventQueue.Count == 0)
-            {
-                return;
-            }
-
-            lock (EventQueueLock)
+            Action action;
+            lock (MessageQueueLock)
             {
                 if (m_EventQueue.Count == 0)
                 {
                     return;
                 }
 
-                var tmp = m_DispatchQueue;
-                m_DispatchQueue = m_EventQueue;
-                m_EventQueue = tmp;
+                action = m_EventQueue.Dequeue();
             }
 
-            foreach (var action in m_DispatchQueue)
-            {
-                action();
-            }
-
-            m_DispatchQueue.Clear();
+            action();
         }
 
         /// <summary>
@@ -194,11 +193,8 @@ namespace NativeWebSocket
         /// </summary>
         public void DispatchMessageQueue()
         {
-            // Hot path: dispatch messages without closure overhead
+            // Messages and events, in arrival order
             DispatchQueuedMessages();
-
-            // Rare events: OnOpen, OnError, OnClose
-            DispatchQueuedEvents();
         }
 
         public void CancelConnection()
