@@ -432,7 +432,37 @@ namespace Colyseus
         public void SetState(byte[] encodedState, int offset)
         {
             Serializer.SetState(encodedState, offset);
+            hasFirstState = true;
             OnStateChange?.Invoke(Serializer.GetState(), true);
+            // after the event handlers, so an awaiter observes the same order
+            // a late OnStateChange subscriber would
+            firstStateSource?.TrySetResult(Serializer.GetState());
+        }
+
+        private bool hasFirstState;
+        private TaskCompletionSource<T> firstStateSource;
+
+        /// <summary>
+        ///     Awaitable first full state sync — the C# analogue of the JS
+        ///     SDK's <c>room.onStateChange.once(...)</c>.
+        ///
+        ///     A resolved join does NOT mean the state has decoded: schema
+        ///     collections (<c>State.players</c>, refs, …) arrive with the
+        ///     first full sync a moment later, and mounting on them earlier
+        ///     reads nulls. Await this after joining, before touching state.
+        ///
+        ///     Resolves immediately when the state has already synced.
+        ///     Deliberately timer-free — it completes inline on the message
+        ///     pump, so it works on WebGL (no thread-pool timers there; a
+        ///     <c>Task.Delay</c> poll never resumes) and adds no per-frame
+        ///     polling anywhere else.
+        /// </summary>
+        /// <returns>The decoded root state instance.</returns>
+        public Task<T> WaitForFirstState()
+        {
+            if (hasFirstState) return Task.FromResult(Serializer.GetState());
+            if (firstStateSource == null) firstStateSource = new TaskCompletionSource<T>();
+            return firstStateSource.Task;
         }
 
         /// <summary>
