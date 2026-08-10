@@ -54,9 +54,15 @@ namespace Colyseus.Predict
 	///     reference expects a little float noise in the correction rather than
 	///     an exact zero.
 	///
+	///     Bound fields register into <c>Predict.Value</c>, so the render layer
+	///     reads them the same way it reads any other entity —
+	///     <c>predict.Value(state.puck, "x")</c> — and the
+	///     "field.schemaField" pose key stays an internal detail.
+	///
 	///     NOT ported (see PORTING.md): the custom `pose`/`interpolate` overlays
-	///     that give OPAQUE parts render smoothing, and the boundRegistrations
-	///     hook into Predict.Value — read poses through <see cref="Value" />.
+	///     that give OPAQUE parts render smoothing. Those have no decoded
+	///     instance to key on, so <see cref="Value" /> remains the only way to
+	///     read them.
 	/// </summary>
 	public class SimReconciler<W, I> : RollbackController where W : class
 	{
