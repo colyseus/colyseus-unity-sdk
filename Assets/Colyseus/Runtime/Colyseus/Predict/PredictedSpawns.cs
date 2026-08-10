@@ -21,6 +21,48 @@ namespace Colyseus.Predict
 		public Func<double, double> Ttl;
 		/// <summary>Invoked when a prediction is dropped as a mispredict.</summary>
 		public Action<L, int> OnReject;
+
+		/// <summary>
+		///     Dead-reckon confirmed entities on these fields. Each confirmed
+		///     entity gets a reckon slot (readable via <c>predict.Value()</c>
+		///     or, uniformly across the handoff, the store's
+		///     <see cref="PredictedSpawns{S,L}.Value" />): foreign entities
+		///     forward to server-present (snapshot age); owned ones
+		///     additionally forward by the entry's measured input lead when
+		///     <see cref="SpawnTime" /> is set. Requires
+		///     <see cref="ReckonStep" />.
+		/// </summary>
+		public IReadOnlyList<string> Fields;
+
+		/// <summary>
+		///     The reckon's step, operating on a schema scratch of type
+		///     <typeparamref name="S" />. This is the S-typed twin of
+		///     <see cref="Step" />, which advances the pending local of type
+		///     <typeparamref name="L" /> — the reference passes ONE `step` to
+		///     both because JS types it structurally, whereas here the local
+		///     and the schema are distinct types that no interface can unify
+		///     (schemas are generated). Both must integrate the same motion, or
+		///     the handoff jumps.
+		/// </summary>
+		public Action<S, double, double> ReckonStep;
+
+		/// <summary>Reckon smoothing for confirmed entities. Default 0 — a
+		///     deterministic constant-step projectile rebases exactly, so
+		///     smoothing only adds lag.</summary>
+		public double Smoothing;
+
+		/// <summary>Reckon substep in ms. Smaller = more accurate bounces. Default 16.</summary>
+		public double Substep = 16;
+
+		/// <summary>
+		///     How to read a named field off a pending local — what lets
+		///     <see cref="PredictedSpawns{S,L}.Value" /> span the handoff. The
+		///     reference gets this for free (<c>local[field]</c>);
+		///     <typeparamref name="L" /> is an arbitrary type here, so it has
+		///     to be written down. Optional: without it <c>Value()</c> still
+		///     serves confirmed entries.
+		/// </summary>
+		public Func<L, string, double> ReadLocal;
 	}
 
 	/// <summary>A merged logical entity — one per logical spawn. Key sprites on Id.</summary>
@@ -180,6 +222,35 @@ namespace Colyseus.Predict
 
 		public SpawnEntry<S, L> EntryFor(S server) =>
 			server != null && byServer.TryGetValue(server, out var entry) ? entry : null;
+
+		/// <summary>
+		///     Unified field read across the predicted → authoritative handoff:
+		///     pending entries read the stepped local through
+		///     <see cref="PredictedSpawnsOptions{S,L}.ReadLocal" />, confirmed
+		///     entries read the authoritative instance through the bound reader
+		///     — <c>predict.Value()</c> (reckoned, lead-aware) when created via
+		///     <c>predict.Spawns(...)</c> with <c>Fields</c>, a raw field read
+		///     otherwise. Render from this and the handoff is invisible: same
+		///     id, same timeline, one code path.
+		/// </summary>
+		/// <returns>NaN when the entry is pending and no <c>ReadLocal</c> was given.</returns>
+		public double Value(SpawnEntry<S, L> entry, string field)
+		{
+			if (entry.Server != null) { return readServer(entry.Server, field); }
+			if (entry.Local == null || opts.ReadLocal == null) { return double.NaN; }
+			return opts.ReadLocal(entry.Local, field);
+		}
+
+		/// <summary>Route confirmed-entry <see cref="Value" /> reads (wired by
+		///     <c>predict.Spawns</c> to its reckon slots; standalone stores keep
+		///     the raw default).</summary>
+		public void BindReader(Func<S, string, double> read) => readServer = read;
+
+		private Func<S, string, double> readServer = (server, field) =>
+			server is Schema.Schema s ? ToNumber(s[field]) : double.NaN;
+
+		private static double ToNumber(object value) =>
+			value == null ? double.NaN : Convert.ToDouble(value);
 
 		public bool Alive(int id) => byId.ContainsKey(id);
 

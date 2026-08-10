@@ -509,17 +509,80 @@ namespace Colyseus.Predict
 		/// <summary>
 		///     Spawn a driven <see cref="PredictedSpawns{S,L}" /> wired to a
 		///     root-level collection's add/remove stream.
+		///     <para>
+		///     With <c>Fields</c> + <c>ReckonStep</c>, the store also owns the
+		///     collection's MOTION (no separate <c>AttachAll</c> needed):
+		///     confirmed entities are dead-reckoned, and
+		///     <c>store.Value(entry, field)</c> is one read path across the
+		///     whole life of the entity.
+		///     </para>
 		/// </summary>
 		public PredictedSpawns<S, L> Spawns<S, L>(string collection, PredictedSpawnsOptions<S, L> opts)
 			where S : Schema.Schema where L : class
 		{
 			var store = new PredictedSpawns<S, L>(opts, clock);
-			var addOff = callbacks.OnAdd(collection, (server, key) => store.HandleAdd((S)server));
-			var removeOff = callbacks.OnRemove(collection, (server, key) => store.HandleRemove((S)server));
+
+			// Reckon wiring: every confirmed entity gets a reckon attach whose
+			// horizon is snapshot age PLUS the entry's measured input lead — 0
+			// for a foreign entity (server-present, same as an AttachAll
+			// reckon), the exact per-spawn uplink for an owned one (see
+			// SpawnTime). An owned projectile thus keeps flying the shooter's
+			// timeline through the handoff.
+			bool reckon = opts?.Fields != null && opts.ReckonStep != null;
+			// keyed by refId, like simsByRef
+			var untrack = reckon ? new Dictionary<int, Action>() : null;
+			var localClock = clock;
+
+			var addOff = callbacks.OnAdd(collection, (server, key) =>
+			{
+				var s = (S)server;
+				store.HandleAdd(s);
+				if (!reckon || untrack.ContainsKey(s.__refId)) { return; } // decoder re-fire
+				// AFTER HandleAdd: the lead is only measured once the entry collapses.
+				double lead = store.EntryFor(s)?.LeadMs ?? 0;
+				var off = TrackStepped(s, new ReckonOptions<S>
+				{
+					Fields = opts.Fields,
+					Step = opts.ReckonStep,
+					Smoothing = opts.Smoothing,
+					Substep = opts.Substep,
+				});
+				BindForward(s, () =>
+				{
+					if (localClock == null) { return Math.Max(0, lead); }
+					double stamp = localClock.LastServerTime();
+					double age = stamp > 0 ? Math.Max(0, localClock.ServerNow() - stamp) : 0;
+					return Math.Max(0, age + lead);
+				});
+				untrack[s.__refId] = off;
+			});
+
+			var removeOff = callbacks.OnRemove(collection, (server, key) =>
+			{
+				var s = (S)server;
+				if (untrack != null && untrack.TryGetValue(s.__refId, out var off))
+				{
+					off?.Invoke();
+					untrack.Remove(s.__refId);
+				}
+				store.HandleRemove(s);
+			});
+
+			if (reckon)
+			{
+				// route store.Value() confirmed reads through the reckon slots
+				store.BindReader((server, field) => Value(server, field));
+			}
+
 			store.OnDisposedInternal = () =>
 			{
 				addOff?.Invoke();
 				removeOff?.Invoke();
+				if (untrack != null)
+				{
+					foreach (var off in untrack.Values) { off?.Invoke(); }
+					untrack.Clear();
+				}
 			};
 			driven.Add(store);
 			return store;
