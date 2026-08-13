@@ -18,7 +18,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
@@ -67,7 +66,7 @@ namespace GameDevWare.Serialization.Serializers
 				throw JsonSerializationException.UnexpectedToken(reader, this.arrayType, JsonToken.BeginArray);
 
 			if (reader.Context.Hierarchy.Count >= reader.Context.MaxHierarchyDepth)
-				throw new SerializationException(string.Format("Deserialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", reader.Context.MaxHierarchyDepth, reader.Context.GetPath()));
+				throw JsonSerializationException.SerializationGraphIsTooDeep(reader, (ulong)reader.Context.MaxHierarchyDepth);
 
 			var container = new ArrayList();
 			reader.Context.Hierarchy.Push(container);
@@ -112,9 +111,9 @@ namespace GameDevWare.Serialization.Serializers
 			if (value == null) throw new ArgumentNullException("value");
 
 			if (writer.Context.Hierarchy.Contains(value, IdentityComparer.Default))
-				throw new SerializationException(string.Format("Circular reference detected for type '{0}'. Path: '{1}'.", this.arrayType.FullName, writer.Context.GetPath()));
+				throw JsonSerializationException.CircularReferenceDetected(writer, this.arrayType);
 			if (writer.Context.Hierarchy.Count >= writer.Context.MaxHierarchyDepth)
-				throw new SerializationException(string.Format("Serialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", writer.Context.MaxHierarchyDepth, writer.Context.GetPath()));
+				throw JsonSerializationException.SerializationGraphIsTooDeep(writer, (ulong)writer.Context.MaxHierarchyDepth);
 
 			writer.Context.Hierarchy.Push(value);
 			try

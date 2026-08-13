@@ -16,7 +16,6 @@
 using System;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.Serialization;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
@@ -54,7 +53,7 @@ namespace GameDevWare.Serialization.Serializers
 			}
 			catch (FormatException fe)
 			{
-				throw new SerializationException(string.Format("Failed to parse date '{0}' with pattern '{1}'.", dateTimeStr, reader.Context.DateTimeFormats[0]), fe);
+				throw JsonSerializationException.FailedToParseDateTime(reader, dateTimeStr, reader.Context.DateTimeFormats[0], fe);
 			}
 		}
 

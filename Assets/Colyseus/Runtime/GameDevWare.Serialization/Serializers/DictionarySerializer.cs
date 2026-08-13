@@ -17,7 +17,6 @@ using System;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
@@ -88,7 +87,7 @@ namespace GameDevWare.Serialization.Serializers
 			if (reader == null) throw new ArgumentNullException("reader");
 
 			if (reader.Context.Hierarchy.Count >= reader.Context.MaxHierarchyDepth)
-				throw new SerializationException(string.Format("Deserialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", reader.Context.MaxHierarchyDepth, reader.Context.GetPath()));
+				throw JsonSerializationException.SerializationGraphIsTooDeep(reader, (ulong)reader.Context.MaxHierarchyDepth);
 
 			var container = new List<DictionaryEntry>();
 			reader.Context.Hierarchy.Push(container);
@@ -105,10 +104,10 @@ namespace GameDevWare.Serialization.Serializers
 						{
 							reader.ReadArrayBegin();
 							try { entry.Key = reader.ReadValue(this.keyType); }
-							catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary key of type '{0}': {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
+							catch (Exception e) { throw JsonSerializationException.FailedToReadDictionaryKey(reader, this.keyType, e); }
 							reader.Context.Path.Push(new PathSegment(entry.Key));
 							try { entry.Value = reader.ReadValue(this.valueType); }
-							catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary value of type '{0}' for key '{1}': {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key, e.Message), e); }
+							catch (Exception e) { throw JsonSerializationException.FailedToReadDictionaryValue(reader, this.valueType, entry.Key, e); }
 							reader.Context.Path.Pop();
 							reader.ReadArrayEnd();
 						}
@@ -123,7 +122,7 @@ namespace GameDevWare.Serialization.Serializers
 								{
 									case DictionaryEntrySerializer.KEY_MEMBER_NAME:
 										try { entry.Key = reader.ReadValue(this.keyType); }
-										catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary key of type '{0}': {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
+										catch (Exception e) { throw JsonSerializationException.FailedToReadDictionaryKey(reader, this.keyType, e); }
 										if (!keyIsPushed)
 										{
 											reader.Context.Path.Push(new PathSegment(entry.Key));
@@ -132,13 +131,13 @@ namespace GameDevWare.Serialization.Serializers
 										break;
 									case DictionaryEntrySerializer.VALUE_MEMBER_NAME:
 										try { entry.Value = reader.ReadValue(this.valueType); }
-										catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary value of type '{0}' for key '{1}': {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key ?? "<unknown>", e.Message), e); }
+										catch (Exception e) { throw JsonSerializationException.FailedToReadDictionaryValue(reader, this.valueType, entry.Key ?? "<unknown>", e); }
 										break;
 									case ObjectSerializer.TYPE_MEMBER_NAME:
 										reader.ReadValue(typeof(object));
 										break;
 									default:
-										throw new SerializationException(string.Format("Unknown member '{0}' found in dictionary entry. Expected '{1}' or '{2}'.", memberName, DictionaryEntrySerializer.KEY_MEMBER_NAME, DictionaryEntrySerializer.VALUE_MEMBER_NAME));
+										throw JsonSerializationException.UnexpectedMemberName(memberName, string.Format("'{0}' or '{1}'", DictionaryEntrySerializer.KEY_MEMBER_NAME, DictionaryEntrySerializer.VALUE_MEMBER_NAME), reader);
 								}
 
 							}
@@ -160,11 +159,11 @@ namespace GameDevWare.Serialization.Serializers
 						var entry = default(DictionaryEntry);
 
 						try { entry.Key = reader.ReadValue(this.keyType); }
-						catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary key of type '{0}': {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
+						catch (Exception e) { throw JsonSerializationException.FailedToReadDictionaryKey(reader, this.keyType, e); }
 						reader.Context.Path.Push(new PathSegment(entry.Key));
 
 						try { entry.Value = reader.ReadValue(this.valueType); }
-						catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary value of type '{0}' for key '{1}': {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key, e.Message), e); }
+						catch (Exception e) { throw JsonSerializationException.FailedToReadDictionaryValue(reader, this.valueType, entry.Key, e); }
 
 						reader.Context.Path.Pop();
 						container.Add(entry);
@@ -211,9 +210,9 @@ namespace GameDevWare.Serialization.Serializers
 			if (value == null) throw new ArgumentNullException("value");
 
 			if (writer.Context.Hierarchy.Contains(value, IdentityComparer.Default))
-				throw new SerializationException(string.Format("Circular reference detected for type '{0}'. Path: '{1}'.", this.dictionaryType.FullName, writer.Context.GetPath()));
+				throw JsonSerializationException.CircularReferenceDetected(writer, this.dictionaryType);
 			if (writer.Context.Hierarchy.Count >= writer.Context.MaxHierarchyDepth)
-				throw new SerializationException(string.Format("Serialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", writer.Context.MaxHierarchyDepth, writer.Context.GetPath()));
+				throw JsonSerializationException.SerializationGraphIsTooDeep(writer, (ulong)writer.Context.MaxHierarchyDepth);
 
 			var dictionary = (IDictionary)value;
 			// ReSharper disable PossibleMultipleEnumeration

@@ -14,7 +14,6 @@
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
-using System.Runtime.Serialization;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
@@ -412,7 +411,7 @@ namespace GameDevWare.Serialization
 		/// <param name="writer">The JSON writer to use.</param>
 		/// <param name="value">The object value to write.</param>
 		/// <param name="valueType">The declared type of the value.</param>
-		/// <exception cref="SerializationException">Thrown when the serialization graph is too deep.</exception>
+		/// <exception cref="JsonSerializationException">Thrown when the serialization graph is too deep.</exception>
 		public static void WriteValue(this IJsonWriter writer, object value, Type valueType)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");
@@ -424,7 +423,7 @@ namespace GameDevWare.Serialization
 			}
 
 			if (writer.Context.Hierarchy.Count >= writer.Context.MaxHierarchyDepth)
-				throw new SerializationException(string.Format("Serialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", writer.Context.MaxHierarchyDepth, writer.Context.GetPath()));
+				throw JsonSerializationException.SerializationGraphIsTooDeep(writer, (ulong)writer.Context.MaxHierarchyDepth);
 
 			var actualValueType = value.GetType();
 			var serializer = writer.Context.GetSerializerForType(actualValueType);

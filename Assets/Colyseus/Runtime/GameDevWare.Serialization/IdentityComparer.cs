@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 internal sealed class IdentityComparer : IEqualityComparer<object>
 {
-	public static IdentityComparer Default = new IdentityComparer();
+	public static readonly IdentityComparer Default = new IdentityComparer();
 
 	public new bool Equals(object x, object y)
 	{
