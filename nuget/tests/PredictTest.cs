@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using Colyseus;
 using Colyseus.Predict;
@@ -219,6 +220,37 @@ namespace Colyseus.Tests
 				Assert.AreEqual(35, predict.Value(ent, "a"));
 				now = 1500; predict.Tick(now);
 				Assert.AreEqual(40, predict.Value(ent, "a"));
+			}
+			finally
+			{
+				RoomClock.GetNow = originalNow;
+			}
+		}
+
+		[Test]
+		public void TickDefaultsToTheClockTest()
+		{
+			double now = 0;
+			var originalNow = RoomClock.GetNow;
+			RoomClock.GetNow = () => now;
+			try
+			{
+				var (_, _, _, predict) = MakePassive<SchemaTest.Predict.PassiveEnt>();
+
+				var type = typeof(Colyseus.Predict.Predict);
+				var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+				type.GetMethod("AdoptFixedStep", flags).Invoke(predict, new object[] { 50.0 });
+				var renderTime = type.GetField("renderTime", flags);
+
+				// The render time is what pins `now` to an axis; the send budget only
+				// sees deltas, so a constant offset would cancel out of it unnoticed.
+				now = 1234;
+				Assert.AreEqual(0, predict.Tick());          // first frame has no delta
+				Assert.AreEqual(1234.0, (double)renderTime.GetValue(predict));
+
+				now = 1334;
+				Assert.AreEqual(2, predict.Tick());          // 100ms of a 50ms step
+				Assert.AreEqual(1334.0, (double)renderTime.GetValue(predict));
 			}
 			finally
 			{

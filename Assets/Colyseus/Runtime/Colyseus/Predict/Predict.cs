@@ -612,6 +612,13 @@ namespace Colyseus.Predict
 		///     fixed input steps are due — send exactly that many inputs, then
 		///     read render values. 0 until a reconciler advertises the step.
 		/// </summary>
+		/// <summary>
+		///     As <see cref="Tick(double)" />, reading the SDK clock instead of
+		///     taking a timestamp — the JS reference's <c>performance.now()</c>
+		///     default. Keeps the caller off a platform clock of its own.
+		/// </summary>
+		public int Tick() => Tick(RoomClock.GetNow());
+
 		public int Tick(double now)
 		{
 			renderTime = now;
