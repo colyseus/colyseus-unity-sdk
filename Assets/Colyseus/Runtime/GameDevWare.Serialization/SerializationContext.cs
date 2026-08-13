@@ -1,16 +1,16 @@
-/* 
+/*
 	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
-	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND 
-	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE 
-	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY, 
-	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE 
+	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND
+	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE
+	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY,
+	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE
 	AND THOSE ARISING BY STATUTE OR FROM CUSTOM OR USAGE OF TRADE OR COURSE OF DEALING.
-	
-	This source code is distributed via Unity Asset Store, 
-	to use it in your project you should accept Terms of Service and EULA 
+
+	This source code is distributed via Unity Asset Store,
+	to use it in your project you should accept Terms of Service and EULA
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
@@ -45,7 +45,7 @@ namespace GameDevWare.Serialization
 
 		/// <summary>
 		/// Limits the recursion depth for object graphs to prevent stack overflow and mitigate potential Denial of Service (DoS) attacks.
-		/// <para>While a higher limit allows for more complex, deeply nested data structures, it increases the risk of exhausting the stack; 
+		/// <para>While a higher limit allows for more complex, deeply nested data structures, it increases the risk of exhausting the stack;
 		/// a tighter limit provides more safety but may prevent the serialization of valid, deeply nested graphs.</para>
 		/// </summary>
 		public int MaxHierarchyDepth { get; set; }
@@ -64,7 +64,7 @@ namespace GameDevWare.Serialization
 
 		/// <summary>
 		/// Gets or sets a dictionary of registered type serializers for explicit type handling.
-		/// <para>Use this to override default serialization for specific types or to provide support for complex user-defined types. 
+		/// <para>Use this to override default serialization for specific types or to provide support for complex user-defined types.
 		/// Registered serializers take precedence over default or factory-generated serializers.</para>
 		/// </summary>
 		public Dictionary<Type, TypeSerializer> Serializers
@@ -80,7 +80,7 @@ namespace GameDevWare.Serialization
 		}
 		/// <summary>
 		/// Gets or sets the handler for MessagePack extension types (type codes -1 to -128).
-		/// <para>Use this to provide high-performance binary serialization for types like <see cref="Guid"/>, <see cref="decimal"/>, or 
+		/// <para>Use this to provide high-performance binary serialization for types like <see cref="Guid"/>, <see cref="decimal"/>, or
 		/// custom engine-specific structures that require a compact binary representation beyond standard objects or arrays.</para>
 		/// </summary>
 		public MessagePackExtensionTypeHandler ExtensionTypeHandler
@@ -96,31 +96,31 @@ namespace GameDevWare.Serialization
 
 		/// <summary>
 		/// Gets or sets a factory for creating object serializers.
-		/// <para>Use this to globally customize how classes and structs are handled, such as adding specialized validation logic, 
+		/// <para>Use this to globally customize how classes and structs are handled, such as adding specialized validation logic,
 		/// support for non-standard inheritance, or automatically wrapping instances in proxies during deserialization.</para>
 		/// </summary>
 		public Func<Type, TypeSerializer> ObjectSerializerFactory { get; set; }
 		/// <summary>
 		/// Gets or sets a factory for creating enum serializers.
-		/// <para>Use this to customize enum handling, such as forcing all enums to serialize as strings instead of integers 
+		/// <para>Use this to customize enum handling, such as forcing all enums to serialize as strings instead of integers
 		/// for better interoperability with external systems.</para>
 		/// </summary>
 		public Func<Type, TypeSerializer> EnumSerializerFactory { get; set; }
 		/// <summary>
 		/// Gets or sets a factory for creating dictionary serializers.
-		/// <para>Use this to support non-standard dictionary implementations or to enforce specific key-sorting or filtering 
+		/// <para>Use this to support non-standard dictionary implementations or to enforce specific key-sorting or filtering
 		/// logic across all dictionary-like structures.</para>
 		/// </summary>
 		public Func<Type, TypeSerializer> DictionarySerializerFactory { get; set; }
 		/// <summary>
 		/// Gets or sets a factory for creating array and collection serializers.
-		/// <para>Use this to provide specialized support for custom collection types or to implement global 
+		/// <para>Use this to provide specialized support for custom collection types or to implement global
 		/// constraints on collection sizes and element types.</para>
 		/// </summary>
 		public Func<Type, TypeSerializer> ArraySerializerFactory { get; set; }
 		/// <summary>
 		/// Gets or sets a general-purpose factory for resolving serializers for any type.
-		/// <para>This factory acts as the primary resolution point before falling back to specialized factories. 
+		/// <para>This factory acts as the primary resolution point before falling back to specialized factories.
 		/// Use it to implement complex, type-agnostic serialization strategies or to integrate with external DI containers.</para>
 		/// </summary>
 		public Func<Type, TypeSerializer> SerializerFactory { get; set; }
@@ -152,7 +152,7 @@ namespace GameDevWare.Serialization
 			if (valueType == null) throw new ArgumentNullException("valueType");
 
 			if (valueType.BaseType == typeof(MulticastDelegate) || valueType.BaseType == typeof(Delegate))
-				throw new InvalidOperationException(string.Format("Unable to serialize delegate type '{0}'.", valueType));
+				throw JsonSerializationException.CantSerializeDelegateType(valueType);
 
 			var serializer = default(TypeSerializer);
 			if (this.serializers.TryGetValue(valueType, out serializer))

@@ -15,7 +15,6 @@
 */
 using System;
 using System.Collections;
-using System.Runtime.Serialization;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
@@ -70,7 +69,7 @@ namespace GameDevWare.Serialization.Serializers
 							reader.ReadValue(typeof(object));
 							break;
 						default:
-							throw new SerializationException(string.Format("Unknown member found '{0}' while '{1}' or '{2}' are expected.", memberName, KEY_MEMBER_NAME, VALUE_MEMBER_NAME));
+							throw JsonSerializationException.UnexpectedMemberName(memberName, string.Format("'{0}' or '{1}'", KEY_MEMBER_NAME, VALUE_MEMBER_NAME), reader);
 					}
 				}
 				reader.ReadObjectEnd(nextToken: false);

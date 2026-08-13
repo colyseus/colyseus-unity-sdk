@@ -46,7 +46,7 @@ namespace GameDevWare.Serialization.Metadata
 
 		public override object GetValue(object target)
 		{
-			if (!this.CanGet) throw new InvalidOperationException("Property is write-only.");
+			if (!this.CanGet) throw JsonSerializationException.MemberIsWriteOnly(this.Name);
 
 			if (this.getFn != null)
 				return this.getFn(target);
@@ -55,7 +55,7 @@ namespace GameDevWare.Serialization.Metadata
 		}
 		public override void SetValue(object target, object value)
 		{
-			if (!this.CanSet) throw new InvalidOperationException("Property is read-only.");
+			if (!this.CanSet) throw JsonSerializationException.MemberIsReadOnly(this.Name);
 
 			if (this.setFn != null)
 				this.setFn(target, value);

@@ -101,7 +101,7 @@ namespace GameDevWare.Serialization.Metadata
 				var dataMember = default(DataMemberDescription);
 				if (member is PropertyInfo) dataMember = new PropertyDescription(this, member as PropertyInfo);
 				else if (member is FieldInfo) dataMember = new FieldDescription(this, member as FieldInfo);
-				else throw new InvalidOperationException("Unknown member type. Should be PropertyInfo or FieldInfo.");
+				else throw JsonSerializationException.UnsupportedMemberType(member);
 
 				if (string.IsNullOrEmpty(dataMember.Name))
 					throw JsonSerializationException.TypeIsNotValid(objectType, "must not have members with an empty name");

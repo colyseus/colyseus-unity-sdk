@@ -35,7 +35,18 @@ namespace GameDevWare.Serialization
 			UnterminatedStringLiteral,
 			UnknownNotation,
 			MemberNameIsNotSpecified,
-			TypeRequiresCustomSerializer
+			TypeRequiresCustomSerializer,
+			CircularReferenceDetected,
+			FailedToReadDictionaryKey,
+			FailedToReadDictionaryValue,
+			UnsupportedMemberType,
+			CantSerializeDelegateType,
+			MemberIsWriteOnly,
+			MemberIsReadOnly,
+			FailedToResolveMemberType,
+			FailedToReadMemberValue,
+			FailedToSetMemberValue,
+			FailedToParseDateTime
 		}
 
 		public ErrorCode Code { get; set; }
@@ -147,6 +158,22 @@ namespace GameDevWare.Serialization
 					string.Format("The serialization graph exceeds the maximum allowed depth ({0}) at path '{1}'. This often points to circular object references or very deep nesting. Consider increasing 'SerializationContext.MaxDepth' if this is intentional, or check for recursive references.", maxDepth, reader.Context.GetPath()),
 				ErrorCode.SerializationGraphIsTooDeep)
 			;
+		}
+		public static Exception SerializationGraphIsTooDeep(IJsonWriter writer, ulong maxDepth)
+		{
+			return new JsonSerializationException
+			(
+					string.Format("The serialization graph exceeds the maximum allowed depth ({0}) at path '{1}'. This often points to circular object references or very deep nesting. Consider increasing 'SerializationContext.MaxDepth' if this is intentional, or check for recursive references.", maxDepth, writer.Context.GetPath()),
+				ErrorCode.SerializationGraphIsTooDeep)
+			;
+		}
+		public static Exception CircularReferenceDetected(IJsonWriter writer, Type type)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("A circular reference was detected while serializing an instance of type '{0}' at path '{1}'. This library does not support cyclic object graphs; break the cycle or exclude the back-reference member with an '[IgnoreDataMember]' attribute.", type.FullName, writer.Context.GetPath()),
+				ErrorCode.CircularReferenceDetected
+			);
 		}
 		public static Exception TypeIsNotValid(Type type, string problem)
 		{
@@ -302,6 +329,98 @@ namespace GameDevWare.Serialization
 			(
 				string.Format("Type '{0}' can't be serialized by '{1}' and requires custom {2} registered in 'Json.DefaultSerializers'.", type.FullName, typeSerializer.Name, typeof(TypeSerializer).Name),
 				ErrorCode.TypeRequiresCustomSerializer
+			);
+		}
+		public static Exception FailedToReadDictionaryKey(IJsonReader reader, Type keyType, Exception innerException)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Failed to read dictionary key of type '{0}' at path '{1}': {2}\r\nMore detailed information in inner exception.", keyType.Name, reader.Context.GetPath(), innerException.Message),
+				ErrorCode.FailedToReadDictionaryKey,
+				reader,
+				innerException
+			);
+		}
+		public static Exception FailedToReadDictionaryValue(IJsonReader reader, Type valueType, object key, Exception innerException)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Failed to read dictionary value of type '{0}' for key '{1}' at path '{2}': {3}\r\nMore detailed information in inner exception.", valueType.Name, key ?? "<unknown>", reader.Context.GetPath(), innerException.Message),
+				ErrorCode.FailedToReadDictionaryValue,
+				reader,
+				innerException
+			);
+		}
+		public static Exception UnsupportedMemberType(MemberInfo member)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Member '{0}' has an unsupported reflection type '{1}'. Only properties and fields can be used as data members.", member.Name, member.MemberType),
+				ErrorCode.UnsupportedMemberType
+			);
+		}
+		public static Exception CantSerializeDelegateType(Type type)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Unable to serialize delegate type '{0}'. Delegates reference executable code and cannot be represented in JSON or MessagePack.", type),
+				ErrorCode.CantSerializeDelegateType
+			);
+		}
+		public static Exception MemberIsWriteOnly(string memberName)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Member '{0}' is write-only and cannot be read during serialization.", memberName),
+				ErrorCode.MemberIsWriteOnly
+			);
+		}
+		public static Exception MemberIsReadOnly(string memberName)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Member '{0}' is read-only and cannot be set during deserialization.", memberName),
+				ErrorCode.MemberIsReadOnly
+			);
+		}
+		public static Exception FailedToResolveMemberType(IJsonReader reader, string typeName, string memberName, Type objectType, Exception innerException)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Failed to resolve type '{0}' of value for member '{1}' of type '{2}' at path '{3}'.\r\nMore detailed information in inner exception.", typeName, memberName, objectType.Name, reader.Context.GetPath()),
+				ErrorCode.FailedToResolveMemberType,
+				reader,
+				innerException
+			);
+		}
+		public static Exception FailedToReadMemberValue(IJsonReader reader, string memberName, Type objectType, Exception innerException)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Failed to read value for member '{0}' of type '{1}' at path '{2}'.\r\nMore detailed information in inner exception.", memberName, objectType.Name, reader.Context.GetPath()),
+				ErrorCode.FailedToReadMemberValue,
+				reader,
+				innerException
+			);
+		}
+		public static Exception FailedToSetMemberValue(string memberName, object value, Exception innerException)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Failed to set member '{0}' to value '{1}' of type {2}.\r\nMore detailed information in inner exception.", memberName, value, value != null ? value.GetType().FullName : "<null>"),
+				ErrorCode.FailedToSetMemberValue,
+				null,
+				innerException
+			);
+		}
+		public static Exception FailedToParseDateTime(IJsonReader reader, string dateTimeStr, string pattern, Exception innerException)
+		{
+			return new JsonSerializationException
+			(
+				string.Format("Failed to parse date '{0}' with pattern '{1}' at path '{2}'.", dateTimeStr, pattern, reader.Context.GetPath()),
+				ErrorCode.FailedToParseDateTime,
+				reader,
+				innerException
 			);
 		}
 	}

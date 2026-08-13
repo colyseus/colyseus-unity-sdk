@@ -15,7 +15,6 @@
 */
 using System;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using GameDevWare.Serialization.Metadata;
 
@@ -89,7 +88,7 @@ namespace GameDevWare.Serialization.Serializers
 				throw JsonSerializationException.UnexpectedToken(reader, this.objectType, JsonToken.BeginObject);
 
 			if (reader.Context.Hierarchy.Count >= reader.Context.MaxHierarchyDepth)
-				throw new SerializationException(string.Format("Deserialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", reader.Context.MaxHierarchyDepth, reader.Context.GetPath()));
+				throw JsonSerializationException.SerializationGraphIsTooDeep(reader, (ulong)reader.Context.MaxHierarchyDepth);
 
 			var serializerOverride = default(ObjectSerializer);
 			var container = new IndexedDictionary<string, object>(10);
@@ -126,9 +125,9 @@ namespace GameDevWare.Serialization.Serializers
 			if (value == null) throw new ArgumentNullException("value");
 
 			if (writer.Context.Hierarchy.Contains(value, IdentityComparer.Default))
-				throw new SerializationException(string.Format("Circular reference detected for type '{0}'. Path: '{1}'.", this.objectType.FullName, writer.Context.GetPath()));
+				throw JsonSerializationException.CircularReferenceDetected(writer, this.objectType);
 			if (writer.Context.Hierarchy.Count >= writer.Context.MaxHierarchyDepth)
-				throw new SerializationException(string.Format("Serialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", writer.Context.MaxHierarchyDepth, writer.Context.GetPath()));
+				throw JsonSerializationException.SerializationGraphIsTooDeep(writer, (ulong)writer.Context.MaxHierarchyDepth);
 
 			writer.Context.Hierarchy.Push(value);
 			try
@@ -207,8 +206,7 @@ namespace GameDevWare.Serialization.Serializers
 					}
 					catch (Exception getTypeError)
 					{
-						throw new SerializationException(string.Format("Failed to resolve type '{0}' of value for member '{1}' of type '{2}'.\r\n" +
-							"More detailed information in inner exception.", typeName, memberName, this.objectType.Name), getTypeError);
+						throw JsonSerializationException.FailedToResolveMemberType(reader, typeName, memberName, this.objectType, getTypeError);
 					}
 					this.context.Path.Pop();
 
@@ -249,7 +247,7 @@ namespace GameDevWare.Serialization.Serializers
 				}
 				catch (Exception e)
 				{
-					throw new SerializationException(string.Format("Failed to read value for member '{0}' of type '{1}'.\r\nMore detailed information in inner exception.", memberName, this.objectType.Name), e);
+					throw JsonSerializationException.FailedToReadMemberValue(reader, memberName, this.objectType, e);
 				}
 
 				container[memberName] = value;
@@ -304,8 +302,7 @@ namespace GameDevWare.Serialization.Serializers
 				}
 				catch (Exception e)
 				{
-					throw new SerializationException(string.Format("Failed to set member '{0}' to value '{1}' of type {2}.\r\n More detailed information in inner exception.",
-						memberName, value, value != null ? value.GetType().FullName : "<null>"), e);
+					throw JsonSerializationException.FailedToSetMemberValue(memberName, value, e);
 				}
 			}
 
