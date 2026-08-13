@@ -2,6 +2,10 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.17.20
+
+- Fix `"number"` fields declared `double` silently losing precision. `"number"` is variable-width, and the server emits the 8-byte float64 (`0xcb`) payload only after checking that the value does *not* survive a float32 round trip — so a `0xcb` on the wire is an assertion that float32 is insufficient for that value. The decoder cast it straight back down to `float`, discarding the precision before the field was assigned, so declaring the field `double` did not help. Epoch milliseconds are the common case: at ~1.79e12 one float32 ulp is 131072, so timestamps arrived quantised with up to 65536 ms of error, and two distinct timestamps could collapse onto the same value — which typically shows up as a deadline that never elapses. A `0xcb` payload is now decoded as `double` when the destination field is declared `double`; every other case decodes exactly as before, including `"number"` fields mapped to `float` by `schema-codegen --csharp` and primitive collections. Thanks @kuoder for the diagnosis, the fix and the tests! [#267](https://github.com/colyseus/colyseus-unity-sdk/pull/267)
+
 ## 0.17.19
 
 - Fix `room.Leave()`, `room.Send()` and every other call guarded by `Connection.IsOpen` silently doing nothing on platforms without a `SynchronizationContext` (MonoGame, console apps, test hosts — Unity is unaffected). `Connection.IsOpen` is only set when the transport's `OnOpen` event is delivered, and the underlying `Colyseus.NativeWebSocket` dispatched queued messages before queued events, so `OnOpen` arrived *after* the first messages: a room could finish joining and start handling state while the connection still looked closed. A consented `room.Leave()` then returned without sending `LEAVE_ROOM`, leaving the room open until the server timed the connection out. Updates `Colyseus.NativeWebSocket` to [2.0.7](https://github.com/endel/NativeWebSocket/blob/master/CHANGELOG.md). Only 0.17.18 was affected — earlier releases pinned NativeWebSocket 2.0.0, before the regression.
