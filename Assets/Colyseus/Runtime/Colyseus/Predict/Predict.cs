@@ -147,7 +147,7 @@ namespace Colyseus.Predict
 		///     which is the same two collaborators every time and no decision the
 		///     caller is better placed to make.
 		/// </summary>
-		public static Predict For<TState>(Room<TState> room) where TState : Schema.Schema
+		public static Predict Get<TState>(Room<TState> room) where TState : Schema.Schema
 			=> new Predict(new PredictCallbacks<TState>(Schema.Callbacks.Get(room)), room.Clock);
 
 		private static int? RefIdOf(Schema.Schema instance) => instance?.__refId;
