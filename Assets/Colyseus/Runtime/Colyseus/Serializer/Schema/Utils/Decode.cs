@@ -19,6 +19,23 @@ namespace Colyseus.Schema.Utils
         /// <returns>A decoded <see cref="object" /> that has been decoded with a <paramref name="type" /> specified method</returns>
         public static object DecodePrimitiveType(string type, byte[] bytes, Iterator it)
         {
+            return DecodePrimitiveType(type, bytes, it, null);
+        }
+
+        /// <summary>
+        ///     Decodes incoming data, preserving float64 precision when the destination field can hold it.
+        /// </summary>
+        /// <param name="targetType">
+        ///     The declared type of the field being decoded into, or <c>null</c> when it is not known.
+        ///     Qualified as <c>System.Type</c> because <c>Colyseus.Schema.Type</c> is the field attribute.
+        ///     <para>
+        ///         Only <c>typeof(double)</c> changes anything: a <c>"number"</c> carrying a float64 payload
+        ///         is decoded as <see cref="double" /> rather than narrowed to <see cref="float" />. Every
+        ///         other combination takes exactly the path it took before.
+        ///     </para>
+        /// </param>
+        public static object DecodePrimitiveType(string type, byte[] bytes, Iterator it, System.Type targetType)
+        {
             if (type == "string")
             {
                 return DecodeString(bytes, it);
@@ -26,6 +43,20 @@ namespace Colyseus.Schema.Utils
 
             if (type == "number")
             {
+                //
+                // `"number"` is variable-width, and the encoder emits the 0xcb float64 prefix ONLY after
+                // testing that the value does not survive a float32 round trip. DecodeNumber returns
+                // float and casts such a payload down, so the value arrives quantised - an epoch
+                // millisecond loses up to 65536 ms, silently.
+                //
+                // The prefix is PEEKED rather than consumed, so anything that is not a float64 payload
+                // never reaches the new path and decodes byte-for-byte as it did before.
+                //
+                if (targetType == typeof(double) && it.Offset < bytes.Length && bytes[it.Offset] == 0xcb)
+                {
+                    return DecodeNumberAsDouble(bytes, it);
+                }
+
                 return DecodeNumber(bytes, it);
             }
 
@@ -85,6 +116,28 @@ namespace Colyseus.Schema.Utils
             }
 
             return null;
+        }
+
+        /// <summary>
+        ///     Decode a <c>"number"</c> without narrowing a float64 payload.
+        /// </summary>
+        /// <remarks>
+        ///     Identical to <see cref="DecodeNumber" /> in every case except the 0xcb prefix, which
+        ///     <see cref="DecodeNumber" /> casts down to <see cref="float" />. Kept as a separate method so
+        ///     the existing signature and behaviour are untouched.
+        /// </remarks>
+        /// <param name="bytes">The incoming data</param>
+        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
+        /// <returns><paramref name="bytes" /> decoded into a <see cref="double" /></returns>
+        public static double DecodeNumberAsDouble(byte[] bytes, Iterator it)
+        {
+            if (it.Offset < bytes.Length && bytes[it.Offset] == 0xcb)
+            {
+                it.Offset++;
+                return DecodeFloat64(bytes, it);
+            }
+
+            return DecodeNumber(bytes, it);
         }
 
         /// <summary>
