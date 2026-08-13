@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -21,6 +21,9 @@ using System.Runtime.Serialization;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for <see cref="IDictionary"/> types.
+	/// </summary>
 	public sealed class DictionarySerializer : TypeSerializer
 	{
 		private readonly Type dictionaryType;
@@ -29,8 +32,13 @@ namespace GameDevWare.Serialization.Serializers
 		private readonly Type valueType;
 		private readonly bool isStringKeyType;
 
+		/// <inheritdoc />
 		public override Type SerializedType { get { return this.dictionaryType; } }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DictionarySerializer"/> class.
+		/// </summary>
+		/// <param name="dictionaryType">The type of the dictionary to serialize or deserialize.</param>
 		public DictionarySerializer(Type dictionaryType)
 		{
 			if (dictionaryType == null)
@@ -73,9 +81,13 @@ namespace GameDevWare.Serialization.Serializers
 			this.isStringKeyType = this.keyType == typeof(string);
 		}
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
+
+			if (reader.Context.Hierarchy.Count >= reader.Context.MaxHierarchyDepth)
+				throw new SerializationException(string.Format("Deserialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", reader.Context.MaxHierarchyDepth, reader.Context.GetPath()));
 
 			var container = new List<DictionaryEntry>();
 			reader.Context.Hierarchy.Push(container);
@@ -92,10 +104,10 @@ namespace GameDevWare.Serialization.Serializers
 						{
 							reader.ReadArrayBegin();
 							try { entry.Key = reader.ReadValue(this.keyType); }
-							catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' key of dictionary: {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
+							catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary key of type '{0}': {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
 							reader.Context.Path.Push(new PathSegment(entry.Key));
 							try { entry.Value = reader.ReadValue(this.valueType); }
-							catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' value for key '{1}' in dictionary: {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key, e.Message), e); }
+							catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary value of type '{0}' for key '{1}': {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key, e.Message), e); }
 							reader.Context.Path.Pop();
 							reader.ReadArrayEnd();
 						}
@@ -110,7 +122,7 @@ namespace GameDevWare.Serialization.Serializers
 								{
 									case DictionaryEntrySerializer.KEY_MEMBER_NAME:
 										try { entry.Key = reader.ReadValue(this.keyType); }
-										catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' key of dictionary: {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
+										catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary key of type '{0}': {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
 										if (!keyIsPushed)
 										{
 											reader.Context.Path.Push(new PathSegment(entry.Key));
@@ -119,13 +131,13 @@ namespace GameDevWare.Serialization.Serializers
 										break;
 									case DictionaryEntrySerializer.VALUE_MEMBER_NAME:
 										try { entry.Value = reader.ReadValue(this.valueType); }
-										catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' value for key '{1}' in dictionary: {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key ?? "<unknown>", e.Message), e); }
+										catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary value of type '{0}' for key '{1}': {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key ?? "<unknown>", e.Message), e); }
 										break;
 									case ObjectSerializer.TYPE_MEMBER_NAME:
 										reader.ReadValue(typeof(object));
 										break;
 									default:
-										throw new SerializationException(string.Format("Unknown member found '{0}' in dictionary entry while '{1}' or '{2}' are expected.", memberName, DictionaryEntrySerializer.KEY_MEMBER_NAME, DictionaryEntrySerializer.VALUE_MEMBER_NAME));
+										throw new SerializationException(string.Format("Unknown member '{0}' found in dictionary entry. Expected '{1}' or '{2}'.", memberName, DictionaryEntrySerializer.KEY_MEMBER_NAME, DictionaryEntrySerializer.VALUE_MEMBER_NAME));
 								}
 
 							}
@@ -147,11 +159,11 @@ namespace GameDevWare.Serialization.Serializers
 						var entry = default(DictionaryEntry);
 
 						try { entry.Key = reader.ReadValue(this.keyType); }
-						catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' key of dictionary: {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
+						catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary key of type '{0}': {1}\r\nMore detailed information in inner exception.", this.keyType.Name, e.Message), e); }
 						reader.Context.Path.Push(new PathSegment(entry.Key));
 
 						try { entry.Value = reader.ReadValue(this.valueType); }
-						catch (Exception e) { throw new SerializationException(string.Format("Failed to read '{0}' value for key '{1}' in dictionary: {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key, e.Message), e); }
+						catch (Exception e) { throw new SerializationException(string.Format("Failed to read dictionary value of type '{0}' for key '{1}': {2}\r\nMore detailed information in inner exception.", this.valueType.Name, entry.Key, e.Message), e); }
 
 						reader.Context.Path.Pop();
 						container.Add(entry);
@@ -190,51 +202,64 @@ namespace GameDevWare.Serialization.Serializers
 				reader.Context.Hierarchy.Pop();
 			}
 		}
+
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");
 			if (value == null) throw new ArgumentNullException("value");
 
+			if (writer.Context.Hierarchy.Contains(value))
+				throw new SerializationException(string.Format("Circular reference detected for type '{0}'. Path: '{1}'.", this.dictionaryType.FullName, writer.Context.GetPath()));
+			if (writer.Context.Hierarchy.Count >= writer.Context.MaxHierarchyDepth)
+				throw new SerializationException(string.Format("Serialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", writer.Context.MaxHierarchyDepth, writer.Context.GetPath()));
+
 			var dictionary = (IDictionary)value;
 			// ReSharper disable PossibleMultipleEnumeration
 			writer.Context.Hierarchy.Push(value);
-			// object
-			if (this.isStringKeyType)
+			try
 			{
-				writer.WriteObjectBegin(dictionary.Count);
-				foreach (DictionaryEntry pair in dictionary)
+				// object
+				if (this.isStringKeyType)
 				{
-					var keyStr = Convert.ToString(pair.Key, writer.Context.Format);
-					writer.Context.Path.Push(new PathSegment(keyStr));
+					writer.WriteObjectBegin(dictionary.Count);
+					foreach (DictionaryEntry pair in dictionary)
+					{
+						var keyStr = Convert.ToString(pair.Key, writer.Context.Format);
+						writer.Context.Path.Push(new PathSegment(keyStr));
 
-					// key
-					writer.WriteMember(keyStr);
-					// value
-					writer.WriteValue(pair.Value, this.valueType);
+						// key
+						writer.WriteMember(keyStr);
+						// value
+						writer.WriteValue(pair.Value, this.valueType);
 
-					writer.Context.Path.Pop();
+						writer.Context.Path.Pop();
+					}
+					writer.WriteObjectEnd();
 				}
-				writer.WriteObjectEnd();
-			}
-			else
-			{
-				writer.WriteArrayBegin(dictionary.Count);
-				foreach (DictionaryEntry pair in dictionary)
+				else
 				{
-					writer.Context.Path.Push(new PathSegment(pair.Key));
-					writer.WriteArrayBegin(2);
-					writer.WriteValue(pair.Key, this.keyType);
-					writer.WriteValue(pair.Value, this.valueType);
+					writer.WriteArrayBegin(dictionary.Count);
+					foreach (DictionaryEntry pair in dictionary)
+					{
+						writer.Context.Path.Push(new PathSegment(pair.Key));
+						writer.WriteArrayBegin(2);
+						writer.WriteValue(pair.Key, this.keyType);
+						writer.WriteValue(pair.Value, this.valueType);
+						writer.WriteArrayEnd();
+						writer.Context.Path.Pop();
+					}
 					writer.WriteArrayEnd();
-					writer.Context.Path.Pop();
 				}
-				writer.WriteArrayEnd();
+			}
+			finally
+			{
+				writer.Context.Hierarchy.Pop();
 			}
 			// ReSharper restore PossibleMultipleEnumeration
-
-			writer.Context.Hierarchy.Pop();
 		}
 
+		/// <inheritdoc />
 		public override string ToString()
 		{
 			return string.Format("dictionary of {1}:{2}, {0}", this.dictionaryType, this.keyType, this.valueType);

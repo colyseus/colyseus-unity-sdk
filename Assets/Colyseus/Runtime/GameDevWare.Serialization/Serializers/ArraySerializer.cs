@@ -1,5 +1,5 @@
 /* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -18,18 +18,27 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for array and collection types.
+	/// </summary>
 	public sealed class ArraySerializer : TypeSerializer
 	{
 		private readonly Type arrayType;
 		private readonly Type instantiatedArrayType;
 		private readonly Type elementType;
 
+		/// <inheritdoc />
 		public override Type SerializedType { get { return this.arrayType; } }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ArraySerializer"/> class.
+		/// </summary>
+		/// <param name="enumerableType">The type of the array or collection to serialize.</param>
 		public ArraySerializer(Type enumerableType)
 		{
 			if (enumerableType == null) throw new ArgumentNullException("enumerableType");
@@ -46,6 +55,7 @@ namespace GameDevWare.Serialization.Serializers
 				this.instantiatedArrayType = typeof(List<>).MakeGenericType(this.elementType);
 		}
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
@@ -53,54 +63,82 @@ namespace GameDevWare.Serialization.Serializers
 			if (reader.Token == JsonToken.Null)
 				return null;
 
-			var container = new ArrayList();
 			if (reader.Token != JsonToken.BeginArray)
-				throw JsonSerializationException.UnexpectedToken(reader, JsonToken.BeginArray);
+				throw JsonSerializationException.UnexpectedToken(reader, this.arrayType, JsonToken.BeginArray);
 
+			if (reader.Context.Hierarchy.Count >= reader.Context.MaxHierarchyDepth)
+				throw new SerializationException(string.Format("Deserialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", reader.Context.MaxHierarchyDepth, reader.Context.GetPath()));
+
+			var container = new ArrayList();
 			reader.Context.Hierarchy.Push(container);
-			var i = 0;
-			while (reader.NextToken() && reader.Token != JsonToken.EndOfArray)
+			try
 			{
-				reader.Context.Path.Push(new PathSegment(i++));
+				var i = 0;
+				while (reader.NextToken() && reader.Token != JsonToken.EndOfArray)
+				{
+					reader.Context.Path.Push(new PathSegment(i++));
 
-				var value = reader.ReadValue(this.elementType, false);
-				container.Add(value);
+					var value = reader.ReadValue(this.elementType, false);
+					container.Add(value);
 
-				reader.Context.Path.Pop();
+					reader.Context.Path.Pop();
+				}
+
+				if (reader.Token != JsonToken.EndOfArray)
+				{
+					if (reader.Token == JsonToken.EndOfStream)
+						throw JsonSerializationException.UnexpectedEndOfStream(reader, "reading array elements");
+
+					throw JsonSerializationException.UnexpectedToken(reader, this.arrayType, JsonToken.EndOfArray);
+				}
+
+				if (this.instantiatedArrayType == typeof(ArrayList))
+					return container;
+				else if (this.instantiatedArrayType.IsArray)
+					return container.ToArray(this.elementType);
+				else
+					return Activator.CreateInstance(this.instantiatedArrayType, container.ToArray(this.elementType));
 			}
-			reader.Context.Hierarchy.Pop();
-
-			if (reader.IsEndOfStream())
-				throw JsonSerializationException.UnexpectedToken(reader, JsonToken.EndOfArray);
-
-			if (this.instantiatedArrayType == typeof(ArrayList))
-				return container;
-			else if (this.instantiatedArrayType.IsArray)
-				return container.ToArray(this.elementType);
-			else
-				return Activator.CreateInstance(this.instantiatedArrayType, container.ToArray(this.elementType));
+			finally
+			{
+				reader.Context.Hierarchy.Pop();
+			}
 		}
 
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");
 			if (value == null) throw new ArgumentNullException("value");
 
-			var size = 0;
-			if (value is ICollection)
-				size = ((ICollection)value).Count;
-			else
-				size = ((IEnumerable)value).Cast<object>().Count();
+			if (writer.Context.Hierarchy.Contains(value))
+				throw new SerializationException(string.Format("Circular reference detected for type '{0}'. Path: '{1}'.", this.arrayType.FullName, writer.Context.GetPath()));
+			if (writer.Context.Hierarchy.Count >= writer.Context.MaxHierarchyDepth)
+				throw new SerializationException(string.Format("Serialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", writer.Context.MaxHierarchyDepth, writer.Context.GetPath()));
 
-			writer.WriteArrayBegin(size);
-			var i = 0;
-			foreach (var item in (IEnumerable)value)
+			writer.Context.Hierarchy.Push(value);
+			try
 			{
-				writer.Context.Path.Push(new PathSegment(i++));
-				writer.WriteValue(item, this.elementType);
-				writer.Context.Path.Pop();
+				var size = 0;
+				if (value is ICollection)
+					size = ((ICollection)value).Count;
+				else
+					size = ((IEnumerable)value).Cast<object>().Count();
+
+				writer.WriteArrayBegin(size);
+				var i = 0;
+				foreach (var item in (IEnumerable)value)
+				{
+					writer.Context.Path.Push(new PathSegment(i++));
+					writer.WriteValue(item, this.elementType);
+					writer.Context.Path.Pop();
+				}
+				writer.WriteArrayEnd();
 			}
-			writer.WriteArrayEnd();
+			finally
+			{
+				writer.Context.Hierarchy.Pop();
+			}
 		}
 
 		private Type GetElementType(Type arrayType)
@@ -131,6 +169,7 @@ namespace GameDevWare.Serialization.Serializers
 			return elementType;
 		}
 
+		/// <inheritdoc />
 		public override string ToString()
 		{
 			return string.Format("array of {1}, {0}", this.arrayType, this.elementType);

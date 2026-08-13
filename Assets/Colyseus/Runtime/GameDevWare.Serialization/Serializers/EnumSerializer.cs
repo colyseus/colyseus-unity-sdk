@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -18,13 +18,21 @@ using System;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for <see cref="Enum"/> types.
+	/// </summary>
 	public sealed class EnumSerializer : TypeSerializer
 	{
 		private readonly Type enumType;
 		private readonly Type enumBaseType;
 
+		/// <inheritdoc />
 		public override Type SerializedType { get { return this.enumType; } }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="EnumSerializer"/> class.
+		/// </summary>
+		/// <param name="enumType">The type of the enum to serialize or deserialize.</param>
 		public EnumSerializer(Type enumType)
 		{
 			if (enumType == null) throw new ArgumentNullException("enumType");
@@ -34,6 +42,7 @@ namespace GameDevWare.Serialization.Serializers
 			this.enumBaseType = Enum.GetUnderlyingType(enumType);
 		}
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
@@ -46,6 +55,7 @@ namespace GameDevWare.Serialization.Serializers
 				throw JsonSerializationException.UnexpectedToken(reader, JsonToken.Number, JsonToken.StringLiteral);
 		}
 
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");

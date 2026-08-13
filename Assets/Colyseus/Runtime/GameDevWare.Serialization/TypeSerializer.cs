@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -19,11 +19,27 @@ using System;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
+	/// <summary>
+	/// Base class for type-specific serializers.
+	/// </summary>
 	public abstract class TypeSerializer
 	{
+		/// <summary>
+		/// Gets the type serialized by this instance.
+		/// </summary>
 		public abstract Type SerializedType { get; }
 
+		/// <summary>
+		/// Deserializes an object from the specified reader.
+		/// </summary>
+		/// <param name="reader">The reader to deserialize from.</param>
+		/// <returns>The deserialized object.</returns>
 		public abstract object Deserialize(IJsonReader reader);
+		/// <summary>
+		/// Serializes an object using the specified writer.
+		/// </summary>
+		/// <param name="writer">The writer to serialize to.</param>
+		/// <param name="value">The object to serialize.</param>
 		public abstract void Serialize(IJsonWriter writer, object value);
 	}
 }

@@ -1,5 +1,5 @@
 /* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -19,10 +19,19 @@ using System.IO;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
+	/// <summary>
+	/// Represents a JSON reader that reads from a <see cref="TextReader"/>.
+	/// </summary>
 	public sealed class JsonTextReader : JsonReader
 	{
 		private readonly TextReader reader;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JsonTextReader"/> class.
+		/// </summary>
+		/// <param name="reader">The <see cref="TextReader"/> to read from.</param>
+		/// <param name="context">The serialization context.</param>
+		/// <param name="buffer">The character buffer to use.</param>
 		public JsonTextReader(TextReader reader, SerializationContext context, char[] buffer = null)
 			: base(context, buffer)
 		{
@@ -33,6 +42,7 @@ namespace GameDevWare.Serialization
 			this.reader = reader;
 		}
 
+		/// <inheritdoc />
 		protected override int FillBuffer(char[] buffer, int index)
 		{
 			if (buffer == null)

@@ -1,5 +1,5 @@
 /* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -19,17 +19,33 @@ using System.Runtime.Serialization;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.MessagePack
 {
+	/// <summary>
+	/// Exception that is thrown when an unknown or invalid MessagePack format byte is encountered during deserialization.
+	/// </summary>
 	[Serializable]
 	public sealed class UnknownMsgPackFormatException : SerializationException
 	{
+		/// <summary>
+		/// Initializes a new instance of the <see cref="UnknownMsgPackFormatException"/> class with a specified error message and a reference to the inner exception that is the cause of this exception.
+		/// </summary>
+		/// <param name="message">The error message that explains the reason for the exception.</param>
+		/// <param name="innerException">The exception that is the cause of the current exception, or a null reference if no inner exception is specified.</param>
 		public UnknownMsgPackFormatException(string message, Exception innerException) : base(message, innerException)
 		{
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="UnknownMsgPackFormatException"/> class with a specified error message.
+		/// </summary>
+		/// <param name="message">The message that describes the error.</param>
 		public UnknownMsgPackFormatException(string message) : base(message)
 		{
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="UnknownMsgPackFormatException"/> class with an error message indicating the invalid format byte.
+		/// </summary>
+		/// <param name="invalidValue">The invalid MessagePack format byte encountered.</param>
 		public UnknownMsgPackFormatException(byte invalidValue)
 			: base(string.Format("Unknown MessagePack format '{0}' was readed from stream.", invalidValue))
 		{

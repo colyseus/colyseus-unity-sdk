@@ -1,5 +1,5 @@
 /* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -19,10 +19,19 @@ using System.IO;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
+	/// <summary>
+	/// Represents a reader that provides fast, non-cached, forward-only access to JSON data from a <see cref="Stream"/>.
+	/// </summary>
 	public sealed class JsonStreamReader : JsonReader
 	{
 		private readonly StreamReader reader;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JsonStreamReader"/> class.
+		/// </summary>
+		/// <param name="stream">The stream to read from.</param>
+		/// <param name="context">The serialization context.</param>
+		/// <param name="buffer">The character buffer to use for reading.</param>
 		public JsonStreamReader(Stream stream, SerializationContext context, char[] buffer = null)
 			: base(context, buffer)
 		{
@@ -32,6 +41,12 @@ namespace GameDevWare.Serialization
 			this.reader = new StreamReader(stream, context.Encoding);
 		}
 
+		/// <summary>
+		/// Fills the character buffer from the underlying stream.
+		/// </summary>
+		/// <param name="buffer">The buffer to fill.</param>
+		/// <param name="index">The starting index in the buffer.</param>
+		/// <returns>The number of characters read.</returns>
 		protected override int FillBuffer(char[] buffer, int index)
 		{
 			if (buffer == null)

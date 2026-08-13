@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -21,10 +21,15 @@ using System.Runtime.Serialization;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for <see cref="DateTime"/> values.
+	/// </summary>
 	public sealed class DateTimeSerializer : TypeSerializer
 	{
+		/// <inheritdoc />
 		public override Type SerializedType { get { return typeof(DateTime); } }
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
@@ -36,6 +41,12 @@ namespace GameDevWare.Serialization.Serializers
 			try
 			{
 				var value = default(DateTime);
+				if (DateTime.TryParseExact(dateTimeStr, reader.Context.DateTimeFormats, reader.Context.Format, DateTimeStyles.RoundtripKind, out value))
+					return value;
+
+				if (DateTime.TryParseExact(dateTimeStr, "o", reader.Context.Format, DateTimeStyles.RoundtripKind, out value))
+					return value;
+
 				if (!DateTime.TryParse(dateTimeStr, reader.Context.Format, DateTimeStyles.RoundtripKind, out value))
 					value = DateTime.ParseExact(dateTimeStr, reader.Context.DateTimeFormats, reader.Context.Format, DateTimeStyles.RoundtripKind);
 
@@ -43,10 +54,11 @@ namespace GameDevWare.Serialization.Serializers
 			}
 			catch (FormatException fe)
 			{
-				throw new SerializationException(string.Format("Failed to parse date '{0}' in with pattern '{1}'.", dateTimeStr, reader.Context.DateTimeFormats[0]), fe);
+				throw new SerializationException(string.Format("Failed to parse date '{0}' with pattern '{1}'.", dateTimeStr, reader.Context.DateTimeFormats[0]), fe);
 			}
 		}
 
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");
