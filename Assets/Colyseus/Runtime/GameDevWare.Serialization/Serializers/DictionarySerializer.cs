@@ -14,6 +14,7 @@
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
@@ -209,7 +210,7 @@ namespace GameDevWare.Serialization.Serializers
 			if (writer == null) throw new ArgumentNullException("writer");
 			if (value == null) throw new ArgumentNullException("value");
 
-			if (writer.Context.Hierarchy.Contains(value))
+			if (writer.Context.Hierarchy.Contains(value, IdentityComparer.Default))
 				throw new SerializationException(string.Format("Circular reference detected for type '{0}'. Path: '{1}'.", this.dictionaryType.FullName, writer.Context.GetPath()));
 			if (writer.Context.Hierarchy.Count >= writer.Context.MaxHierarchyDepth)
 				throw new SerializationException(string.Format("Serialization graph is too deep. Maximum depth is {0}. Path: '{1}'.", writer.Context.MaxHierarchyDepth, writer.Context.GetPath()));
