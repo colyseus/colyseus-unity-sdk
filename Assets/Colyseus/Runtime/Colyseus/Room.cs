@@ -822,16 +822,37 @@ namespace Colyseus
 
         /// <summary>
         ///     Method to add new message handlers to the room
+        ///     <para>
+        ///         Several handlers may be registered for the same message type, and are invoked in
+        ///         registration order. They must all share the same <typeparamref name="MessageType" />.
+        ///     </para>
         /// </summary>
         /// <param name="type">The type of message received</param>
         /// <param name="handler"></param>
         /// <typeparam name="MessageType">The type of object this message should respond with</typeparam>
-        public void OnMessage<MessageType>(string type, Action<MessageType> handler)
+        /// <returns>An <see cref="Action" /> that removes this handler. Safe to call more than once.</returns>
+        /// <exception cref="Exception">
+        ///     Thrown when <paramref name="type" /> already has handlers of a different message type.
+        /// </exception>
+        public Action OnMessage<MessageType>(string type, Action<MessageType> handler)
         {
-            OnMessageHandlers.Add(type, new MessageHandler<MessageType>
+            // an emptied-out entry no longer constrains the message type, so it is replaced rather than reused
+            if (!OnMessageHandlers.TryGetValue(type, out var entry) || entry.IsEmpty)
             {
-                Action = handler
-            });
+                entry = new MessageHandler<MessageType>();
+                OnMessageHandlers[type] = entry;
+            }
+
+            var messageHandler = entry as MessageHandler<MessageType>;
+            if (messageHandler == null)
+            {
+                throw new Exception(
+                    $"room.OnMessage(\"{type}\") is already registered as {entry.Type}. All handlers for the same message must share the same type.");
+            }
+
+            messageHandler.Action += handler;
+
+            return () => messageHandler.Action -= handler;
         }
 
         /// <summary>
@@ -840,12 +861,10 @@ namespace Colyseus
         /// <param name="type">The type of message received</param>
         /// <param name="handler"></param>
         /// <typeparam name="MessageType">The type of object this message should respond with</typeparam>
-        public void OnMessage<MessageType>(byte type, Action<MessageType> handler)
+        /// <returns>An <see cref="Action" /> that removes this handler. Safe to call more than once.</returns>
+        public Action OnMessage<MessageType>(byte type, Action<MessageType> handler)
         {
-            OnMessageHandlers.Add("i" + type, new MessageHandler<MessageType>
-            {
-                Action = handler
-            });
+            return OnMessage("i" + type, handler);
         }
 
         /// <summary>
@@ -1060,7 +1079,7 @@ namespace Colyseus
                     OnMessageHandlers.TryGetValue(type.ToString(), out handler);
                 }
 
-                if (handler != null)
+                if (handler != null && !handler.IsEmpty)
                 {
                     object message = null;
 
