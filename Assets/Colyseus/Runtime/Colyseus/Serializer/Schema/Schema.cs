@@ -265,6 +265,14 @@ namespace Colyseus.Schema
 		/// </summary>
 		internal virtual Dictionary<string, string> fieldTypes => _metadata.FieldTypes;
 
+		/// <summary>
+		///     Whether a <c>"number"</c> at <paramref name="index" /> can be received at full width.
+		///     Only consulted for <c>"number"</c> fields, whose payload is variable-width and lossy in
+		///     <see cref="float" /> past 2^24; a generated field declared <see cref="double" /> takes it
+		///     wide, and <see cref="DynamicSchema" /> takes everything wide.
+		/// </summary>
+		internal virtual bool AcceptsWideNumber(int index) => _metadata.WideNumberFields.Contains(index);
+
 		public Schema()
 		{
 			var type = GetType();
@@ -304,6 +312,11 @@ namespace Colyseus.Schema
 					{
 						metadata.FieldQuantizedDescriptors.Add(field.Name,
 							Utils.Quantize.Resolve(t.QuantizeMin, t.QuantizeMax, (byte)t.QuantizeBits, t.QuantizeWrap));
+					}
+
+					if (t.FieldType == "number" && field.FieldType == typeof(double))
+					{
+						metadata.WideNumberFields.Add(t.Index);
 					}
 				}
 			}
@@ -417,6 +430,11 @@ namespace Colyseus.Schema
 			/// </summary>
 			public Dictionary<string, Utils.QuantizeDescriptor> FieldQuantizedDescriptors =
 				new Dictionary<string, Utils.QuantizeDescriptor>();
+
+			/// <summary>
+			///     Indexes of the <c>"number"</c> fields declared <see cref="double" />
+			/// </summary>
+			public HashSet<int> WideNumberFields = new HashSet<int>();
 		}
 	}
 }

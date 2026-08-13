@@ -292,47 +292,37 @@ namespace Colyseus.Schema
 		}
 
 		/// <summary>
-		///     Cache of declared field types, keyed by the schema type and the field index.
+		///     <c>typeof(double)</c> when a <c>"number"</c> can be delivered at full width to this
+		///     destination; <c>null</c> when it must stay <see cref="float" />, as every generated schema
+		///     mapping <c>"number"</c> to <see cref="float" /> requires.
 		/// </summary>
 		/// <remarks>
-		///     Reflection is not free, and while this path is rare it can repeat on every patch for a
-		///     timestamp field. The key is the DECLARING type rather than the instance, so every instance
-		///     of a schema shares one lookup.
+		///     The destination governs, never the payload — so a value decodes to the same C# type
+		///     whatever encoding the server picked for it, patch after patch.
 		/// </remarks>
-		private static readonly System.Collections.Concurrent.ConcurrentDictionary<(System.Type, int), System.Type>
-			DeclaredFieldTypes = new System.Collections.Concurrent.ConcurrentDictionary<(System.Type, int), System.Type>();
-
-		/// <summary>
-		///     <c>typeof(double)</c> when this field is a <c>"number"</c> declared as <see cref="double" />
-		///     AND the incoming payload is a float64; <c>null</c> in every other case.
-		/// </summary>
-		/// <remarks>
-		///     Returning null keeps the decode on precisely the path it took before, which is what makes
-		///     this change non-breaking. The two cheap tests come FIRST - the schema type string, then a
-		///     peek at the prefix byte - so the reflection lookup happens only for a field that can
-		///     actually lose precision, rather than on every primitive in the patch.
-		/// </remarks>
-		private static System.Type DoubleFieldOrNull(IRef _ref, int fieldIndex, string fieldType, byte[] bytes, Iterator it)
+		private static System.Type DoubleTargetOrNull(IRef _ref, int fieldIndex, string fieldType)
 		{
 			if (fieldType != "number") { return null; }
-			if (it.Offset >= bytes.Length || bytes[it.Offset] != 0xcb) { return null; }
 
-			// Collections are deliberately untouched: ArraySchema<T>.SetByIndex casts with `(T)value`,
-			// so handing it a boxed double would throw rather than widen.
-			if (!(_ref is Schema schemaRef)) { return null; }
+			bool wide = _ref is Schema schema
+				? schema.AcceptsWideNumber(fieldIndex)
+				: _ref is ISchemaCollection collection && AcceptsWideNumber(collection);
 
-			System.Type schemaType = schemaRef.GetType();
-			if (DeclaredFieldTypes.TryGetValue((schemaType, fieldIndex), out var cached)) { return cached; }
+			return wide ? typeof(double) : null;
+		}
 
-			System.Type resolved = null;
-			if (schemaRef.fieldsByIndex.TryGetValue(fieldIndex, out var fieldName) && fieldName != null)
-			{
-				System.Reflection.FieldInfo field = schemaType.GetField(fieldName);
-				if (field != null && field.FieldType == typeof(double)) { resolved = typeof(double); }
-			}
+		/// <summary>
+		///     Whether this collection's elements can hold a <see cref="double" />. <c>SetByIndex</c> casts
+		///     with <c>(T)value</c>, and unboxing converts neither way: an <c>object</c> element (what an
+		///     untyped state builds) takes anything, a <c>double</c> one is where the boxed float throws,
+		///     and <c>ArraySchema&lt;float&gt;</c> must keep receiving floats.
+		/// </summary>
+		private static bool AcceptsWideNumber(ISchemaCollection collection)
+		{
+			if (collection.HasSchemaChild) { return false; }
 
-			DeclaredFieldTypes[(schemaType, fieldIndex)] = resolved;
-			return resolved;
+			System.Type element = collection.GetChildType();
+			return element == typeof(object) || element == typeof(double);
 		}
 
 		protected void DecodeValue(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType, System.Type childType, byte operation, out object value, out object previousValue)
@@ -433,7 +423,7 @@ namespace Colyseus.Schema
 			else if (childType == null)
 			{
 				// primitive values
-				value = Utils.Decode.DecodePrimitiveType(fieldType, bytes, it, DoubleFieldOrNull(_ref, fieldIndex, fieldType, bytes, it));
+				value = Utils.Decode.DecodePrimitiveType(fieldType, bytes, it, DoubleTargetOrNull(_ref, fieldIndex, fieldType));
 			}
 			else
 			{

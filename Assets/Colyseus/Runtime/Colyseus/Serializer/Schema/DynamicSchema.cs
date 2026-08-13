@@ -130,6 +130,12 @@ namespace Colyseus.Schema
 		internal override Dictionary<string, Utils.QuantizeDescriptor> fieldQuantizedDescriptors =>
 			Definition?.FieldQuantizedDescriptors ?? _emptyFieldQuantizedDescriptors;
 
+		/// <summary>
+		///     Values are boxed into <see cref="_values" />, so nothing here needs narrowing — which also
+		///     matches the server, where every <c>"number"</c> is a float64.
+		/// </summary>
+		internal override bool AcceptsWideNumber(int index) => true;
+
 		private static readonly Dictionary<string, Utils.QuantizeDescriptor> _emptyFieldQuantizedDescriptors =
 			new Dictionary<string, Utils.QuantizeDescriptor>();
 
