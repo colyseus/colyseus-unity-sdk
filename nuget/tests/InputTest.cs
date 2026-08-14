@@ -436,5 +436,15 @@ namespace Colyseus.Tests
 				RoomClock.GetNow = originalNow;
 			}
 		}
+
+		[Test]
+		public void RoomInputUnreliableModeIsRejectedTest()
+		{
+			// No datagram transport in this SDK yet — mode "unreliable" must fail
+			// loudly at construction rather than silently ride the reliable channel.
+			var room = new TestRoom();
+			Assert.Throws<NotSupportedException>(
+				() => room.Input(null, new InputOptions { Mode = "unreliable" }));
+		}
 	}
 }

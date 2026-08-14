@@ -7,7 +7,10 @@ namespace Colyseus
 	/// <summary>Options accepted by <c>Room.Input()</c>.</summary>
 	public class InputOptions
 	{
-		/// <summary>"reliable" (default) or "unreliable".</summary>
+		/// <summary>
+		///     "reliable" (default). "unreliable" is rejected for now — it needs a
+		///     WebTransport datagram channel, which this SDK does not have.
+		/// </summary>
 		public string Mode = "reliable";
 
 		/// <summary>Unreliable-mode redundancy ring size (default 3).</summary>

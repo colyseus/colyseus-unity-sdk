@@ -799,6 +799,14 @@ namespace Colyseus
             }
             options ??= new InputOptions();
 
+            if (options.Mode == "unreliable")
+            {
+                throw new NotSupportedException(
+                    "Room.Input(): mode \"unreliable\" is not supported yet — it needs a " +
+                    "WebTransport datagram channel, and this SDK connects over WebSocket only. " +
+                    "Use mode \"reliable\".");
+            }
+
             if (data == null)
             {
                 if (inputDefinitionFromReflection == null)
