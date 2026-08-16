@@ -27,6 +27,12 @@ namespace Colyseus.Schema
 	/// </summary>
 	public class InputEncoder
 	{
+		// A field op packs as `operation | index`, so index 63 would emit 255 —
+		// the byte a decoder reads as SWITCH_TO_STRUCTURE. The server rejects
+		// the 64th field where the schema is defined; mirror it here, since
+		// this encoder assembles the op byte itself.
+		private const int MAX_FIELDS = 63;
+
 		public readonly Schema Instance;
 		public readonly string Mode;
 		public readonly int HistorySize;
@@ -60,6 +66,12 @@ namespace Colyseus.Schema
 			fieldIndexes = instance.fieldsByIndex.Keys.OrderBy(i => i).ToArray();
 			foreach (var index in fieldIndexes)
 			{
+				if (index >= MAX_FIELDS)
+				{
+					throw new Exception(
+						$"InputEncoder: field '{instance.fieldsByIndex[index]}' is at index {index}; a Schema may only have {MAX_FIELDS} fields.");
+				}
+
 				var fieldType = instance.fieldTypes[instance.fieldsByIndex[index]];
 				if (fieldType == "ref" || fieldType == "array" || fieldType == "map")
 				{
