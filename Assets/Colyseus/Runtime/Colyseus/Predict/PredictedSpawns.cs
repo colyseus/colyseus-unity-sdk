@@ -46,10 +46,10 @@ namespace Colyseus.Predict
 		/// </summary>
 		public Action<S, double, double> ReckonStep;
 
-		/// <summary>Reckon smoothing for confirmed entities. Default 0 — a
-		///     deterministic constant-step projectile rebases exactly, so
-		///     smoothing only adds lag.</summary>
-		public double Smoothing;
+		/// <summary>Reckon smoothing time constant (ms) for confirmed entities.
+		///     Default 0 — a deterministic constant-step projectile rebases
+		///     exactly, so smoothing only adds lag.</summary>
+		public double SmoothMs;
 
 		/// <summary>Reckon substep in ms. Smaller = more accurate bounces. Default 16.</summary>
 		public double Substep = 16;

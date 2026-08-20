@@ -71,9 +71,9 @@ namespace Colyseus.Predict
 		public InputHandle Input;
 		/// <summary>Resolves ReckonTime's unstamped fallback (serverNow).</summary>
 		public RoomClock Clock;
-		/// <summary>Error-decay spring (1/s); 0 = hard snap; null = the
-		///     server's correction cadence (1000/patchRate) else 20.</summary>
-		public double? Smoothing;
+		/// <summary>Error-decay time constant (ms); 0 = hard snap; null = the
+		///     server's correction cadence (one patch interval) else 50.</summary>
+		public double? SmoothMs;
 		/// <summary>Teleport threshold — corrections beyond it POP. 0 = off.</summary>
 		public double Snap;
 		public double? StepMs;
@@ -133,7 +133,7 @@ namespace Colyseus.Predict
 		// per-seq memo store: seq → (key → value)
 		private readonly Dictionary<int, Dictionary<string, object>> memos = new Dictionary<int, Dictionary<string, object>>();
 
-		protected readonly double smoothing;
+		protected readonly double smoothMs;
 		private readonly double snapThreshold;
 		/// <summary>The fixed simulation step (ms) this controller predicts at.</summary>
 		public readonly double StepMs;
@@ -153,8 +153,8 @@ namespace Colyseus.Predict
 		{
 			input = opts.Input ?? throw new Exception("RollbackController: input handle required");
 			clock = opts.Clock;
-			smoothing = opts.Smoothing
-				?? (input.PatchRate.HasValue && input.PatchRate.Value > 0 ? 1000.0 / input.PatchRate.Value : 20);
+			smoothMs = opts.SmoothMs
+				?? (input.PatchRate.HasValue && input.PatchRate.Value > 0 ? input.PatchRate.Value : 50);
 			snapThreshold = opts.Snap;
 			double? stepMs = opts.StepMs ?? input.StepMs ?? (opts.StepSeconds * 1000);
 			StepMs = stepMs ?? throw new Exception(
@@ -230,7 +230,7 @@ namespace Colyseus.Predict
 			MarkDirty();
 
 			if (dt <= 0) { return; }
-			double k = smoothing <= 0 ? 1 : 1 - Math.Exp(-smoothing * dt / 1000);
+			double k = smoothMs <= 0 ? 1 : 1 - Math.Exp(-dt / smoothMs);
 			foreach (var f in SmoothedFields()) { error[f] -= error[f] * k; }
 		}
 
@@ -308,7 +308,7 @@ namespace Colyseus.Predict
 			RefreshRender();
 			predictedSeq = input.SentCount;
 
-			bool hard = smoothing <= 0;
+			bool hard = smoothMs <= 0;
 			double mag = 0;
 			foreach (var f in SmoothedFields())
 			{

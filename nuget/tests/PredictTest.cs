@@ -52,7 +52,7 @@ namespace Colyseus.Tests
 						Input = handle,
 						Fields = new[] { "x", "vx" },
 						Step = (ctx, s, cmd) => { s.vx += cmd.ax * (float)ctx.Dt; s.x += s.vx * (float)ctx.Dt; },
-						Smoothing = 0,
+						SmoothMs = 0,
 						StepMs = 50,
 					});
 
@@ -127,7 +127,7 @@ namespace Colyseus.Tests
 							});
 							s.x += cmd.ax + (bonus is float b ? b : 0);
 						},
-						Smoothing = 0,
+						SmoothMs = 0,
 						StepMs = 50,
 					});
 
@@ -184,7 +184,7 @@ namespace Colyseus.Tests
 				{
 					["a"] = PredictMode.Lerp,
 					["b"] = PredictMode.Damped,
-					["c"] = new PredictFieldOptions { Mode = PredictMode.Extrapolate, Damping = 0 },
+					["c"] = new PredictFieldOptions { Mode = PredictMode.Extrapolate, SmoothMs = 0 },
 					["d"] = PredictMode.Raw,
 					["yaw"] = new PredictFieldOptions { Mode = PredictMode.Lerp, Angle = true },
 				});
@@ -273,7 +273,7 @@ namespace Colyseus.Tests
 				{
 					Fields = new[] { "x" },
 					Step = (s, dt, elapsed) => { s.x += s.vx * (float)dt; },
-					Smoothing = 0,   // raw projection (exp()-free)
+					SmoothMs = 0,   // raw projection (exp()-free)
 					Substep = 10,
 				});
 

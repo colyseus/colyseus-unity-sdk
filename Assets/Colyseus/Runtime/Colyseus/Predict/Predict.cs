@@ -19,8 +19,18 @@ namespace Colyseus.Predict
 		public PredictMode Mode = PredictMode.Lerp;
 		/// <summary>Lerp render-time lag (ms).</summary>
 		public double Delay = 100;
-		/// <summary>Damped/extrapolate spring (1/s). 0 on extrapolate = raw projection.</summary>
-		public double Damping = 15;
+		/// <summary>
+		///     Output-smoothing time constant, in milliseconds. 0 = off (snap /
+		///     raw projection / exact interpolation). Roughly the extra display
+		///     lag the smoothing adds: a steady mover trails its target by
+		///     ≈ speed × SmoothMs; corrections fade ~63% per SmoothMs, ~95% by 3×.
+		///     Damped uses it as the chase rate toward the latest value,
+		///     extrapolate as its predict-then-smooth blend, and lerp as an
+		///     optional DISPLAY-ONLY output spring on the interpolated result.
+		///     Null = the mode default: 50 on damped/extrapolate, 0 on lerp
+		///     (spring off — exact interpolation).
+		/// </summary>
+		public double? SmoothMs;
 		/// <summary>Extrapolate overshoot cap (ms).</summary>
 		public double MaxExtrapolate = 200;
 		/// <summary>Arrival-grid snap (ms); 0 off.</summary>
@@ -48,8 +58,9 @@ namespace Colyseus.Predict
 		///     scratch in place by dt seconds; elapsedMs is the absolute
 		///     server-time at the end of the substep.</summary>
 		public Action<T, double, double> Step;
-		/// <summary>Offset-decay smoothing (1/s). 0 = raw projection.</summary>
-		public double Smoothing = 20;
+		/// <summary>Predict-then-smooth time constant (ms) — see
+		///     <see cref="PredictFieldOptions.SmoothMs" />. Default 50. 0 = raw projection.</summary>
+		public double SmoothMs = 50;
 		/// <summary>Substep length (ms).</summary>
 		public double Substep = 16;
 		/// <summary>Rebase discontinuities beyond this pop. 0 off.</summary>
@@ -71,6 +82,8 @@ namespace Colyseus.Predict
 		private const double GapResumePatchMult = 1.5;
 		private const double GapResumeMaxMs = 250;
 		private const int MaxStepsPerFrame = 5;
+		/// <summary>SmoothMs fallback for damped/extrapolate (lerp's spring defaults 0).</summary>
+		private const double DefaultSmoothMs = 50;
 
 		private class Slot
 		{
@@ -80,6 +93,8 @@ namespace Colyseus.Predict
 			public double V1;
 			public double AuxV;
 			public double AuxT;
+			/// <summary>Previous frame's RAW lerp output — the target slope for the output spring's FOH step.</summary>
+			public double LerpPrev;
 			public readonly double[] RingT = new double[RingCap];
 			public readonly double[] RingV = new double[RingCap];
 			public int RingHead;
@@ -98,7 +113,7 @@ namespace Colyseus.Predict
 			public Schema.Schema Scratch;
 			public IReadOnlyList<string> Fields;
 			public Action<Schema.Schema, double, double> Step;
-			public double Smoothing;
+			public double SmoothMs;
 			public double Substep;
 			public double Snap;
 			public double[] Smoothed;
@@ -179,7 +194,8 @@ namespace Colyseus.Predict
 			double initial = ToNumber(instance[field]);
 			slot.V1 = initial;
 			slot.AuxV = initial;
-			slot.AuxT = 0;
+			slot.AuxT = RoomClock.GetNow();
+			slot.LerpPrev = initial;
 			perRef[field] = slot;
 
 			slot.Detach = callbacks.Listen(instance, field, (object current) => OnSample(slot, ToNumber(current)), true);
@@ -222,7 +238,7 @@ namespace Colyseus.Predict
 				Scratch = scratch,
 				Fields = options.Fields,
 				Step = (s, dt, elapsed) => options.Step((T)s, dt, elapsed),
-				Smoothing = options.Smoothing,
+				SmoothMs = options.SmoothMs,
 				Substep = options.Substep > 0 ? options.Substep : 16,
 				Snap = options.Snap,
 				Smoothed = new double[n],
@@ -544,7 +560,7 @@ namespace Colyseus.Predict
 				{
 					Fields = opts.Fields,
 					Step = opts.ReckonStep,
-					Smoothing = opts.Smoothing,
+					SmoothMs = opts.SmoothMs,
 					Substep = opts.Substep,
 				});
 				BindForward(s, () =>
@@ -690,6 +706,7 @@ namespace Colyseus.Predict
 				head = 0;
 				count = 0;
 				slot.AuxV = current;
+				slot.LerpPrev = current;   // lerp's output spring pops too
 			}
 
 			double lastT1 = count == 0
@@ -796,13 +813,47 @@ namespace Colyseus.Predict
 			slot.AuxT = now;
 			if (dtFrame > 0)
 			{
-				double k = 1 - Math.Exp(-slot.Opts.Damping * dtFrame / 1000);
+				double tau = slot.Opts.SmoothMs ?? DefaultSmoothMs;
+				double k = tau > 0 ? 1 - Math.Exp(-dtFrame / tau) : 1;   // 0 = snap
 				slot.AuxV += (slot.V1 - slot.AuxV) * k;
 			}
 			return slot.AuxV;
 		}
 
 		private double ComputeLerp(Slot slot)
+		{
+			double raw = ComputeLerpRaw(slot);
+			double tau = slot.Opts.SmoothMs ?? 0;   // lerp's output spring defaults OFF
+			double now = renderTime;
+			if (tau <= 0)
+			{
+				// Spring off (the default) — pin the state to the raw output so a
+				// runtime SmoothMs enable starts from here instead of gliding in
+				// from wherever the spring last rested.
+				slot.AuxV = raw;
+				slot.LerpPrev = raw;
+				slot.AuxT = now;
+				return raw;
+			}
+			double dt = now - slot.AuxT;
+			if (dt <= 0) { return slot.AuxV; }   // same-frame re-read
+			// Exact first-order-hold step for a linearly-varying target (τ = SmoothMs):
+			//   y(dt) = u1 − s·τ + (y0 − u0 + s·τ)·e^(−dt/τ),  s = (u1 − u0)/dt
+			// Frame-rate independent: a steady mover renders with a constant s·τ
+			// trail at any fps (a per-frame EMA's trail varies with frame rate).
+			double u0 = slot.LerpPrev;
+			double y0 = slot.AuxV;
+			double kdt = dt / tau;
+			double trail = (raw - u0) / kdt;
+			double y = raw - trail + (y0 - u0 + trail) * Math.Exp(-kdt);
+			slot.AuxV = y;
+			slot.LerpPrev = raw;
+			slot.AuxT = now;
+			return y;
+		}
+
+		/// <summary>The undamped interpolant — <see cref="ComputeLerp" /> minus the output spring.</summary>
+		private double ComputeLerpRaw(Slot slot)
 		{
 			int count = slot.RingCount;
 			if (count == 0) { return slot.V1; }
@@ -871,7 +922,8 @@ namespace Colyseus.Predict
 
 			double lastT = slot.AuxT;
 			slot.AuxT = now;
-			if (slot.Opts.Damping <= 0)
+			double tau = slot.Opts.SmoothMs ?? DefaultSmoothMs;
+			if (tau <= 0)
 			{
 				slot.AuxV = raw;
 				return raw;
@@ -879,7 +931,7 @@ namespace Colyseus.Predict
 			double dtFrame = now - lastT;
 			if (dtFrame > 0)
 			{
-				double k = 1 - Math.Exp(-slot.Opts.Damping * dtFrame / 1000);
+				double k = 1 - Math.Exp(-dtFrame / tau);
 				slot.AuxV += (raw - slot.AuxV) * k;
 			}
 			return slot.AuxV;
@@ -927,7 +979,7 @@ namespace Colyseus.Predict
 			Advance(sim, forward, sim.Out, present);
 
 			bool first = double.IsNegativeInfinity(sim.LastApplyTime);
-			if (first || sim.Smoothing <= 0)
+			if (first || sim.SmoothMs <= 0)
 			{
 				for (int k = 0; k < n; k++) { sim.Offset[k] = 0; sim.Smoothed[k] = sim.Out[k]; }
 			}
@@ -946,7 +998,7 @@ namespace Colyseus.Predict
 				{
 					for (int k = 0; k < n; k++) { sim.FrameVel[k] = (sim.Out[k] - sim.OutPrev[k]) / dtMs; }
 				}
-				double decay = Math.Exp(-sim.Smoothing * dtMs / 1000);
+				double decay = Math.Exp(-dtMs / sim.SmoothMs);
 				for (int k = 0; k < n; k++)
 				{
 					sim.Offset[k] *= decay;
@@ -956,7 +1008,7 @@ namespace Colyseus.Predict
 			else
 			{
 				double dtMs = Math.Max(0, Math.Min(now - sim.LastApplyTime, 100));
-				double k2 = 1 - Math.Exp(-sim.Smoothing * dtMs / 1000);
+				double k2 = 1 - Math.Exp(-dtMs / sim.SmoothMs);
 				for (int k = 0; k < n; k++) { sim.Smoothed[k] += (sim.Out[k] - sim.Smoothed[k]) * k2; }
 			}
 			for (int k = 0; k < n; k++) { sim.OutPrev[k] = sim.Out[k]; }
