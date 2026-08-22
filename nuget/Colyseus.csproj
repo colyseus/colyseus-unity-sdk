@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Colyseus.NativeWebSocket" Version="2.0.0" />
+    <PackageReference Include="Colyseus.NativeWebSocket" Version="2.0.7" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
