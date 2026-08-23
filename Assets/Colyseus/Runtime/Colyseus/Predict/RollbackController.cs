@@ -142,6 +142,17 @@ namespace Colyseus.Predict
 		internal readonly double? WarnTolerance;
 		private readonly RoomClock clock;
 
+		/// <summary>
+		///     Is ANY controller re-simulating already-applied inputs right now?
+		///     Lets code reached indirectly from a step — an event channel's
+		///     <c>Predict()</c> — refuse to fire a second time on the way through a
+		///     rollback. <see cref="StepContext.IsReplay" /> is the same fact for
+		///     code that holds the ctx; this is for code that doesn't.
+		/// </summary>
+		public static bool IsReplaying() => replayDepth > 0;
+		// depth, not bool: a step that ticks another controller nests a replay
+		internal static int replayDepth;
+
 		/// <summary>Set by <see cref="Dispose" />.</summary>
 		public bool Dead { get; private set; }
 		/// <summary>Number of unacknowledged inputs currently buffered.</summary>
@@ -293,6 +304,7 @@ namespace Colyseus.Predict
 			int from = Math.Max(acked, replayFrom);
 			stepCtx.IsReplay = true;
 			catching = true;
+			replayDepth++;
 			try
 			{
 				for (int seq = from + 1; seq <= input.SentCount; seq++)
@@ -303,6 +315,7 @@ namespace Colyseus.Predict
 			}
 			finally
 			{
+				replayDepth--;
 				catching = false;
 			}
 			RefreshRender();

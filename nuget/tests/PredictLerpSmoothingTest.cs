@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Colyseus;
 using Colyseus.Predict;
 using Colyseus.Schema;
+using static Colyseus.Tests.PredictTestSupport;
 
 namespace Colyseus.Tests
 {
@@ -23,29 +24,10 @@ namespace Colyseus.Tests
 	[TestFixture]
 	public class PredictLerpSmoothingTest
 	{
-		/// <summary>Listener stub — tests push samples directly, no decoder bytes.</summary>
-		private class FakeCallbacks : IPredictCallbacks
-		{
-			private readonly Dictionary<string, Action<object>> listeners = new Dictionary<string, Action<object>>();
-
-			public Action Listen(Schema.Schema instance, string field, Action<object> handler, bool immediate)
-			{
-				listeners[field] = handler;
-				if (immediate) { handler(instance[field]); }
-				return () => listeners.Remove(field);
-			}
-
-			public Action OnAdd(string collection, Action<Schema.Schema, object> handler) => () => { };
-			public Action OnRemove(string collection, Action<Schema.Schema, object> handler) => () => { };
-
-			public void Push(string field, double value) => listeners[field](value);
-		}
-
 		private static (SchemaTest.Predict.PassiveEnt ent, FakeCallbacks cb, Colyseus.Predict.Predict predict) Setup(float x0 = 10)
 		{
 			var ent = new SchemaTest.Predict.PassiveEnt { a = x0 };
-			var cb = new FakeCallbacks();
-			var predict = new Colyseus.Predict.Predict(cb, new RoomClock());
+			var (cb, _, predict) = MakePredict();
 			return (ent, cb, predict);
 		}
 
@@ -64,13 +46,13 @@ namespace Colyseus.Tests
 				p.Attach(ent, new AttachConfig { ["a"] = PredictMode.Lerp });
 				p0.Attach(ent, new AttachConfig { ["a"] = new PredictFieldOptions { Mode = PredictMode.Lerp, SmoothMs = 0 } });
 
-				now = 1050; cb.Push("a", 20); cb0.Push("a", 20);
+				now = 1050; cb.Push(ent, "a", 20f); cb0.Push(ent, "a", 20f);
 				now = 1130; p.Tick(now); p0.Tick(now);        // target 1030 → u = 0.6
 				double v = p.Value(ent, "a");
 				Assert.AreEqual(16, v, 1e-12, "mid-segment interpolant");
 				Assert.AreEqual(p0.Value(ent, "a"), v, "default ≡ explicit 0");
 
-				now = 1145; cb.Push("a", 35); cb0.Push("a", 35);
+				now = 1145; cb.Push(ent, "a", 35f); cb0.Push(ent, "a", 35f);
 				now = 1170; p.Tick(now); p0.Tick(now);
 				Assert.AreEqual(p0.Value(ent, "a"), p.Value(ent, "a"), "stays identical across frames");
 			}
@@ -92,8 +74,8 @@ namespace Colyseus.Tests
 
 				for (now = 1050; now <= 1400; now += 50)
 				{
-					double x = 10 + (now - 1000) / 5;
-					cbRaw.Push("a", x); cbSm.Push("a", x);
+					float x = 10 + (float)(now - 1000) / 5;
+					cbRaw.Push(entRaw, "a", x); cbSm.Push(entSm, "a", x);
 				}
 				for (now = 1000; now <= 1400; now += 10)
 				{
@@ -128,7 +110,7 @@ namespace Colyseus.Tests
 					double v = 10;
 					for (now = 1000 + tickMs; now <= 2500; now += tickMs)
 					{
-						if (now % 50 == 0) { cb.Push("a", 10 + (now - 1000) / 5); }
+						if (now % 50 == 0) { cb.Push(ent, "a", 10 + (float)(now - 1000) / 5); }
 						p.Tick(now);
 						v = p.Value(ent, "a");
 					}
@@ -156,8 +138,8 @@ namespace Colyseus.Tests
 					["a"] = new PredictFieldOptions { Mode = PredictMode.Lerp, Snap = 4, SmoothMs = 30 },
 				});
 
-				now = 1050; cb.Push("a", 10.2);           // establish cadence
-				now = 3000; cb.Push("a", 60);             // teleport
+				now = 1050; cb.Push(ent, "a", 10.2f);           // establish cadence
+				now = 3000; cb.Push(ent, "a", 60f);             // teleport
 				now = 3060; p.Tick(now);
 				Assert.AreEqual(60, p.Value(ent, "a"), 1e-9, "spring state popped with the ring");
 			}
@@ -177,7 +159,7 @@ namespace Colyseus.Tests
 				var (ent, cb, p) = Setup();
 				p.Attach(ent, new AttachConfig { ["a"] = PredictMode.Damped });
 
-				now = 1050; cb.Push("a", 60);
+				now = 1050; cb.Push(ent, "a", 60f);
 				now = 1110; p.Tick(now);
 				double v = p.Value(ent, "a");
 				Assert.Greater(v, 10, "damped is chasing — SmoothMs 50 intact");
@@ -201,7 +183,7 @@ namespace Colyseus.Tests
 					["a"] = new PredictFieldOptions { Mode = PredictMode.Damped, SmoothMs = 0 },
 				});
 
-				now = 1050; cb.Push("a", 60);
+				now = 1050; cb.Push(ent, "a", 60f);
 				now = 1110; p.Tick(now);
 				Assert.AreEqual(60, p.Value(ent, "a"), "SmoothMs 0 = snap");
 			}
@@ -222,7 +204,7 @@ namespace Colyseus.Tests
 					["a"] = new PredictFieldOptions { Mode = PredictMode.Lerp, SmoothMs = 30 },
 				});
 
-				now = 1050; cb.Push("a", 20);
+				now = 1050; cb.Push(ent, "a", 20f);
 				now = 1130; p.Tick(now);
 				double v1 = p.Value(ent, "a");
 				Assert.AreEqual(v1, p.Value(ent, "a"), "spring advances once per frame");

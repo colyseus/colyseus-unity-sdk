@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Colyseus;
 using Colyseus.Predict;
 using Colyseus.Schema;
+using static Colyseus.Tests.PredictTestSupport;
 
 namespace Colyseus.Tests
 {
@@ -18,23 +19,6 @@ namespace Colyseus.Tests
 	[TestFixture]
 	public class PredictTest
 	{
-		private class StubConnection : Connection
-		{
-			public StubConnection() : base("ws://localhost", null)
-			{
-				IsOpen = true;
-				Transmit = _ => System.Threading.Tasks.Task.CompletedTask;
-			}
-		}
-
-		private static InputHandle MakeHandle(Schema.Schema input)
-		{
-			var encoder = new InputEncoder(input);
-			var stub = new StubConnection();
-			return new InputHandle(input, encoder, false, false, 0, null,
-				null, null, null, () => stub, () => null);
-		}
-
 		[Test]
 		public void ReconcilerCoreTest()
 		{
@@ -155,6 +139,45 @@ namespace Colyseus.Tests
 			finally
 			{
 				RoomClock.GetNow = originalNow;
+			}
+		}
+
+		/// <summary>
+		///     Strings are scalars: derived into the mirror, adopted verbatim, never
+		///     smoothed — and their presence turns the wire-precision skip off.
+		/// </summary>
+		[Test]
+		public void DerivedFieldsIncludeStrings()
+		{
+			double now = 0;
+			using (FreezeClock(() => now))
+			{
+				var truth = new SchemaTest.Predict.SimPaddle { x = 1, y = 2, team = "left" };
+				var command = new SchemaTest.Predict.AccelInput();
+				var handle = MakeHandle(command);
+				var me = new Reconciler<SchemaTest.Predict.SimPaddle, SchemaTest.Predict.AccelInput>(truth,
+					new ReconcilerOptions<SchemaTest.Predict.SimPaddle, SchemaTest.Predict.AccelInput>
+					{
+						Input = handle,
+						Step = (ctx, s, cmd) => { s.x += cmd.ax * (float)ctx.Dt; },
+						SmoothMs = 0,
+						StepMs = 50,
+					});
+
+				Assert.AreEqual("left", me.State.team);
+				var historyOn = typeof(Reconciler<SchemaTest.Predict.SimPaddle, SchemaTest.Predict.AccelInput>)
+					.GetField("historyOn", BindingFlags.NonPublic | BindingFlags.Instance);
+				Assert.IsFalse((bool)historyOn.GetValue(me));
+				CollectionAssert.AreEqual(new[] { "x", "y" }, me.BoundRegistrations[0].Fields);
+
+				// re-adopted on every ack, like any other mirrored field
+				now = 0; me.Tick(now);
+				command.ax = 10; handle.Send();
+				truth.team = "right";
+				truth.x = 1;
+				handle.AckInput(1);
+				now = 50; me.Tick(now);
+				Assert.AreEqual("right", me.State.team);
 			}
 		}
 
@@ -360,6 +383,88 @@ namespace Colyseus.Tests
 			}
 		}
 
+		[Test]
+		public void ChannelPredictIsIgnoredDuringReplay()
+		{
+			using (CaptureLogs(out var log))
+			{
+				int fired = 0;
+				var chan = new PredictedEventChannel<string>(new PredictedEventChannelOptions<string>
+				{
+					Label = "hit",
+					UniqueBy = p => p,
+					OnPredict = _ => fired++,
+				}, new RoomClock());
+
+				chan.Predict("a");
+				Assert.AreEqual(1, fired);
+
+				// as if a controller were mid-rollback
+				RollbackController.replayDepth = 1;
+				try
+				{
+					chan.Predict("b");
+					chan.Predict("c");
+				}
+				finally
+				{
+					RollbackController.replayDepth = 0;
+				}
+
+				Assert.AreEqual(1, fired);
+				Assert.AreEqual(1, chan.PendingCount);
+				// warned once, and named the channel
+				Assert.AreEqual(1, log.Warnings.Count);
+				StringAssert.Contains("\"hit\"", log.Warnings[0]);
+
+				// ...and the gate lifts again
+				chan.Predict("d");
+				Assert.AreEqual(2, fired);
+			}
+		}
+
+		/// <summary>The replay flag is raised by a real rollback, not just by tests.</summary>
+		[Test]
+		public void IsReplayingTracksTheRollbackWindow()
+		{
+			double now = 0;
+			using (FreezeClock(() => now))
+			{
+				var truth = new SchemaTest.Predict.ReconState();
+				var command = new SchemaTest.Predict.AccelInput();
+				var handle = MakeHandle(command);
+				var duringStep = new List<bool>();
+				var me = new Reconciler<SchemaTest.Predict.ReconState, SchemaTest.Predict.AccelInput>(truth,
+					new ReconcilerOptions<SchemaTest.Predict.ReconState, SchemaTest.Predict.AccelInput>
+					{
+						Input = handle,
+						Fields = new[] { "x" },
+						Step = (ctx, s, cmd) =>
+						{
+							duringStep.Add(RollbackController.IsReplaying());
+							s.x += cmd.ax;
+						},
+						SmoothMs = 0,
+						StepMs = 50,
+					});
+
+				now = 0; me.Tick(now);
+				command.ax = 1; handle.Send();
+				command.ax = 1; handle.Send();
+				CollectionAssert.AreEqual(new[] { false, false }, duringStep);
+
+				// ack 1 with DIVERGENT truth (a matching one takes the wire-precision
+				// skip and never rolls back) -> input 2 replays, and only that step
+				// sees the flag
+				duringStep.Clear();
+				truth.x = 5;
+				handle.AckInput(1);
+				now = 50; me.Tick(now);
+				CollectionAssert.AreEqual(new[] { true }, duringStep);
+				Assert.IsFalse(RollbackController.IsReplaying());
+			}
+		}
+
 		private class Rocket
 		{
 			public string Owner;
@@ -426,6 +531,50 @@ namespace Colyseus.Tests
 			finally
 			{
 				RoomClock.GetNow = originalNow;
+			}
+		}
+
+		/// <summary>The entry IS the handle: Cancel/Accept without naming an id, plus the Data scratch.</summary>
+		[Test]
+		public void SpawnEntryActsAsTheHandle()
+		{
+			double now = 1000;
+			using (FreezeClock(() => now))
+			{
+				var clock = new RoomClock();
+				clock.Sample(1000, -1);
+				int made = 0;
+				var rejected = new List<int>();
+				var store = new PredictedSpawns<Rocket, double[]>(new PredictedSpawnsOptions<Rocket, double[]>
+				{
+					Data = () => new object[] { ++made },
+					OnReject = (l, id) => rejected.Add(id),
+				}, clock);
+
+				var cancelled = store.Spawn(new double[] { 0 });
+				Assert.AreEqual(1, ((object[])cancelled.Data)[0]);
+				cancelled.Cancel();
+				Assert.IsFalse(store.Alive(cancelled.Id));
+
+				// accepted: survives the TTL prune (rtt 0 → 600ms)
+				var accepted = store.Spawn(new double[] { 0 });
+				accepted.Accept();
+				var pending = store.Spawn(new double[] { 0 });
+				now = 1701;
+				store.Prune();
+				Assert.IsTrue(store.Alive(accepted.Id));
+				Assert.IsFalse(store.Alive(pending.Id));
+				CollectionAssert.AreEqual(new[] { pending.Id }, rejected);
+
+				// confirmed: Cancel is a no-op, and a foreign add gets its own scratch
+				var server = new Rocket { Owner = "me" };
+				store.HandleAdd(server);
+				var confirmed = store.EntryFor(server);
+				Assert.AreSame(accepted, confirmed);
+				confirmed.Cancel();
+				Assert.IsTrue(store.Alive(confirmed.Id));
+				store.HandleAdd(new Rocket { Owner = "them" });
+				Assert.AreEqual(4, made);
 			}
 		}
 	}

@@ -13,8 +13,9 @@ namespace Colyseus.Predict
 		/// </summary>
 		public Action<StepContext, S, I> Step;
 		/// <summary>
-		///     Fields to mirror from the server on reconcile. Null = every
-		///     numeric/boolean field of the schema (declaration order).
+		///     Fields to mirror from the server on reconcile. Null = every scalar
+		///     field of the schema (numbers, booleans, strings; declaration order).
+		///     Numeric fields get smooth error correction; the rest copy verbatim.
 		/// </summary>
 		public IReadOnlyList<string> Fields;
 	}
@@ -53,7 +54,7 @@ namespace Colyseus.Predict
 				var derived = new List<string>();
 				foreach (var pair in instance.fieldTypes)
 				{
-					if (IsScalarType(pair.Value)) { derived.Add(pair.Key); }
+					if (FieldKinds.IsScalarType(pair.Value)) { derived.Add(pair.Key); }
 				}
 				if (derived.Count == 0)
 				{
@@ -74,7 +75,7 @@ namespace Colyseus.Predict
 				fields.Add(f);
 				var value = instance[f];
 				mirror[f] = value;
-				if (IsNumeric(value))
+				if (FieldKinds.IsNumericValue(value))
 				{
 					numericFields.Add(f);
 					prev[f] = Convert.ToDouble(value);
@@ -93,29 +94,10 @@ namespace Colyseus.Predict
 			for (int s = 0; s < historySeq.Length; s++) { historySeq[s] = -1; }
 		}
 
-		private static bool IsScalarType(string fieldType)
-		{
-			switch (fieldType)
-			{
-				case "ref":
-				case "array":
-				case "map":
-				case "string":
-					return false;
-				default:
-					return true;
-			}
-		}
-
-		private static bool IsNumeric(object value) =>
-			value is float || value is double || value is byte || value is sbyte
-			|| value is short || value is ushort || value is int || value is uint
-			|| value is long || value is ulong;
-
 		private static double AsScalar(object value)
 		{
 			if (value is bool b) { return b ? 1 : 0; }
-			if (IsNumeric(value)) { return Convert.ToDouble(value); }
+			if (FieldKinds.IsNumericValue(value)) { return Convert.ToDouble(value); }
 			return double.NaN;
 		}
 
@@ -161,7 +143,7 @@ namespace Colyseus.Predict
 		public override double Value(string field)
 		{
 			var current = mirror[field];
-			if (!IsNumeric(current)) { return AsScalar(current); }
+			if (!FieldKinds.IsNumericValue(current)) { return AsScalar(current); }
 			double c = Convert.ToDouble(current);
 			double smoothed = c + GetError(field);
 			double p = prev.TryGetValue(field, out var pv) ? pv : smoothed;

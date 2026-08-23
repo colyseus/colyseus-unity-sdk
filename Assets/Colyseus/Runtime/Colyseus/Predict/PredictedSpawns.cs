@@ -55,6 +55,13 @@ namespace Colyseus.Predict
 		public double Substep = 16;
 
 		/// <summary>
+		///     Per-entry render scratch factory (a sprite handle, a tween). The
+		///     returned object is exposed as <see cref="SpawnEntry{S,L}.Data" /> and
+		///     dropped with the entry. Null = no scratch (<c>Data</c> stays null).
+		/// </summary>
+		public Func<object> Data;
+
+		/// <summary>
 		///     How to read a named field off a pending local — what lets
 		///     <see cref="PredictedSpawns{S,L}.Value" /> span the handoff. The
 		///     reference gets this for free (<c>local[field]</c>);
@@ -65,8 +72,13 @@ namespace Colyseus.Predict
 		public Func<L, string, double> ReadLocal;
 	}
 
-	/// <summary>A merged logical entity — one per logical spawn. Key sprites on Id.</summary>
-	public class SpawnEntry<S, L>
+	/// <summary>
+	///     A merged logical entity — one per logical spawn. Key sprites on Id.
+	///     Also the handle <see cref="PredictedSpawns{S,L}.Spawn" /> returns
+	///     (the reference's <c>SpawnHandle</c>): <see cref="Cancel" /> /
+	///     <see cref="Accept" /> act on this entry without naming its id.
+	/// </summary>
+	public class SpawnEntry<S, L> where S : class where L : class
 	{
 		public int Id;
 		public S Server;
@@ -74,8 +86,16 @@ namespace Colyseus.Predict
 		public bool Confirmed;
 		/// <summary>Measured input lead (ms) — SpawnTime(server) − at.</summary>
 		public double LeadMs;
+		/// <summary>Render scratch from <see cref="PredictedSpawnsOptions{S,L}.Data" />; null when no factory was given.</summary>
+		public object Data;
 		internal double At = double.NaN;
 		internal bool Accepted;
+		internal PredictedSpawns<S, L> Store;
+
+		/// <summary>Drop this prediction (a local cancel or rollback). No-op once confirmed by its authoritative add.</summary>
+		public void Cancel() => Store?.Cancel(Id);
+		/// <summary>Mark the prediction accepted: exempt the still-pending entry from TTL eviction.</summary>
+		public void Accept() => Store?.Accept(Id);
 	}
 
 	/// <summary>
@@ -109,7 +129,16 @@ namespace Colyseus.Predict
 		/// <summary>Record an optimistic local spawn; returns the entry (stable Id).</summary>
 		public SpawnEntry<S, L> Spawn(L local)
 		{
-			var entry = new SpawnEntry<S, L> { Id = nextId++, Local = local, At = Now() };
+			var entry = NewEntry();
+			entry.Local = local;
+			entry.At = Now();
+			return entry;
+		}
+
+		/// <summary>Allocate, id and register an entry; the caller fills in which side it came from.</summary>
+		private SpawnEntry<S, L> NewEntry()
+		{
+			var entry = new SpawnEntry<S, L> { Id = nextId++, Data = opts.Data?.Invoke(), Store = this };
 			byId[entry.Id] = entry;
 			order.Add(entry);
 			return entry;
@@ -167,9 +196,9 @@ namespace Colyseus.Predict
 			}
 			else
 			{
-				var entry = new SpawnEntry<S, L> { Id = nextId++, Server = server, Confirmed = true };
-				byId[entry.Id] = entry;
-				order.Add(entry);
+				var entry = NewEntry();
+				entry.Server = server;
+				entry.Confirmed = true;
 				byServer[server] = entry;
 			}
 		}

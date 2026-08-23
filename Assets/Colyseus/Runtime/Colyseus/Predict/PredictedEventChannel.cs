@@ -4,9 +4,27 @@ using System.Linq;
 
 namespace Colyseus.Predict
 {
+	/// <summary>Constants shared by every <see cref="PredictedEventChannel{T}" />.</summary>
+	public static class PredictedEventChannel
+	{
+		/// <summary>
+		///     Default <see cref="PredictedEventChannelOptions{T}.GraceTicks" />:
+		///     server progress past a prediction before an unconfirmed sim-born
+		///     entry rejects (~333ms of simulation at 30Hz) — generous against
+		///     contested-event divergence, and anchored to the ack stream so
+		///     latency can't induce a false reject.
+		/// </summary>
+		public const int DefaultGraceTicks = 10;
+	}
+
 	/// <summary>Options for <see cref="PredictedEventChannel{T}" />.</summary>
 	public class PredictedEventChannelOptions<T>
 	{
+		/// <summary>
+		///     Diagnostic name. Nothing resolves by it — it only names this channel
+		///     in warnings, which starts to matter once a room has several.
+		/// </summary>
+		public string Label;
 		/// <summary>The optimistic feedback — fires the moment the event is predicted.</summary>
 		public Action<T> OnPredict;
 		/// <summary>The prediction was wrong — undo the optimistic feedback.</summary>
@@ -19,12 +37,17 @@ namespace Colyseus.Predict
 		///     while pending. Null: string/number payloads key themselves; other
 		///     payloads share one anonymous slot.</summary>
 		public Func<T, object> UniqueBy;
-		/// <summary>Sim-born settlement deadline in input ticks (default 10).</summary>
-		public int GraceTicks = 10;
+		/// <summary>Sim-born settlement deadline in input ticks (default <see cref="PredictedEventChannel.DefaultGraceTicks" />).</summary>
+		public int GraceTicks = PredictedEventChannel.DefaultGraceTicks;
 		/// <summary>UI-born eviction window (ms); 0 = max(2·rtt, 600).</summary>
 		public double TtlMs;
 		/// <summary>Min gap (ms) between OnPredict fires; 0 = off.</summary>
 		public double CooldownMs;
+		/// <summary>
+		///     Declarative settlement off a state change (see <see cref="ConfirmOn" />).
+		///     Wired by <c>predict.DefineEvent</c>; a standalone channel ignores it.
+		/// </summary>
+		public ConfirmOn ConfirmOn;
 	}
 
 	/// <summary>
@@ -51,9 +74,11 @@ namespace Colyseus.Predict
 		private readonly RoomClock clock;
 		private readonly Dictionary<object, Entry> entries = new Dictionary<object, Entry>();
 		private double cooldownUntil = double.NegativeInfinity;
+		private bool warnedReplayPredict;
 
 		public bool Dead { get; private set; }
 		public int PendingCount => entries.Count;
+		internal Action OnDisposedInternal;
 
 		public PredictedEventChannel(PredictedEventChannelOptions<T> options, RoomClock clock)
 		{
@@ -73,8 +98,28 @@ namespace Colyseus.Predict
 		/// <summary>Sim-born prediction (reached via ctx.Predict — live steps only).</summary>
 		public void PredictFromSim(int seq, T payload, Func<int> acked) => Add(seq, payload, acked);
 
-		/// <summary>Predict from OUTSIDE the sim (UI-optimistic; wall-clock TTL).</summary>
-		public void Predict(T payload) => Add(-1, payload, null);
+		/// <summary>
+		///     Predict from OUTSIDE the sim (UI-optimistic; wall-clock TTL). Inside
+		///     a reconciler step use <c>ctx.Predict(channel, payload)</c> instead —
+		///     this form is backstopped (a call that lands inside a rollback replay
+		///     no-ops and warns once) but the ctx form is live-only by construction.
+		/// </summary>
+		public void Predict(T payload)
+		{
+			if (RollbackController.IsReplaying())
+			{
+				if (!warnedReplayPredict)
+				{
+					warnedReplayPredict = true;
+					string name = opts.Label != null ? $" \"{opts.Label}\"" : "";
+					ColyseusContext.Logger.LogWarning(
+						$"colyseus: PredictedEventChannel{name}.Predict() was called during a rollback " +
+						"replay and ignored. Inside a reconciler step, use ctx.Predict(channel, payload).");
+				}
+				return;
+			}
+			Add(-1, payload, null);
+		}
 
 		private void Add(int seq, T payload, Func<int> acked)
 		{
@@ -167,7 +212,9 @@ namespace Colyseus.Predict
 		/// <summary>Stop being driven and drop all entries (silently).</summary>
 		public void Dispose()
 		{
+			if (Dead) { return; }
 			Dead = true;
+			OnDisposedInternal?.Invoke();
 			Clear();
 		}
 	}

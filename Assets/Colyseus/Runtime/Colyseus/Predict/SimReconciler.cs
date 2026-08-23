@@ -124,7 +124,7 @@ namespace Colyseus.Predict
 
 			foreach (var pair in source.fieldTypes)
 			{
-				if (!IsScalarType(pair.Value)) { continue; }
+				if (!FieldKinds.IsScalarType(pair.Value)) { continue; }
 				string name = pair.Key;
 				var value = source[name];
 				mirror[name] = value;
@@ -132,7 +132,7 @@ namespace Colyseus.Predict
 
 				string key = field.Name + "." + name;
 				poseOf[key] = (b, name);
-				if (IsNumeric(value))
+				if (FieldKinds.IsNumericValue(value))
 				{
 					poseKeys.Add(key);
 					prev[key] = Convert.ToDouble(value);
@@ -152,30 +152,11 @@ namespace Colyseus.Predict
 			return b;
 		}
 
-		private static bool IsScalarType(string fieldType)
-		{
-			switch (fieldType)
-			{
-				case "ref":
-				case "array":
-				case "map":
-				case "string":
-					return false;
-				default:
-					return true;
-			}
-		}
-
-		private static bool IsNumeric(object value) =>
-			value is float || value is double || value is byte || value is sbyte
-			|| value is short || value is ushort || value is int || value is uint
-			|| value is long || value is ulong;
-
 		private double ReadPose(string key)
 		{
 			if (!poseOf.TryGetValue(key, out var slot)) { return double.NaN; }
 			var v = slot.part.Mirror[slot.field];
-			return IsNumeric(v) ? Convert.ToDouble(v) : double.NaN;
+			return FieldKinds.IsNumericValue(v) ? Convert.ToDouble(v) : double.NaN;
 		}
 
 		/// <summary>
@@ -213,7 +194,7 @@ namespace Colyseus.Predict
 					foreach (var f in b.Fields)
 					{
 						string key = b.Name + "." + f;
-						if (poseOf.ContainsKey(key) && IsNumeric(b.Mirror[f]))
+						if (poseOf.ContainsKey(key) && FieldKinds.IsNumericValue(b.Mirror[f]))
 						{
 							fields.Add(f);
 							keys.Add(key);

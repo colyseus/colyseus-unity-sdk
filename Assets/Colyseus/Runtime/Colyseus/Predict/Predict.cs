@@ -13,12 +13,19 @@ namespace Colyseus.Predict
 		Raw,
 	}
 
-	/// <summary>Per-field smoothing options (defaults mirror the JS reference).</summary>
+	/// <summary>
+	///     Per-field smoothing options. Every member is optional: null means
+	///     "the Predict's default" (see <see cref="PredictGetOptions" /> /
+	///     <see cref="Predict.SetDefaults" />), which itself falls back to the
+	///     JS reference's defaults — lerp, 100ms delay, 200ms extrapolate cap.
+	///     An attach SNAPSHOTS its resolved options; later
+	///     <see cref="Predict.SetDefaults" /> calls only affect new attaches.
+	/// </summary>
 	public class PredictFieldOptions
 	{
-		public PredictMode Mode = PredictMode.Lerp;
-		/// <summary>Lerp render-time lag (ms).</summary>
-		public double Delay = 100;
+		public PredictMode? Mode;
+		/// <summary>Lerp render-time lag (ms). Default 100.</summary>
+		public double? Delay;
 		/// <summary>
 		///     Output-smoothing time constant, in milliseconds. 0 = off (snap /
 		///     raw projection / exact interpolation). Roughly the extra display
@@ -31,14 +38,56 @@ namespace Colyseus.Predict
 		///     (spring off — exact interpolation).
 		/// </summary>
 		public double? SmoothMs;
-		/// <summary>Extrapolate overshoot cap (ms).</summary>
-		public double MaxExtrapolate = 200;
+		/// <summary>Extrapolate overshoot cap (ms). Default 200.</summary>
+		public double? MaxExtrapolate;
 		/// <summary>Arrival-grid snap (ms); 0 off.</summary>
-		public double TickInterval;
+		public double? TickInterval;
 		/// <summary>Value-space teleport threshold; 0 off.</summary>
-		public double Snap;
+		public double? Snap;
 		/// <summary>Radian angle — unwrap samples over the shortest arc.</summary>
-		public bool Angle;
+		public bool? Angle;
+	}
+
+	/// <summary>
+	///     Room-wide prediction defaults, passed to <see cref="Predict.Get" /> or
+	///     <see cref="Predict.SetDefaults" /> (port of the reference's
+	///     <c>PredictGetOptions</c>). Every attach resolves an omitted option as
+	///     <c>per-attach ?? these ?? the mode's built-in default</c>. Only the
+	///     members you set are touched; the rest keep their current value.
+	///     <code>
+	///     Predict.Get(room, new PredictGetOptions { Mode = PredictMode.Lerp, Delay = 80 });
+	///     Predict.Get(room, new PredictGetOptions { Mode = PredictMode.Reckon, Step = StepEnemy, SmoothMs = 40 });
+	///     </code>
+	/// </summary>
+	public class PredictGetOptions
+	{
+		/// <summary>Mode for attaches that don't name one. Default lerp.</summary>
+		public PredictMode? Mode;
+		/// <summary>Lerp render-time lag (ms). Default 100.</summary>
+		public double? Delay;
+		/// <summary>
+		///     Output-smoothing time constant (ms) — see
+		///     <see cref="PredictFieldOptions.SmoothMs" />. One value arms every
+		///     mode: lerp's output spring, damped/extrapolate's chase rate and the
+		///     reckon blend. Unset = each mode's own default.
+		/// </summary>
+		public double? SmoothMs;
+		/// <summary>Extrapolate overshoot cap (ms). Default 200.</summary>
+		public double? MaxExtrapolate;
+		/// <summary>Arrival-grid snap (ms); 0 off.</summary>
+		public double? TickInterval;
+		/// <summary>Value-space teleport threshold; 0 off.</summary>
+		public double? Snap;
+		/// <summary>Treat attached fields as radian angles.</summary>
+		public bool? Angle;
+		/// <summary>
+		///     Reckon default: inherited by a <see cref="ReckonOptions{T}" />
+		///     attach that omits <c>Step</c>, so <c>Predict.Get(room, { Mode =
+		///     Reckon, Step = ... })</c> plus a bare fields list is a complete attach.
+		/// </summary>
+		public Action<Schema.Schema, double, double> Step;
+		/// <summary>Reckon substep length (ms). Default 16.</summary>
+		public double? Substep;
 	}
 
 	/// <summary>
@@ -50,21 +99,25 @@ namespace Colyseus.Predict
 	/// </summary>
 	public class AttachConfig : Dictionary<string, object> { }
 
-	/// <summary>Options for a reckon attach.</summary>
+	/// <summary>
+	///     Options for a reckon attach. Null members inherit the Predict's
+	///     defaults (<see cref="PredictGetOptions" />), then the built-in ones.
+	/// </summary>
 	public class ReckonOptions<T>
 	{
 		public IReadOnlyList<string> Fields;
 		/// <summary>The pure step function, SHARED with the server: mutate the
 		///     scratch in place by dt seconds; elapsedMs is the absolute
-		///     server-time at the end of the substep.</summary>
+		///     server-time at the end of the substep. Null = the Predict's
+		///     <see cref="PredictGetOptions.Step" />; one of the two is required.</summary>
 		public Action<T, double, double> Step;
 		/// <summary>Predict-then-smooth time constant (ms) — see
 		///     <see cref="PredictFieldOptions.SmoothMs" />. Default 50. 0 = raw projection.</summary>
-		public double SmoothMs = 50;
-		/// <summary>Substep length (ms).</summary>
-		public double Substep = 16;
+		public double? SmoothMs;
+		/// <summary>Substep length (ms). Default 16.</summary>
+		public double? Substep;
 		/// <summary>Rebase discontinuities beyond this pop. 0 off.</summary>
-		public double Snap;
+		public double? Snap;
 	}
 
 	/// <summary>
@@ -82,14 +135,26 @@ namespace Colyseus.Predict
 		private const double GapResumePatchMult = 1.5;
 		private const double GapResumeMaxMs = 250;
 		private const int MaxStepsPerFrame = 5;
-		/// <summary>SmoothMs fallback for damped/extrapolate (lerp's spring defaults 0).</summary>
+		/// <summary>SmoothMs fallback for damped/extrapolate/reckon (lerp's spring defaults 0).</summary>
 		private const double DefaultSmoothMs = 50;
+
+		/// <summary>A slot's options with every fallback applied — frozen at attach time.</summary>
+		private class ResolvedFieldOptions
+		{
+			public PredictMode Mode;
+			public double Delay;
+			public double SmoothMs;
+			public double MaxExtrapolate;
+			public double TickInterval;
+			public double Snap;
+			public bool Angle;
+		}
 
 		private class Slot
 		{
 			public string Field;
 			public Schema.Schema Instance;
-			public PredictFieldOptions Opts;
+			public ResolvedFieldOptions Opts;
 			public double V1;
 			public double AuxV;
 			public double AuxT;
@@ -131,13 +196,29 @@ namespace Colyseus.Predict
 
 		private readonly IPredictCallbacks callbacks;
 		private readonly RoomClock clock;
+		private readonly Func<string> sessionId;
 		private double renderTime;
+
+		// SmoothMs and Step stay null here: SmoothMs resolves per MODE at
+		// attach (lerp's spring off, 50 elsewhere) and a reckon without any
+		// step is an error, not a default.
+		private readonly PredictGetOptions defaults = new PredictGetOptions
+		{
+			Mode = PredictMode.Lerp,
+			Delay = 100,
+			MaxExtrapolate = 200,
+			TickInterval = 0,
+			Snap = 0,
+			Angle = false,
+			Substep = 16,
+		};
 		// refId → field → slot
 		private readonly Dictionary<int, Dictionary<string, Slot>> slotsByRef = new Dictionary<int, Dictionary<string, Slot>>();
 		private readonly Dictionary<int, SimState> simsByRef = new Dictionary<int, SimState>();
 		private readonly List<object> driven = new List<object>();
 		// Every AttachAll* off, so Dispose can unhook what the caller never held.
 		private readonly List<Action> attachments = new List<Action>();
+		private readonly HashSet<string> warnedEmpty = new HashSet<string>();
 
 		// room-wide fixed-step accumulator (send budget)
 		private double? fixedStepMs;
@@ -146,24 +227,67 @@ namespace Colyseus.Predict
 
 		/// <summary>
 		///     Create over a room's callbacks + clock. Mirrors
-		///     <c>Predict.get(room)</c> — pass <c>CallbacksRef</c> from
+		///     <c>Predict.get(room, opts)</c> — pass <c>CallbacksRef</c> from
 		///     <c>Callbacks.Get(room)</c> and the room's <see cref="RoomClock" />.
+		///     <paramref name="sessionId" /> resolves <see cref="ConfirmOn.Mine" />.
 		/// </summary>
-		public Predict(IPredictCallbacks callbacks, RoomClock clock)
+		public Predict(IPredictCallbacks callbacks, RoomClock clock, PredictGetOptions opts = null, Func<string> sessionId = null)
 		{
 			this.callbacks = callbacks;
 			this.clock = clock;
+			this.sessionId = sessionId;
+			SetDefaults(opts);
 		}
 
 		/// <summary>
 		///     The one-liner every caller wants: a <see cref="Predict" /> over a
-		///     room's callbacks and clock. Equivalent to
-		///     <c>new Predict(new PredictCallbacks&lt;T&gt;(Callbacks.Get(room)), room.Clock)</c>,
-		///     which is the same two collaborators every time and no decision the
+		///     room's callbacks and clock, seeded with room-wide defaults.
+		///     Equivalent to
+		///     <c>new Predict(new PredictCallbacks&lt;T&gt;(Callbacks.Get(room)), room.Clock, opts)</c>,
+		///     which is the same collaborators every time and no decision the
 		///     caller is better placed to make.
 		/// </summary>
-		public static Predict Get<TState>(Room<TState> room) where TState : Schema.Schema
-			=> new Predict(new PredictCallbacks<TState>(Schema.Callbacks.Get(room)), room.Clock);
+		public static Predict Get<TState>(Room<TState> room, PredictGetOptions opts = null) where TState : Schema.Schema
+			=> new Predict(new PredictCallbacks<TState>(Schema.Callbacks.Get(room)), room.Clock, opts, () => room.SessionId);
+
+		/// <summary>The mode attaches fall back to when they don't name one.</summary>
+		public PredictMode Mode => defaults.Mode.Value;
+
+		/// <summary>
+		///     Mutate the room-wide defaults. Only the options present are
+		///     touched. Takes effect on the NEXT attach — every attached slot
+		///     snapshots its resolved options, so changing the defaults never moves
+		///     an entity that is already being predicted.
+		/// </summary>
+		public void SetDefaults(PredictGetOptions opts)
+		{
+			if (opts == null) { return; }
+			defaults.Mode = opts.Mode ?? defaults.Mode;
+			defaults.Delay = opts.Delay ?? defaults.Delay;
+			defaults.SmoothMs = opts.SmoothMs ?? defaults.SmoothMs;
+			defaults.MaxExtrapolate = opts.MaxExtrapolate ?? defaults.MaxExtrapolate;
+			defaults.TickInterval = opts.TickInterval ?? defaults.TickInterval;
+			defaults.Snap = opts.Snap ?? defaults.Snap;
+			defaults.Angle = opts.Angle ?? defaults.Angle;
+			defaults.Step = opts.Step ?? defaults.Step;
+			defaults.Substep = opts.Substep ?? defaults.Substep;
+		}
+
+		private ResolvedFieldOptions Resolve(PredictFieldOptions o)
+		{
+			var mode = o?.Mode ?? defaults.Mode.Value;
+			return new ResolvedFieldOptions
+			{
+				Mode = mode,
+				Delay = o?.Delay ?? defaults.Delay.Value,
+				// lerp's output spring is opt-in; the other modes chase by default
+				SmoothMs = o?.SmoothMs ?? defaults.SmoothMs ?? (mode == PredictMode.Lerp ? 0 : DefaultSmoothMs),
+				MaxExtrapolate = o?.MaxExtrapolate ?? defaults.MaxExtrapolate.Value,
+				TickInterval = o?.TickInterval ?? defaults.TickInterval.Value,
+				Snap = o?.Snap ?? defaults.Snap.Value,
+				Angle = o?.Angle ?? defaults.Angle.Value,
+			};
+		}
 
 		private static int? RefIdOf(Schema.Schema instance) => instance?.__refId;
 
@@ -176,7 +300,7 @@ namespace Colyseus.Predict
 		/// </summary>
 		private Action Track(Schema.Schema instance, string field, PredictFieldOptions options = null)
 		{
-			var opts = options ?? new PredictFieldOptions();
+			var opts = Resolve(options);
 			int refId = instance.__refId;
 			if (!slotsByRef.TryGetValue(refId, out var perRef))
 			{
@@ -210,6 +334,32 @@ namespace Colyseus.Predict
 		/// </summary>
 		private Action TrackStepped<T>(T instance, ReckonOptions<T> options) where T : Schema.Schema
 		{
+			if (options.Fields == null)
+			{
+				throw new Exception("Predict.Attach(): reckon mode requires `Fields` — the numeric fields the step integrates.");
+			}
+			// per-attach step, else the Predict-wide one — a reckon without either can't integrate
+			var userStep = options.Step;
+			Action<Schema.Schema, double, double> step = userStep != null
+				? (s, dt, elapsed) => userStep((T)s, dt, elapsed)
+				: defaults.Step;
+			if (step == null)
+			{
+				throw new Exception(
+					"Predict.Attach(): reckon mode requires a 'Step' function. Either pass `Step` in the " +
+					"attach options OR construct the Predict with `Predict.Get(room, new PredictGetOptions " +
+					"{ Mode = PredictMode.Reckon, Step = yourStepFn })` so it can be inherited.");
+			}
+			double snap = options.Snap ?? defaults.Snap.Value;
+			// same drop rule as the smoothing arm: one fields list can cover a
+			// heterogeneous collection, so undeclared names are skipped, not fatal
+			var fields = new List<string>();
+			foreach (var f in options.Fields) { if (IsNumericField(instance, f)) { fields.Add(f); } }
+			if (fields.Count == 0)
+			{
+				WarnEmptyAttach(instance, options.Fields);
+				return () => { };
+			}
 			int refId = instance.__refId;
 			var scratch = (Schema.Schema)Activator.CreateInstance(instance.GetType());
 			var copyFields = new List<string>();
@@ -231,16 +381,16 @@ namespace Colyseus.Predict
 						break;
 				}
 			}
-			int n = options.Fields.Count;
+			int n = fields.Count;
 			var sim = new SimState
 			{
 				Instance = instance,
 				Scratch = scratch,
-				Fields = options.Fields,
-				Step = (s, dt, elapsed) => options.Step((T)s, dt, elapsed),
-				SmoothMs = options.SmoothMs,
-				Substep = options.Substep > 0 ? options.Substep : 16,
-				Snap = options.Snap,
+				Fields = fields,
+				Step = step,
+				SmoothMs = options.SmoothMs ?? defaults.SmoothMs ?? DefaultSmoothMs,
+				Substep = options.Substep ?? defaults.Substep.Value,
+				Snap = snap,
 				Smoothed = new double[n],
 				Out = new double[n],
 				ValueOut = new double[n],
@@ -249,14 +399,14 @@ namespace Colyseus.Predict
 				FrameVel = new double[n],
 				CopyFields = copyFields,
 			};
-			for (int k = 0; k < n; k++) { sim.Smoothed[k] = ToNumber(instance[options.Fields[k]]); }
+			for (int k = 0; k < n; k++) { sim.Smoothed[k] = ToNumber(instance[fields[k]]); }
 			simsByRef[refId] = sim;
 
 			// each reckoned field gets a RECKON slot (sample mirror + fallback)
 			var offs = new List<Action>();
-			foreach (var f in options.Fields)
+			foreach (var f in fields)
 			{
-				offs.Add(Track(instance, f, new PredictFieldOptions { Mode = PredictMode.Reckon }));
+				offs.Add(Track(instance, f, new PredictFieldOptions { Mode = PredictMode.Reckon, Snap = snap }));
 			}
 			return () =>
 			{
@@ -346,21 +496,50 @@ namespace Colyseus.Predict
 		///         ["yaw"] = new PredictFieldOptions { Mode = PredictMode.Damped, Angle = true },
 		///     });
 		///     </code>
-		///     Fields the instance's schema doesn't declare are DROPPED, not an
-		///     error: one config can cover a heterogeneous collection, and a field
-		///     that isn't there would subscribe to nothing.
+		///     Fields the instance's schema doesn't declare as NUMERIC are DROPPED,
+		///     not an error: one config can cover a heterogeneous collection, and a
+		///     field that isn't there would subscribe to nothing. A config that
+		///     matches nothing at all warns once per class + config shape.
 		/// </summary>
 		public Action Attach(Schema.Schema instance, AttachConfig config)
 		{
 			var offs = new List<Action>();
 			foreach (var pair in config)
 			{
-				if (!instance.fieldTypes.ContainsKey(pair.Key)) { continue; }
+				if (!IsNumericField(instance, pair.Key)) { continue; }
 				var opts = pair.Value as PredictFieldOptions
 					?? new PredictFieldOptions { Mode = (PredictMode)pair.Value };
 				offs.Add(Track(instance, pair.Key, opts));
 			}
+			if (offs.Count == 0) { WarnEmptyAttach(instance, config.Keys); }
 			return () => { foreach (var off in offs) { off(); } };
+		}
+
+		/// <summary>Asks the schema metadata, not the live value: a field holding null at attach time still counts.</summary>
+		private static bool IsNumericField(Schema.Schema instance, string field)
+			=> instance.fieldTypes.TryGetValue(field, out var type) && FieldKinds.IsNumericType(type);
+
+		/// <summary>
+		///     Dropping fields a type doesn't declare is deliberate (one config can
+		///     cover a heterogeneous collection) — matching ZERO never is, and it
+		///     renders as a plausible raw number rather than an error. Deduped per
+		///     class + config shape so an AttachAll over a large collection says
+		///     it once.
+		/// </summary>
+		private void WarnEmptyAttach(Schema.Schema instance, IEnumerable<string> keys)
+		{
+			string cls = instance.GetType().Name;
+			string named = string.Join(", ", keys);
+			if (!warnedEmpty.Add(cls + "|" + named)) { return; }
+			var available = new List<string>();
+			foreach (var pair in instance.fieldTypes)
+			{
+				if (FieldKinds.IsNumericType(pair.Value)) { available.Add(pair.Key); }
+			}
+			ColyseusContext.Logger.LogWarning(
+				$"colyseus: Predict.Attach matched no fields on {cls} — nothing is being predicted, " +
+				"and Value() will fall back to the raw synced value. " +
+				$"Config named [{named}]; numeric fields available: [{string.Join(", ", available)}].");
 		}
 
 		/// <summary>
@@ -383,7 +562,7 @@ namespace Colyseus.Predict
 			{
 				attach(child);
 				tracked.Add(child);
-			});
+			}, true);
 			var removeOff = callbacks.OnRemove(collection, (Schema.Schema child, object key) =>
 			{
 				tracked.Remove(child);
@@ -514,10 +693,19 @@ namespace Colyseus.Predict
 			return recon;
 		}
 
-		/// <summary>Spawn a driven <see cref="PredictedEventChannel{T}" />.</summary>
+		/// <summary>
+		///     Spawn a driven <see cref="PredictedEventChannel{T}" />. With
+		///     <see cref="PredictedEventChannelOptions{T}.ConfirmOn" /> set, the
+		///     schema listeners that settle it are wired here and torn down with
+		///     the channel.
+		/// </summary>
 		public PredictedEventChannel<T> DefineEvent<T>(PredictedEventChannelOptions<T> opts)
 		{
 			var channel = new PredictedEventChannel<T>(opts, clock);
+			if (opts?.ConfirmOn != null)
+			{
+				channel.OnDisposedInternal = ConfirmOnWiring.Wire(callbacks, key => channel.Confirm(key), opts.ConfirmOn, sessionId);
+			}
 			driven.Add(channel);
 			return channel;
 		}
@@ -571,7 +759,7 @@ namespace Colyseus.Predict
 					return Math.Max(0, age + lead);
 				});
 				untrack[s.__refId] = off;
-			});
+			}, true);
 
 			var removeOff = callbacks.OnRemove(collection, (server, key) =>
 			{
@@ -755,11 +943,18 @@ namespace Colyseus.Predict
 		/// <summary>Smoothed/predicted RENDER value with raw instance fallback.</summary>
 		public double Value(Schema.Schema instance, string field)
 		{
-			if (!slotsByRef.TryGetValue(instance.__refId, out var perRef)
-				|| !perRef.TryGetValue(field, out var slot))
-			{
-				return ToNumber(instance[field]);
-			}
+			var slot = SlotOf(SlotsOf(instance), field);
+			return slot == null ? ToNumber(instance[field]) : ValueOf(slot);
+		}
+
+		private Dictionary<string, Slot> SlotsOf(Schema.Schema instance)
+			=> slotsByRef.TryGetValue(instance.__refId, out var perRef) ? perRef : null;
+
+		private static Slot SlotOf(Dictionary<string, Slot> perRef, string field)
+			=> perRef != null && perRef.TryGetValue(field, out var slot) ? slot : null;
+
+		private double ValueOf(Slot slot)
+		{
 			// Controller-owned: a reconciler claimed this field, so the pose comes
 			// from its rollback rather than a smoothing curve over the server stream.
 			if (slot.Ctrl != null) { return slot.Ctrl.Value(slot.PoseKey); }
@@ -773,6 +968,16 @@ namespace Colyseus.Predict
 			}
 		}
 
+		/// <summary>Position of a reckon-tracked field in its instance's sim, or -1 when it has none.</summary>
+		private int ReckonIndex(Slot slot, out SimState sim)
+		{
+			sim = null;
+			return slot != null && slot.Opts.Mode == PredictMode.Reckon
+				&& simsByRef.TryGetValue(slot.Instance.__refId, out sim)
+				? IndexOf(sim.Fields, slot.Field)
+				: -1;
+		}
+
 		/// <summary>
 		///     RAW reckoned value at an arbitrary server-time instant (no
 		///     smoothing offset) — for game logic / lag-comp hit tests. Reckons
@@ -780,24 +985,75 @@ namespace Colyseus.Predict
 		/// </summary>
 		public double ValueAt(Schema.Schema instance, string field, double time)
 		{
-			if (!slotsByRef.TryGetValue(instance.__refId, out var perRef)
-				|| !perRef.TryGetValue(field, out var slot)
-				|| slot.Opts.Mode != PredictMode.Reckon)
+			var slot = SlotOf(SlotsOf(instance), field);
+			int pos = ReckonIndex(slot, out var sim);
+			if (pos < 0) { return Value(instance, field); }
+			AdvanceTo(sim, time);
+			return sim.ValueOut[pos];
+		}
+
+		/// <summary>Raw reckon of <paramref name="sim" /> to an arbitrary instant into <c>ValueOut</c>; the past clamps to the snapshot.</summary>
+		private void AdvanceTo(SimState sim, double time)
+		{
+			double baseT = clock?.LastServerTime() ?? double.NaN;
+			double forward = double.IsNaN(baseT) ? 0 : Math.Max(0, time - baseT);
+			Advance(sim, forward, sim.ValueOut, time);
+		}
+
+		private static double[] Buffer(double[] output, int count)
+			=> output != null && output.Length >= count ? output : new double[count];
+
+		/// <summary>
+		///     Batch <see cref="Value" /> — the render value of each listed field,
+		///     in order, into <paramref name="output" /> (reused when given and
+		///     long enough, else allocated). Mirrors the server's
+		///     <c>seen.read</c>: the same batch-read concept on both sides of the
+		///     wire. On per-frame paths, hoist <paramref name="fields" /> and reuse
+		///     the output buffer — nothing allocates then.
+		/// </summary>
+		public double[] Read(Schema.Schema instance, IReadOnlyList<string> fields, double[] output = null)
+		{
+			var o = Buffer(output, fields.Count);
+			var perRef = SlotsOf(instance);
+			for (int i = 0; i < fields.Count; i++)
 			{
-				return Value(instance, field);
+				var slot = SlotOf(perRef, fields[i]);
+				o[i] = slot == null ? ToNumber(instance[fields[i]]) : ValueOf(slot);
 			}
-			if (simsByRef.TryGetValue(instance.__refId, out var sim))
+			return o;
+		}
+
+		/// <summary>
+		///     Batch <see cref="ValueAt" /> — every listed field sampled at the same
+		///     server-time instant, with <see cref="Read" />'s buffer contract. For
+		///     client-side hit prediction, sample a remote's pose at the input's
+		///     <c>ctx.ReckonTime</c> in one call: the forward reckon integration
+		///     runs ONCE per instance instead of once per field, so a four-field
+		///     pose read costs one step walk, not four. Non-reckon and untracked
+		///     fields ignore <paramref name="time" />, exactly like <see cref="ValueAt" />.
+		/// </summary>
+		public double[] ReadAt(Schema.Schema instance, IReadOnlyList<string> fields, double time, double[] output = null)
+		{
+			var o = Buffer(output, fields.Count);
+			var perRef = SlotsOf(instance);
+			bool advanced = false;   // one advance per batch — the instance has one sim
+			for (int i = 0; i < fields.Count; i++)
 			{
-				int pos = IndexOf(sim.Fields, field);
-				if (pos >= 0)
+				var slot = SlotOf(perRef, fields[i]);
+				int pos = ReckonIndex(slot, out var sim);
+				if (pos < 0)
 				{
-					double baseT = clock?.LastServerTime() ?? double.NaN;
-					double forward = double.IsNaN(baseT) ? 0 : Math.Max(0, time - baseT);
-					Advance(sim, forward, sim.ValueOut, time);
-					return sim.ValueOut[pos];
+					o[i] = slot == null ? ToNumber(instance[fields[i]]) : ValueOf(slot);
+					continue;
 				}
+				if (!advanced)
+				{
+					AdvanceTo(sim, time);
+					advanced = true;
+				}
+				o[i] = sim.ValueOut[pos];
 			}
-			return slot.V1;
+			return o;
 		}
 
 		private static int IndexOf(IReadOnlyList<string> list, string value)
@@ -813,7 +1069,7 @@ namespace Colyseus.Predict
 			slot.AuxT = now;
 			if (dtFrame > 0)
 			{
-				double tau = slot.Opts.SmoothMs ?? DefaultSmoothMs;
+				double tau = slot.Opts.SmoothMs;
 				double k = tau > 0 ? 1 - Math.Exp(-dtFrame / tau) : 1;   // 0 = snap
 				slot.AuxV += (slot.V1 - slot.AuxV) * k;
 			}
@@ -823,7 +1079,7 @@ namespace Colyseus.Predict
 		private double ComputeLerp(Slot slot)
 		{
 			double raw = ComputeLerpRaw(slot);
-			double tau = slot.Opts.SmoothMs ?? 0;   // lerp's output spring defaults OFF
+			double tau = slot.Opts.SmoothMs;
 			double now = renderTime;
 			if (tau <= 0)
 			{
@@ -922,7 +1178,7 @@ namespace Colyseus.Predict
 
 			double lastT = slot.AuxT;
 			slot.AuxT = now;
-			double tau = slot.Opts.SmoothMs ?? DefaultSmoothMs;
+			double tau = slot.Opts.SmoothMs;
 			if (tau <= 0)
 			{
 				slot.AuxV = raw;
@@ -939,16 +1195,10 @@ namespace Colyseus.Predict
 
 		private double ComputeReckon(Slot slot)
 		{
-			if (simsByRef.TryGetValue(slot.Instance.__refId, out var sim))
-			{
-				int pos = IndexOf(sim.Fields, slot.Field);
-				if (pos >= 0)
-				{
-					ApplySimulation(sim);
-					return sim.Smoothed[pos];
-				}
-			}
-			return slot.V1;
+			int pos = ReckonIndex(slot, out var sim);
+			if (pos < 0) { return slot.V1; }
+			ApplySimulation(sim);
+			return sim.Smoothed[pos];
 		}
 
 		private void Advance(SimState sim, double forwardMs, double[] output, double endElapsed)
@@ -1033,7 +1283,8 @@ namespace Colyseus.Predict
 	public interface IPredictCallbacks
 	{
 		Action Listen(Schema.Schema instance, string field, Action<object> handler, bool immediate);
-		Action OnAdd(string collection, Action<Schema.Schema, object> handler);
+		/// <param name="immediate">Replay the children already present; false = new arrivals only.</param>
+		Action OnAdd(string collection, Action<Schema.Schema, object> handler, bool immediate);
 		Action OnRemove(string collection, Action<Schema.Schema, object> handler);
 	}
 
@@ -1050,9 +1301,9 @@ namespace Colyseus.Predict
 		public Action Listen(Schema.Schema instance, string field, Action<object> handler, bool immediate)
 			=> strategy.Listen<object>(instance, field, (current, previous) => handler(current), immediate);
 
-		public Action OnAdd(string collection, Action<Schema.Schema, object> handler)
+		public Action OnAdd(string collection, Action<Schema.Schema, object> handler, bool immediate)
 			=> strategy.OnAdd(collection, new KeyValueEventHandler<string, object>(
-				(key, value) => handler((Schema.Schema)value, key)), true);
+				(key, value) => handler((Schema.Schema)value, key)), immediate);
 
 		public Action OnRemove(string collection, Action<Schema.Schema, object> handler)
 			=> strategy.OnRemove(collection, new KeyValueEventHandler<string, object>(
