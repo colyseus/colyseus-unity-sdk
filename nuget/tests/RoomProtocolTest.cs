@@ -42,6 +42,9 @@ namespace Colyseus.Tests
 			{
 				ParseMessage(frame);
 			}
+
+			public long ClockOffsetMs;
+			protected override long NowMs() => base.NowMs() + ClockOffsetMs;
 		}
 
 		private static (TestRoom room, StubConnection stub) MakeRoom()
@@ -152,6 +155,147 @@ namespace Colyseus.Tests
 			stub.IsOpen = false;
 
 			Assert.ThrowsAsync<Exception>(async () => await room.Request<object>("a"));
+		}
+
+		[Test]
+		public void NumericTypeEncodingTest()
+		{
+			var (room, stub) = MakeRoom();
+
+			// the type rides as a schema "number": positive fixint below 0x80,
+			// uint8-prefixed above — a raw 0x80+ byte would parse as a
+			// fixmap/fixstr prefix on the server
+			_ = room.Request<object>(5, 7);
+			_ = room.Request<object>(200);
+			_ = room.Send(5);
+			_ = room.Send(200, 1);
+			_ = room.SendBytes(200, new byte[] { 9 });
+
+			CollectionAssert.AreEqual(new byte[] { 21, 0, 5, 7 }, stub.Sent[0]);
+			CollectionAssert.AreEqual(new byte[] { 21, 1, 0xcc, 200 }, stub.Sent[1]);
+			CollectionAssert.AreEqual(new byte[] { 13, 5 }, stub.Sent[2]);
+			CollectionAssert.AreEqual(new byte[] { 13, 0xcc, 200, 1 }, stub.Sent[3]);
+			CollectionAssert.AreEqual(new byte[] { 17, 0xcc, 200, 9 }, stub.Sent[4]);
+		}
+
+		[Test]
+		public void RequestIdEncodingTest()
+		{
+			var (room, stub) = MakeRoom();
+
+			var requests = new List<Task<object>>();
+			for (var i = 0; i < 300; i++) { requests.Add(room.Request<object>("a")); }
+
+			// id 128 → uint8 prefix; id 256 → uint16 prefix (little-endian)
+			CollectionAssert.AreEqual(new byte[] { 21, 0xcc, 128, 161, 97 }, stub.Sent[128]);
+			CollectionAssert.AreEqual(new byte[] { 21, 0xcd, 0, 1, 161, 97 }, stub.Sent[256]);
+
+			// and the reply correlates through the same codec
+			room.Feed(new byte[] { 22, 0xcd, 0, 1, 0, 42 });
+			Assert.AreEqual(42, requests[256].Result);
+			Assert.IsFalse(requests[255].IsCompleted);
+		}
+
+		[Test]
+		public async Task RequestErrorShapeTest()
+		{
+			var (room, _) = MakeRoom();
+
+			var rejected = room.Request<object>("a");
+			var noHandler = room.Request<object>("b");
+			var coded = room.Request<object>("c");
+
+			room.Feed(new byte[] { 22, 0, 1, 164, 110, 111, 112, 101 }); // REJECTED "nope"
+			// ERROR {name:"no_handler", message:"missing"}
+			room.Feed(new byte[] { 22, 1, 2, 0x82, 0xa4, 110, 97, 109, 101, 0xaa, 110, 111, 95, 104, 97, 110, 100, 108, 101, 114, 0xa7, 109, 101, 115, 115, 97, 103, 101, 0xa7, 109, 105, 115, 115, 105, 110, 103 });
+			// ERROR {name:"Error", message:"boom", code:7}
+			room.Feed(new byte[] { 22, 2, 2, 0x83, 0xa4, 110, 97, 109, 101, 0xa5, 69, 114, 114, 111, 114, 0xa7, 109, 101, 115, 115, 97, 103, 101, 0xa4, 98, 111, 111, 109, 0xa4, 99, 111, 100, 101, 7 });
+
+			var rejection = Assert.ThrowsAsync<RequestError>(async () => await rejected);
+			Assert.AreEqual("rejected", rejection.Name);
+			Assert.AreEqual("request rejected", rejection.Message);
+			Assert.AreEqual("nope", rejection.Payload);
+			Assert.IsNull(rejection.Code);
+
+			var missing = Assert.ThrowsAsync<RequestError>(async () => await noHandler);
+			Assert.AreEqual("no_handler", missing.Name);
+			Assert.AreEqual("missing", missing.Message);
+			Assert.IsTrue(missing.Faulted);
+
+			var fault = Assert.ThrowsAsync<RequestError>(async () => await coded);
+			Assert.AreEqual("Error", fault.Name);
+			Assert.AreEqual("boom", fault.Message);
+			Assert.AreEqual(7, Convert.ToInt32(fault.Code));
+			await Task.CompletedTask;
+		}
+
+		[Test]
+		public void SendWithCallbackTest()
+		{
+			var (room, stub) = MakeRoom();
+
+			object okResponse = null; Exception okError = null;
+			object failResponse = "untouched"; Exception failError = null;
+
+			room.Send<object>("a", 1, (res, err) => { okResponse = res; okError = err; });
+			room.Send<object>(9, null, (res, err) => { failResponse = res; failError = err; });
+
+			// callback form is a plain ROOM_REQUEST on the wire
+			CollectionAssert.AreEqual(new byte[] { 21, 0, 161, 97, 1 }, stub.Sent[0]);
+			CollectionAssert.AreEqual(new byte[] { 21, 1, 9 }, stub.Sent[1]);
+
+			room.Feed(new byte[] { 22, 0, 0, 42 });
+			room.Feed(new byte[] { 22, 1, 1, 164, 110, 111, 112, 101 });
+
+			Assert.AreEqual(42, okResponse);
+			Assert.IsNull(okError);
+
+			Assert.IsNull(failResponse);
+			Assert.IsInstanceOf<RequestError>(failError);
+			Assert.AreEqual("nope", ((RequestError)failError).Payload);
+		}
+
+		[Test]
+		public async Task RequestTimeoutTest()
+		{
+			var (room, _) = MakeRoom();
+
+			var request = room.Request<object>("slow", null, 20);
+			var timeout = Assert.ThrowsAsync<TimeoutException>(async () => await request);
+			StringAssert.Contains("timed out after 20ms", timeout.Message);
+
+			// the late reply finds no pending entry and is ignored
+			room.Feed(new byte[] { 22, 0, 0, 42 });
+			await Task.CompletedTask;
+		}
+
+		[Test]
+		public void RequestSweepOnInboundFrameTest()
+		{
+			var (room, _) = MakeRoom();
+
+			// the 10s timer won't fire during the test; only the sweep can
+			var request = room.Request<object>("slow", null, 10_000);
+			room.ClockOffsetMs = 10_001;
+
+			// no timer has to fire: the next inbound frame (a PONG here) expires
+			// it inline — the WebGL path
+			room.Feed(new byte[] { 18 });
+
+			Assert.IsTrue(request.IsFaulted);
+			Assert.IsInstanceOf<TimeoutException>(request.Exception.InnerException);
+		}
+
+		[Test]
+		public void RequestRejectedOnCloseTest()
+		{
+			var (room, stub) = MakeRoom();
+
+			var request = room.Request<object>("a");
+			stub.Dispatch(ConnectionEvent.Closed((int) CloseCode.CONSENTED));
+
+			Assert.IsTrue(request.IsFaulted);
+			StringAssert.Contains("connection closed", request.Exception.InnerException.Message);
 		}
 	}
 }

@@ -231,6 +231,12 @@ namespace Colyseus
 
             /// <summary>OK payloads deserialize into this type.</summary>
             public System.Type ResponseType;
+
+            /// <summary>Unix ms after which the request expires; 0 = never.</summary>
+            public long ExpiresAt;
+
+            /// <summary>Called once when <see cref="ExpiresAt" /> passes unanswered.</summary>
+            public Action OnTimeout;
         }
 
         /// <summary>
@@ -469,18 +475,9 @@ namespace Colyseus
         ///     Send a message by number type, without payload
         /// </summary>
         /// <param name="type">Message type</param>
-        public async Task Send(byte type)
+        public Task Send(byte type)
         {
-            byte[] bytes = new[] {Protocol.ROOM_DATA, type};
-
-            // If connection is not open, buffer the message
-            if (!Connection.IsOpen)
-            {
-                EnqueueMessage(bytes);
-                return;
-            }
-
-            await Connection.Send(bytes);
+            return SendOrEnqueue(BuildFrame(Protocol.ROOM_DATA, null, type, null));
         }
 
         /// <summary>
@@ -488,49 +485,18 @@ namespace Colyseus
         /// </summary>
         /// <param name="type">Message type</param>
         /// <param name="message">Message payload</param>
-        public async Task Send(byte type, object message)
+        public Task Send(byte type, object message)
         {
-            MemoryStream serializationOutput = new MemoryStream();
-            MsgPack.Serialize(message, serializationOutput, SerializationOptions.SuppressTypeInformation);
-
-            byte[] initialBytes = {Protocol.ROOM_DATA, type};
-            byte[] encodedMessage = serializationOutput.ToArray();
-
-            byte[] bytes = new byte[initialBytes.Length + encodedMessage.Length];
-            Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
-            Buffer.BlockCopy(encodedMessage, 0, bytes, initialBytes.Length, encodedMessage.Length);
-
-            // If connection is not open, buffer the message
-            if (!Connection.IsOpen)
-            {
-                EnqueueMessage(bytes);
-                return;
-            }
-
-            await Connection.Send(bytes);
+            return SendOrEnqueue(BuildFrame(Protocol.ROOM_DATA, null, type, Pack(message)));
         }
 
         /// <summary>
         ///     Send a message by string type, without payload
         /// </summary>
         /// <param name="type">Message type</param>
-        public async Task Send(string type)
+        public Task Send(string type)
         {
-            byte[] encodedType = Encoding.UTF8.GetBytes(type);
-            byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType, Protocol.ROOM_DATA);
-
-            byte[] bytes = new byte[initialBytes.Length + encodedType.Length];
-            Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
-            Buffer.BlockCopy(encodedType, 0, bytes, initialBytes.Length, encodedType.Length);
-
-            // If connection is not open, buffer the message
-            if (!Connection.IsOpen)
-            {
-                EnqueueMessage(bytes);
-                return;
-            }
-
-            await Connection.Send(bytes);
+            return SendOrEnqueue(BuildFrame(Protocol.ROOM_DATA, null, type, null));
         }
 
         /// <summary>
@@ -538,28 +504,43 @@ namespace Colyseus
         /// </summary>
         /// <param name="type">Message type</param>
         /// <param name="message">Message payload</param>
-        public async Task Send(string type, object message)
+        public Task Send(string type, object message)
         {
-            MemoryStream serializationOutput = new MemoryStream();
-            MsgPack.Serialize(message, serializationOutput, SerializationOptions.SuppressTypeInformation);
+            return SendOrEnqueue(BuildFrame(Protocol.ROOM_DATA, null, type, Pack(message)));
+        }
 
-            byte[] encodedType = Encoding.UTF8.GetBytes(type);
-            byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType, Protocol.ROOM_DATA);
-            byte[] encodedMessage = serializationOutput.ToArray();
+        /// <summary>
+        ///     Send a message and hand the server's reply to <paramref name="callback" />
+        ///     as <c>(response, null)</c>, or <c>(default, exception)</c> when the
+        ///     request fails. Callback form of <see cref="Request{TResponse}(string, object, int)" />;
+        ///     uses <see cref="DefaultRequestTimeout" />.
+        /// </summary>
+        public void Send<TResponse>(string type, object payload, Action<TResponse, Exception> callback)
+        {
+            SendWithCallback(Request<TResponse>(type, payload), callback);
+        }
 
-            byte[] bytes = new byte[encodedType.Length + encodedMessage.Length + initialBytes.Length];
-            Buffer.BlockCopy(initialBytes, 0, bytes, 0, initialBytes.Length);
-            Buffer.BlockCopy(encodedType, 0, bytes, initialBytes.Length, encodedType.Length);
-            Buffer.BlockCopy(encodedMessage, 0, bytes, initialBytes.Length + encodedType.Length, encodedMessage.Length);
+        /// <inheritdoc cref="Send{TResponse}(string, object, Action{TResponse, Exception})" />
+        public void Send<TResponse>(byte type, object payload, Action<TResponse, Exception> callback)
+        {
+            SendWithCallback(Request<TResponse>(type, payload), callback);
+        }
 
-            // If connection is not open, buffer the message
-            if (!Connection.IsOpen)
+        // awaited (not ContinueWith) so the callback lands on the captured
+        // SynchronizationContext — Unity's main thread
+        private static async void SendWithCallback<TResponse>(Task<TResponse> request, Action<TResponse, Exception> callback)
+        {
+            TResponse response;
+            try
             {
-                EnqueueMessage(bytes);
+                response = await request;
+            }
+            catch (Exception e)
+            {
+                callback(default, e);
                 return;
             }
-
-            await Connection.Send(bytes);
+            callback(response, null);
         }
 
         /// <summary>
@@ -567,22 +548,9 @@ namespace Colyseus
         /// </summary>
         /// <param name="type">Message type</param>
         /// <param name="bytes">Message payload</param>
-        public async Task SendBytes(byte type, byte[] bytes)
+        public Task SendBytes(byte type, byte[] bytes)
         {
-            byte[] initialBytes = { Protocol.ROOM_DATA_BYTES, type };
-
-            byte[] bytesToSend = new byte[initialBytes.Length + bytes.Length];
-            Buffer.BlockCopy(initialBytes, 0, bytesToSend, 0, initialBytes.Length);
-            Buffer.BlockCopy(bytes, 0, bytesToSend, initialBytes.Length, bytes.Length);
-
-            // If connection is not open, buffer the message
-            if (!Connection.IsOpen)
-            {
-                EnqueueMessage(bytesToSend);
-                return;
-            }
-
-            await Connection.Send(bytesToSend);
+            return SendOrEnqueue(BuildFrame(Protocol.ROOM_DATA_BYTES, null, type, bytes));
         }
 
         /// <summary>
@@ -590,24 +558,50 @@ namespace Colyseus
         /// </summary>
         /// <param name="type">Message type</param>
         /// <param name="bytes">Message payload</param>
-        public async Task SendBytes(string type, byte[] bytes)
+        public Task SendBytes(string type, byte[] bytes)
         {
-            byte[] encodedType = Encoding.UTF8.GetBytes(type);
-            byte[] initialBytes = Encode.getInitialBytesFromEncodedType(encodedType, Protocol.ROOM_DATA_BYTES);
+            return SendOrEnqueue(BuildFrame(Protocol.ROOM_DATA_BYTES, null, type, bytes));
+        }
 
-            byte[] bytesToSend = new byte[encodedType.Length + bytes.Length + initialBytes.Length];
-            Buffer.BlockCopy(initialBytes, 0, bytesToSend, 0, initialBytes.Length);
-            Buffer.BlockCopy(encodedType, 0, bytesToSend, initialBytes.Length, encodedType.Length);
-            Buffer.BlockCopy(bytes, 0, bytesToSend, initialBytes.Length + encodedType.Length, bytes.Length);
+        private static byte[] Pack(object message)
+        {
+            MemoryStream output = new MemoryStream();
+            MsgPack.Serialize(message, output, SerializationOptions.SuppressTypeInformation);
+            return output.ToArray();
+        }
 
-            // If connection is not open, buffer the message
-            if (!Connection.IsOpen)
+        /// <summary>
+        ///     <c>[protocol][prefix?][type][payload?]</c> — the type rides as a
+        ///     schema "string" or non-negative "number", the encoding the server's
+        ///     <c>decode.stringCheck</c> / <c>decode.number</c> expect.
+        /// </summary>
+        private static byte[] BuildFrame(byte protocol, byte[] prefix, object type, byte[] payload)
+        {
+            List<byte> frame = new List<byte> { protocol };
+            if (prefix != null) { frame.AddRange(prefix); }
+
+            if (type is string stringType)
             {
-                EnqueueMessage(bytesToSend);
-                return;
+                Encode.String(frame, stringType);
+            }
+            else
+            {
+                frame.AddRange(Encode.EncodeUintNumber((byte)type));
             }
 
-            await Connection.Send(bytesToSend);
+            if (payload != null) { frame.AddRange(payload); }
+            return frame.ToArray();
+        }
+
+        // reliable + offline: buffer so it flushes on (re)connect
+        private Task SendOrEnqueue(byte[] frame)
+        {
+            if (!Connection.IsOpen)
+            {
+                EnqueueMessage(frame);
+                return Task.CompletedTask;
+            }
+            return Connection.Send(frame);
         }
 
         /// <summary>
@@ -640,14 +634,10 @@ namespace Colyseus
             }
 
             var tcs = new TaskCompletionSource<TResponse>();
-            // the timeout task lives in this closure — the shared pending
-            // registry stays unaware of timeouts; reply and close cancel it
-            var timeoutCancellation = new System.Threading.CancellationTokenSource();
 
             uint requestId = await SendRequest(type, payload, typeof(TResponse),
                 (ok, replyPayload, faulted) =>
                 {
-                    timeoutCancellation.Cancel();
                     if (ok)
                     {
                         tcs.TrySetResult(replyPayload == null ? default : (TResponse)replyPayload);
@@ -657,21 +647,11 @@ namespace Colyseus
                         tcs.TrySetException(new RequestError(replyPayload, faulted));
                     }
                 },
-                reason =>
-                {
-                    timeoutCancellation.Cancel();
-                    tcs.TrySetException(new Exception(reason));
-                });
+                reason => tcs.TrySetException(new Exception(reason)));
 
             int ms = timeoutMs > 0 ? timeoutMs : DefaultRequestTimeout;
-            _ = Task.Delay(ms, timeoutCancellation.Token).ContinueWith(t =>
-            {
-                if (!t.IsCanceled)
-                {
-                    _pendingRequests.Remove(requestId);
-                    tcs.TrySetException(new TimeoutException($"request \"{type}\" timed out after {ms}ms."));
-                }
-            }, TaskContinuationOptions.ExecuteSynchronously);
+            ArmTimeout(requestId, ms,
+                () => tcs.TrySetException(new TimeoutException($"request \"{type}\" timed out after {ms}ms.")));
 
             return await tcs.Task;
         }
@@ -686,78 +666,107 @@ namespace Colyseus
         {
             uint requestId = _nextRequestId++;
 
-            byte[] header;
-            byte[] requestIdBytes = Encode.EncodeUintNumber(requestId);
+            // [ROOM_REQUEST][requestId][type][msgpack payload?]
+            byte[] frame = BuildFrame(Protocol.ROOM_REQUEST, Encode.EncodeUintNumber(requestId), type,
+                payload != null ? Pack(payload) : null);
 
-            if (type is string stringType)
+            lock (_pendingRequests)
             {
-                byte[] encodedType = Encoding.UTF8.GetBytes(stringType);
-                byte[] typeHeader = Encode.getInitialBytesFromEncodedType(encodedType, Protocol.ROOM_REQUEST);
-
-                // [ROOM_REQUEST][requestId varint][type fixstr header][type bytes]
-                header = new byte[1 + requestIdBytes.Length + (typeHeader.Length - 1) + encodedType.Length];
-                header[0] = Protocol.ROOM_REQUEST;
-                Buffer.BlockCopy(requestIdBytes, 0, header, 1, requestIdBytes.Length);
-                Buffer.BlockCopy(typeHeader, 1, header, 1 + requestIdBytes.Length, typeHeader.Length - 1);
-                Buffer.BlockCopy(encodedType, 0, header, 1 + requestIdBytes.Length + typeHeader.Length - 1, encodedType.Length);
-            }
-            else
-            {
-                header = new byte[2 + requestIdBytes.Length];
-                header[0] = Protocol.ROOM_REQUEST;
-                Buffer.BlockCopy(requestIdBytes, 0, header, 1, requestIdBytes.Length);
-                header[header.Length - 1] = (byte)type;
+                _pendingRequests[requestId] = new PendingRequest
+                {
+                    OnReply = onReply,
+                    OnClose = onClose,
+                    ResponseType = responseType,
+                };
             }
 
-            byte[] bytesToSend;
-            if (payload != null)
-            {
-                MemoryStream serializationOutput = new MemoryStream();
-                MsgPack.Serialize(payload, serializationOutput, SerializationOptions.SuppressTypeInformation);
-                byte[] encodedPayload = serializationOutput.ToArray();
-
-                bytesToSend = new byte[header.Length + encodedPayload.Length];
-                Buffer.BlockCopy(header, 0, bytesToSend, 0, header.Length);
-                Buffer.BlockCopy(encodedPayload, 0, bytesToSend, header.Length, encodedPayload.Length);
-            }
-            else
-            {
-                bytesToSend = header;
-            }
-
-            _pendingRequests[requestId] = new PendingRequest
-            {
-                OnReply = onReply,
-                OnClose = onClose,
-                ResponseType = responseType,
-            };
-
-            // reliable + offline: buffer so it flushes on (re)connect
-            if (!Connection.IsOpen)
-            {
-                EnqueueMessage(bytesToSend);
-            }
-            else
-            {
-                await Connection.Send(bytesToSend);
-            }
+            await SendOrEnqueue(frame);
 
             return requestId;
         }
 
-        private void RejectAllPendingRequests(string reason)
+        /// <summary>
+        ///     Drop a pending round-trip (request timeout, or a caller's own
+        ///     TTL/cancel path). A late reply is then ignored. Idempotent.
+        /// </summary>
+        protected void CancelRequest(uint requestId)
         {
-            if (_pendingRequests.Count == 0)
+            lock (_pendingRequests)
             {
-                return;
+                _pendingRequests.Remove(requestId);
+            }
+        }
+
+        // Two expiry paths converge on ExpireRequest: a Task.Delay timer, and a
+        // sweep on every inbound frame. WebGL has no thread-pool timers (a
+        // Task.Delay never resumes there), so the sweep is what fails an
+        // unanswered request on that platform; elsewhere the timer fires first
+        // and the sweep finds nothing.
+        private void ArmTimeout(uint requestId, int ms, Action onTimeout)
+        {
+            lock (_pendingRequests)
+            {
+                // already answered — nothing to arm
+                if (!_pendingRequests.TryGetValue(requestId, out PendingRequest entry)) { return; }
+                entry.ExpiresAt = NowMs() + ms;
+                entry.OnTimeout = onTimeout;
             }
 
-            foreach (PendingRequest entry in _pendingRequests.Values)
+            _ = Task.Delay(ms).ContinueWith(_ => ExpireRequest(requestId), TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        private void ExpireRequest(uint requestId)
+        {
+            PendingRequest entry;
+            lock (_pendingRequests)
+            {
+                if (!_pendingRequests.TryGetValue(requestId, out entry)) { return; }
+                _pendingRequests.Remove(requestId);
+            }
+            entry.OnTimeout?.Invoke();
+        }
+
+        /// <summary>Wall clock (unix ms) for request expiry; overridable for tests.</summary>
+        protected virtual long NowMs() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        private void SweepExpiredRequests()
+        {
+            List<PendingRequest> expired = null;
+            lock (_pendingRequests)
+            {
+                if (_pendingRequests.Count == 0) { return; }
+
+                long now = NowMs();
+                List<uint> ids = null;
+                foreach (KeyValuePair<uint, PendingRequest> pair in _pendingRequests)
+                {
+                    if (pair.Value.ExpiresAt > 0 && pair.Value.ExpiresAt <= now)
+                    {
+                        (ids ??= new List<uint>()).Add(pair.Key);
+                        (expired ??= new List<PendingRequest>()).Add(pair.Value);
+                    }
+                }
+                if (ids == null) { return; }
+                foreach (uint id in ids) { _pendingRequests.Remove(id); }
+            }
+
+            foreach (PendingRequest entry in expired) { entry.OnTimeout?.Invoke(); }
+        }
+
+        private void RejectAllPendingRequests(string reason)
+        {
+            List<PendingRequest> entries;
+            lock (_pendingRequests)
+            {
+                if (_pendingRequests.Count == 0) { return; }
+                entries = new List<PendingRequest>(_pendingRequests.Values);
+                _pendingRequests.Clear();
+            }
+
+            foreach (PendingRequest entry in entries)
             {
                 entry.OnClose?.Invoke(reason);
             }
-
-            _pendingRequests.Clear();
         }
 
         /// <summary>
@@ -881,6 +890,8 @@ namespace Colyseus
         /// <param name="bytes">The message as provided from the <see cref="Connection" /></param>
         protected async void ParseMessage(byte[] bytes)
         {
+            SweepExpiredRequests();
+
             Iterator it = new Iterator { Offset = 1 };
 
             // Strip modifier bits (bits 5..7) so the dispatch below stays
@@ -1049,14 +1060,21 @@ namespace Colyseus
             else if (code == Protocol.ROOM_RESPONSE)
             {
                 // reply to a pending Request()
-                uint requestId = (uint) Decode.DecodeNumber(bytes, it);
+                uint requestId = (uint) Decode.DecodeNumberAsDouble(bytes, it);
                 var status = (ResponseStatus) bytes[it.Offset++];
 
                 // already answered (e.g. timed out) or unknown id — ignore
-                if (_pendingRequests.TryGetValue(requestId, out PendingRequest entry))
+                PendingRequest entry;
+                lock (_pendingRequests)
                 {
-                    _pendingRequests.Remove(requestId);
+                    if (_pendingRequests.TryGetValue(requestId, out entry))
+                    {
+                        _pendingRequests.Remove(requestId);
+                    }
+                }
 
+                if (entry != null)
+                {
                     object payload = null;
                     if (bytes.Length > it.Offset)
                     {

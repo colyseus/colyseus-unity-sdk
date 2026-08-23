@@ -163,6 +163,15 @@ namespace Colyseus
     /// </summary>
     public class RequestError : System.Exception
     {
+        /// <summary>
+        ///     <c>"rejected"</c> for a deliberate <c>ctx.reject()</c>; otherwise the
+        ///     server-side error name (<c>"no_handler"</c>, <c>"Error"</c>, …).
+        /// </summary>
+        public readonly string Name;
+
+        /// <summary>The server error's <c>code</c>, when it carried one. Null otherwise.</summary>
+        public readonly object Code;
+
         /// <summary>The reply payload: the authored rejection reason, or <c>{name, message, code?}</c> for faults.</summary>
         public readonly object Payload;
 
@@ -170,12 +179,26 @@ namespace Colyseus
         public readonly bool Faulted;
 
         public RequestError(object payload, bool faulted)
-            : base(payload is System.Collections.IDictionary dict && dict.Contains("message")
-                ? dict["message"]?.ToString()
-                : payload?.ToString() ?? "request failed")
+            : base(faulted ? Field(payload, "message") ?? "request failed" : "request rejected")
         {
             Payload = payload;
             Faulted = faulted;
+            if (faulted)
+            {
+                Name = Field(payload, "name") ?? "Error";
+                Code = (payload as System.Collections.IDictionary)?["code"];
+            }
+            else
+            {
+                Name = "rejected";
+            }
+        }
+
+        private static string Field(object payload, string key)
+        {
+            return payload is System.Collections.IDictionary dict && dict.Contains(key)
+                ? dict[key]?.ToString()
+                : null;
         }
     }
 
