@@ -2,6 +2,10 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.1
+
+- Fix the `Colyseus.MonoGame` NuGet package pulling in a 0.17 core, which cannot connect to a 0.18 server. It also targets `net8.0` again, so MonoGame's own project templates can reference it.
+
 ## 0.18.0
 
 - Add `room.Request<TResponse>(type, payload)`: sends a message and awaits the value the server's `onMessage()` handler returns. A server-side rejection or fault throws `RequestError` (`Name`, `Code`, `Payload`, `Faulted`); no reply within `Room.DefaultRequestTimeout` (10s, or the per-call `timeoutMs`) throws `TimeoutException`. `room.Send(type, payload, callback)` is the callback form, receiving `(response, error)`.
