@@ -1,5 +1,5 @@
 /* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -19,13 +19,24 @@ using System.Text;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
-	internal static class JsonUtils
+	/// <summary>
+	/// Provides utility methods for JSON serialization and deserialization, such as escaping, unescaping, and number conversion.
+	/// </summary>
+	public static class JsonUtils
 	{
-		internal static readonly long UnixEpochTicks = new DateTime(0x7b2, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
+		/// <summary>
+		/// The number of ticks for the Unix epoch (January 1, 1970).
+		/// </summary>
+		public static readonly long UnixEpochTicks = new DateTime(0x7b2, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
 
 		private static readonly char[] ZerBuff = new char[] {'0', '0', '0', '0', '0', '0', '0', '0',};
 		private static readonly char[] HexChar = "0123456789ABCDEF".ToCharArray();
 
+		/// <summary>
+		/// Unescapes and unquotes a JSON string.
+		/// </summary>
+		/// <param name="stringToUnescape">The string to unescape and unquote.</param>
+		/// <returns>The unescaped and unquoted string.</returns>
 		public static string UnescapeAndUnquote(string stringToUnescape)
 		{
 			if (stringToUnescape == null)
@@ -44,6 +55,11 @@ namespace GameDevWare.Serialization
 			return UnescapeBuffer(stringToUnescape.ToCharArray(), start, len);
 		}
 
+		/// <summary>
+		/// Escapes and quotes a string for JSON.
+		/// </summary>
+		/// <param name="stringToEscape">The string to escape and quote.</param>
+		/// <returns>The escaped and quoted string.</returns>
 		public static string EscapeAndQuote(string stringToEscape)
 		{
 			if (stringToEscape == null)
@@ -76,21 +92,41 @@ namespace GameDevWare.Serialization
 			{
 				var charToCheck = stringToEscape[i];
 
-				if ((int) charToCheck < 32 || charToCheck == '\\' || charToCheck == '"')
+				switch (charToCheck)
 				{
-					sb.Append("\\u");
-					Buffer.BlockCopy(ZerBuff, 0, hexBuff, 0, sizeof (char)*8); // clear buffer with "0"
-					var hexlen = UInt32ToHexBuffer((uint) charToCheck, hexBuff, 4);
-					sb.Append(hexBuff, hexlen, 4);
+					case '\\': sb.Append("\\\\"); break;
+					case '"': sb.Append("\\\""); break;
+					case '\n': sb.Append("\\n"); break;
+					case '\r': sb.Append("\\r"); break;
+					case '\t': sb.Append("\\t"); break;
+					case '\b': sb.Append("\\b"); break;
+					case '\f': sb.Append("\\f"); break;
+					default:
+						if ((int)charToCheck < 32)
+						{
+							sb.Append("\\u");
+							Buffer.BlockCopy(ZerBuff, 0, hexBuff, 0, sizeof(char) * 8); // clear buffer with "0"
+							var hexlen = UInt32ToHexBuffer((uint)charToCheck, hexBuff, 4);
+							sb.Append(hexBuff, hexlen, 4);
+						}
+						else
+							sb.Append(charToCheck);
+						break;
 				}
-				else
-					sb.Append(charToCheck);
 			}
 			sb.Append('"');
 
 			return sb.ToString();
 		}
 
+		/// <summary>
+		/// Escapes a string into a character buffer.
+		/// </summary>
+		/// <param name="value">The string to escape.</param>
+		/// <param name="offset">The current offset in the string.</param>
+		/// <param name="outputBuffer">The buffer to write the escaped characters to.</param>
+		/// <param name="outputBufferOffset">The offset in the output buffer.</param>
+		/// <returns>The number of characters written to the output buffer.</returns>
 		public static int EscapeBuffer(string value, ref int offset, char[] outputBuffer, int outputBufferOffset)
 		{
 			if (value == null)
@@ -135,6 +171,13 @@ namespace GameDevWare.Serialization
 			return written;
 		}
 
+		/// <summary>
+		/// Unescapes a character buffer.
+		/// </summary>
+		/// <param name="charsToUnescape">The character array to unescape.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="length">The number of characters to unescape.</param>
+		/// <returns>The unescaped string.</returns>
 		public static string UnescapeBuffer(char[] charsToUnescape, int start, int length)
 		{
 			if (charsToUnescape == null)
@@ -213,7 +256,7 @@ namespace GameDevWare.Serialization
 							break;
 						default:
 #if STRICT
-                            throw new Exceptions.UnknownEscapeSequence("\\" + seqKind.ToString(), null);
+                            throw JsonSerializationException.UnknownEscapeSequence("\\" + seqKind.ToString(), null);
 #else
 							sb.Append(charsToUnescape[i + 1]);
 							break;
@@ -235,6 +278,13 @@ namespace GameDevWare.Serialization
 			return sb.ToString();
 		}
 
+		/// <summary>
+		/// Parses a hexadecimal string to a 32-bit unsigned integer.
+		/// </summary>
+		/// <param name="buffer">The character buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="len">The number of characters.</param>
+		/// <returns>The parsed value.</returns>
 		public static uint HexStringToUInt32(char[] buffer, int start, int len)
 		{
 			if (buffer == null)
@@ -271,6 +321,13 @@ namespace GameDevWare.Serialization
 			return result;
 		}
 
+		/// <summary>
+		/// Converts a 32-bit unsigned integer to its hexadecimal representation in a character buffer.
+		/// </summary>
+		/// <param name="uvalue">The value to convert.</param>
+		/// <param name="buffer">The output buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <returns>The number of characters written.</returns>
 		public static int UInt32ToHexBuffer(uint uvalue, char[] buffer, int start)
 		{
 			if (buffer == null)
@@ -303,6 +360,13 @@ namespace GameDevWare.Serialization
 			return length;
 		}
 
+		/// <summary>
+		/// Converts a 16-bit unsigned integer to its padded hexadecimal representation in a character buffer.
+		/// </summary>
+		/// <param name="uvalue">The value to convert.</param>
+		/// <param name="buffer">The output buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <returns>The number of characters written.</returns>
 		public static int UInt16ToPaddedHexBuffer(ushort uvalue, char[] buffer, int start)
 		{
 			if (buffer == null)
@@ -332,6 +396,13 @@ namespace GameDevWare.Serialization
 			return LENGTH;
 		}
 
+		/// <summary>
+		/// Parses a padded hexadecimal string to a 16-bit unsigned integer.
+		/// </summary>
+		/// <param name="buffer">The character buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="len">The number of characters.</param>
+		/// <returns>The parsed value.</returns>
 		public static ushort PaddedHexStringToUInt16(char[] buffer, int start, int len)
 		{
 			if (buffer == null)
@@ -368,6 +439,14 @@ namespace GameDevWare.Serialization
 			return checked((ushort) result);
 		}
 
+		/// <summary>
+		/// Parses a string to a 64-bit signed integer.
+		/// </summary>
+		/// <param name="buffer">The character buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="len">The number of characters.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The parsed value.</returns>
 		public static long StringToInt64(char[] buffer, int start, int len, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -404,6 +483,14 @@ namespace GameDevWare.Serialization
 				return (long) result;
 		}
 
+		/// <summary>
+		/// Parses a string to a 32-bit signed integer.
+		/// </summary>
+		/// <param name="buffer">The character buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="len">The number of characters.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The parsed value.</returns>
 		public static int StringToInt32(char[] buffer, int start, int len, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -440,6 +527,14 @@ namespace GameDevWare.Serialization
 				return (int) result;
 		}
 
+		/// <summary>
+		/// Parses a string to a 64-bit unsigned integer.
+		/// </summary>
+		/// <param name="buffer">The character buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="len">The number of characters.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The parsed value.</returns>
 		public static ulong StringToUInt64(char[] buffer, int start, int len, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -467,6 +562,14 @@ namespace GameDevWare.Serialization
 			return result;
 		}
 
+		/// <summary>
+		/// Parses a string to a 32-bit unsigned integer.
+		/// </summary>
+		/// <param name="buffer">The character buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="len">The number of characters.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The parsed value.</returns>
 		public static uint StringToUInt32(char[] buffer, int start, int len, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -494,6 +597,14 @@ namespace GameDevWare.Serialization
 			return result;
 		}
 
+		/// <summary>
+		/// Parses a string to a double-precision floating-point value.
+		/// </summary>
+		/// <param name="buffer">The character buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="len">The number of characters.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The parsed value.</returns>
 		public static double StringToDouble(char[] buffer, int start, int len, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -553,6 +664,14 @@ namespace GameDevWare.Serialization
 			return double.Parse(new string(buffer, start, len), formatProvider);
 		}
 
+		/// <summary>
+		/// Parses a string to a single-precision floating-point value.
+		/// </summary>
+		/// <param name="buffer">The character buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="len">The number of characters.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The parsed value.</returns>
 		public static float StringToFloat(char[] buffer, int start, int len, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -612,6 +731,14 @@ namespace GameDevWare.Serialization
 			return float.Parse(new string(buffer, start, len), formatProvider);
 		}
 
+		/// <summary>
+		/// Parses a string to a decimal value.
+		/// </summary>
+		/// <param name="buffer">The character buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="len">The number of characters.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The parsed value.</returns>
 		public static decimal StringToDecimal(char[] buffer, int start, int len, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -627,6 +754,14 @@ namespace GameDevWare.Serialization
 			return decimal.Parse(new string(buffer, start, len), formatProvider);
 		}
 
+		/// <summary>
+		/// Converts a 32-bit signed integer to its string representation in a character buffer.
+		/// </summary>
+		/// <param name="value">The value to convert.</param>
+		/// <param name="buffer">The output buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The number of characters written.</returns>
 		public static int Int32ToBuffer(int value, char[] buffer, int start, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -652,6 +787,14 @@ namespace GameDevWare.Serialization
 			return length;
 		}
 
+		/// <summary>
+		/// Converts a 64-bit signed integer to its string representation in a character buffer.
+		/// </summary>
+		/// <param name="value">The value to convert.</param>
+		/// <param name="buffer">The output buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The number of characters written.</returns>
 		public static int Int64ToBuffer(long value, char[] buffer, int start, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -677,6 +820,14 @@ namespace GameDevWare.Serialization
 			return length;
 		}
 
+		/// <summary>
+		/// Converts a 32-bit unsigned integer to its string representation in a character buffer.
+		/// </summary>
+		/// <param name="uvalue">The value to convert.</param>
+		/// <param name="buffer">The output buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The number of characters written.</returns>
 		public static int UInt32ToBuffer(uint uvalue, char[] buffer, int start, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -699,6 +850,14 @@ namespace GameDevWare.Serialization
 			return length;
 		}
 
+		/// <summary>
+		/// Converts a 64-bit unsigned integer to its string representation in a character buffer.
+		/// </summary>
+		/// <param name="uvalue">The value to convert.</param>
+		/// <param name="buffer">The output buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The number of characters written.</returns>
 		public static int UInt64ToBuffer(ulong uvalue, char[] buffer, int start, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -720,6 +879,14 @@ namespace GameDevWare.Serialization
 			return length;
 		}
 
+		/// <summary>
+		/// Converts a single-precision floating-point value to its string representation in a character buffer.
+		/// </summary>
+		/// <param name="value">The value to convert.</param>
+		/// <param name="buffer">The output buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The number of characters written.</returns>
 		public static int SingleToBuffer(float value, char[] buffer, int start, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -733,6 +900,14 @@ namespace GameDevWare.Serialization
 			return valueStr.Length;
 		}
 
+		/// <summary>
+		/// Converts a double-precision floating-point value to its string representation in a character buffer.
+		/// </summary>
+		/// <param name="value">The value to convert.</param>
+		/// <param name="buffer">The output buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The number of characters written.</returns>
 		public static int DoubleToBuffer(double value, char[] buffer, int start, IFormatProvider formatProvider = null)
 		{
 			if (buffer == null)
@@ -746,6 +921,14 @@ namespace GameDevWare.Serialization
 			return valueStr.Length;
 		}
 
+		/// <summary>
+		/// Converts a decimal value to its string representation in a character buffer.
+		/// </summary>
+		/// <param name="value">The value to convert.</param>
+		/// <param name="buffer">The output buffer.</param>
+		/// <param name="start">The starting index.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>The number of characters written.</returns>
 		public static int DecimalToBuffer(decimal value, char[] buffer, int start, IFormatProvider formatProvider = null)
 		{
 			var valueStr = value.ToString(null, formatProvider);

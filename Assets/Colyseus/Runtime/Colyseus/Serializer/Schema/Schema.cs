@@ -68,6 +68,16 @@ namespace Colyseus.Schema
 		/// </summary>
 		public int Index;
 
+		/// <summary>
+		///     <c>t.quantized()</c> options — only meaningful when
+		///     <see cref="FieldType" /> is <c>"quantized"</c> (named args, see
+		///     <see cref="Utils.Quantize.Resolve" />).
+		/// </summary>
+		public double QuantizeMin;
+		public double QuantizeMax;
+		public int QuantizeBits = 16;
+		public bool QuantizeWrap;
+
 		public Type(int index, string type, System.Type childType = null, string childPrimitiveType = null)
 		{
 			Index = index; // GetType().GetFields() doesn't guarantee order of fields, need to manually track them here!
@@ -121,6 +131,8 @@ namespace Colyseus.Schema
 		 * ArraySchema operations
 		 */
 		REVERSE = 15,
+		MOVE = 32,
+		MOVE_AND_ADD = 160,
 		DELETE_BY_REFID = 33,
 		ADD_BY_REFID = 129,
 	}
@@ -190,6 +202,7 @@ namespace Colyseus.Schema
 		void OnDecodeEnd();
 		void SetByIndex(int index, object value, byte operation);
 		void Reverse();
+		void ResyncPrune(HashSet<object> visited, Action<object, object> prune, Action<object> keep);
 	}
 
 	[SuppressMessage("ReSharper", "MissingXmlDoc")]
@@ -198,6 +211,7 @@ namespace Colyseus.Schema
 		void SetIndex(int index, object dynamicIndex);
 		object GetIndex(int index);
 		void SetByIndex(int index, object dynamicIndex, object value);
+		void ResyncPrune(HashSet<object> visited, Action<object, object> prune, Action<object> keep);
 	}
 
 	/// <summary>
@@ -240,9 +254,24 @@ namespace Colyseus.Schema
 		internal virtual Dictionary<int, string> fieldsByIndex => _metadata.FieldsByIndex;
 
 		/// <summary>
+		///     Resolved <c>t.quantized()</c> descriptors by field name — built from
+		///     the <see cref="Type" /> attribute's Quantize* args for generated
+		///     classes; <see cref="DynamicSchema" /> overrides with its definition's.
+		/// </summary>
+		internal virtual Dictionary<string, Utils.QuantizeDescriptor> fieldQuantizedDescriptors => _metadata.FieldQuantizedDescriptors;
+
+		/// <summary>
 		///     Map of the field types in this schema
 		/// </summary>
 		internal virtual Dictionary<string, string> fieldTypes => _metadata.FieldTypes;
+
+		/// <summary>
+		///     Whether a <c>"number"</c> at <paramref name="index" /> can be received at full width.
+		///     Only consulted for <c>"number"</c> fields, whose payload is variable-width and lossy in
+		///     <see cref="float" /> past 2^24; a generated field declared <see cref="double" /> takes it
+		///     wide, and <see cref="DynamicSchema" /> takes everything wide.
+		/// </summary>
+		internal virtual bool AcceptsWideNumber(int index) => _metadata.WideNumberFields.Contains(index);
 
 		public Schema()
 		{
@@ -277,6 +306,17 @@ namespace Colyseus.Schema
 					if (t.ChildType != null)
 					{
 						metadata.FieldChildTypes.Add(field.Name, t.ChildType);
+					}
+
+					if (t.FieldType == "quantized")
+					{
+						metadata.FieldQuantizedDescriptors.Add(field.Name,
+							Utils.Quantize.Resolve(t.QuantizeMin, t.QuantizeMax, (byte)t.QuantizeBits, t.QuantizeWrap));
+					}
+
+					if (t.FieldType == "number" && field.FieldType == typeof(double))
+					{
+						metadata.WideNumberFields.Add(t.Index);
 					}
 				}
 			}
@@ -384,6 +424,17 @@ namespace Colyseus.Schema
 			///     Map of the field types in this schema
 			/// </summary>
 			public Dictionary<string, string> FieldTypes = new Dictionary<string, string>();
+
+			/// <summary>
+			///     Resolved <c>t.quantized()</c> descriptors of this schema's fields
+			/// </summary>
+			public Dictionary<string, Utils.QuantizeDescriptor> FieldQuantizedDescriptors =
+				new Dictionary<string, Utils.QuantizeDescriptor>();
+
+			/// <summary>
+			///     Indexes of the <c>"number"</c> fields declared <see cref="double" />
+			/// </summary>
+			public HashSet<int> WideNumberFields = new HashSet<int>();
 		}
 	}
 }

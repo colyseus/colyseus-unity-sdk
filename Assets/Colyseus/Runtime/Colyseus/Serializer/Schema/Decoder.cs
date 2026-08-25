@@ -24,11 +24,46 @@ namespace Colyseus.Schema
 		/// </summary>
 		private Dictionary<int, float> _collectionChildTypeId;
 
+		/// <summary>
+		///     Non-null only while <see cref="DecodeResync" /> is in progress — its
+		///     non-nullness IS the resync-mode flag (see PORTING_RESYNC.md in
+		///     @colyseus/schema). Maps collection refId → visited entry identities
+		///     (map string keys / boxed array indexes).
+		/// </summary>
+		internal Dictionary<int, HashSet<object>> ResyncVisited;
+		internal bool ResyncDamaged;
+
 		public Decoder()
 		{
             State = Activator.CreateInstance<T>();
             Refs.Add(0, State);
         }
+
+		/// <summary>
+		///     Full-snapshot reconciliation ("resync") decode.
+		///
+		///     Behaves exactly like <see cref="Decode" />, plus: every collection
+		///     entry the payload does NOT mention is removed through the regular
+		///     DELETE path — OnRemove callbacks fire with the real previous value
+		///     and released refs are garbage-collected. Use it to apply a
+		///     rejoin/reconnect full state over an existing decoded tree.
+		///
+		///     ONLY valid for full-snapshot payloads. Calling it on an incremental
+		///     patch would prune everything the patch doesn't touch.
+		/// </summary>
+		public void DecodeResync(byte[] bytes, Iterator it = null)
+		{
+			ResyncVisited = new Dictionary<int, HashSet<object>>();
+			ResyncDamaged = false;
+			try
+			{
+				Decode(bytes, it);
+			}
+			finally
+			{
+				ResyncVisited = null;
+			}
+		}
 
 		/// <summary>
 		///     Decode incoming data
@@ -64,14 +99,19 @@ namespace Colyseus.Schema
 
 					if (_ref is IArraySchema) { ((IArraySchema)_ref).OnDecodeEnd(); }
 
-					_ref = Refs.Get(refId);
+					IRef nextRef = Refs.Get(refId);
 
 					//
 					// Trying to access a reference that haven't been decoded yet.
 					//
-					if (_ref == null)
+					if (nextRef == null)
 					{
-						throw new Exception("refId not found: " + refId);
+						ColyseusContext.Logger.Log("@colyseus/schema: refId not found: " + refId);
+						SkipCurrentStructure(bytes, it, totalBytes);
+					}
+					else
+					{
+						_ref = nextRef;
 					}
 
 					continue;
@@ -94,79 +134,195 @@ namespace Colyseus.Schema
 
 				if (isSchemaDefinitionMismatch)
 				{
-					//
-					// keep skipping next bytes until reaches a known structure
-					// by local decoder.
-					//
-					Iterator nextIterator = new Iterator { Offset = it.Offset };
-
-					while (it.Offset < totalBytes)
-					{
-						if (Utils.Decode.SwitchStructureCheck(bytes, it))
-						{
-							nextIterator.Offset = it.Offset + 1;
-							if (Refs.Has(Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, nextIterator))))
-							{
-								break;
-							}
-						}
-
-						it.Offset++;
-					}
-
+					SkipCurrentStructure(bytes, it, totalBytes);
 					continue;
 				}
 			}
 
 			if (_ref is IArraySchema) { ((IArraySchema)_ref).OnDecodeEnd(); }
 
+			// resync mode: prune everything the snapshot didn't visit. Runs
+			// before TriggerChanges (DELETE changes fire OnRemove with the real
+			// PreviousValue) and before GC (Refs.Remove feeds deletedRefs).
+			if (ResyncVisited != null) { ResyncSweep(); }
+
 			TriggerChanges?.Invoke(ref AllChanges);
 
 			Refs.GarbageCollection();
 		}
 
-		/// <summary>
-		///     Cache of declared field types, keyed by the schema type and the field index.
-		/// </summary>
-		/// <remarks>
-		///     Reflection is not free, and while this path is rare it can repeat on every patch for a
-		///     timestamp field. The key is the DECLARING type rather than the instance, so every instance
-		///     of a schema shares one lookup.
-		/// </remarks>
-		private static readonly System.Collections.Concurrent.ConcurrentDictionary<(System.Type, int), System.Type>
-			DeclaredFieldTypes = new System.Collections.Concurrent.ConcurrentDictionary<(System.Type, int), System.Type>();
-
-		/// <summary>
-		///     <c>typeof(double)</c> when this field is a <c>"number"</c> declared as <see cref="double" />
-		///     AND the incoming payload is a float64; <c>null</c> in every other case.
-		/// </summary>
-		/// <remarks>
-		///     Returning null keeps the decode on precisely the path it took before, which is what makes
-		///     this change non-breaking. The two cheap tests come FIRST - the schema type string, then a
-		///     peek at the prefix byte - so the reflection lookup happens only for a field that can
-		///     actually lose precision, rather than on every primitive in the patch.
-		/// </remarks>
-		private static System.Type DoubleFieldOrNull(IRef _ref, int fieldIndex, string fieldType, byte[] bytes, Iterator it)
+		//
+		// keep skipping next bytes until reaches a known structure
+		// by local decoder.
+		//
+		protected void SkipCurrentStructure(byte[] bytes, Iterator it, int totalBytes)
 		{
-			if (fieldType != "number") { return null; }
-			if (it.Offset >= bytes.Length || bytes[it.Offset] != 0xcb) { return null; }
+			// a skipped range can swallow other structures' ops — resync
+			// visited data is no longer trustworthy
+			if (ResyncVisited != null) { ResyncDamaged = true; }
 
-			// Collections are deliberately untouched: ArraySchema<T>.SetByIndex casts with `(T)value`,
-			// so handing it a boxed double would throw rather than widen.
-			if (!(_ref is Schema schemaRef)) { return null; }
+			Iterator nextIterator = new Iterator { Offset = it.Offset };
 
-			System.Type schemaType = schemaRef.GetType();
-			if (DeclaredFieldTypes.TryGetValue((schemaType, fieldIndex), out var cached)) { return cached; }
-
-			System.Type resolved = null;
-			if (schemaRef.fieldsByIndex.TryGetValue(fieldIndex, out var fieldName) && fieldName != null)
+			while (it.Offset < totalBytes)
 			{
-				System.Reflection.FieldInfo field = schemaType.GetField(fieldName);
-				if (field != null && field.FieldType == typeof(double)) { resolved = typeof(double); }
+				if (Utils.Decode.SwitchStructureCheck(bytes, it))
+				{
+					nextIterator.Offset = it.Offset + 1;
+					if (Refs.Has(Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, nextIterator))))
+					{
+						break;
+					}
+				}
+
+				it.Offset++;
+			}
+		}
+
+		// ─── resync bookkeeping (guarded by `ResyncVisited != null` at call sites) ───
+
+		private HashSet<object> ResyncVisitedFor(int refId)
+		{
+			if (!ResyncVisited.TryGetValue(refId, out var set))
+			{
+				ResyncVisited[refId] = set = new HashSet<object>();
+			}
+			return set;
+		}
+
+		/// <summary>
+		///     Release a replaced occupant: full-sync emits plain ADD (never
+		///     DELETE_AND_ADD), so an entry whose instance changed while this
+		///     client was off the wire would otherwise leak its previous ref.
+		///     Resync-only — a live patch's plain ADD can be a positional rewrite
+		///     where the occupant moved and is still alive.
+		/// </summary>
+		private void ResyncReleaseReplaced(IRef _ref, byte operation, object identity, object previousValue, object value)
+		{
+			if (previousValue is IRef previousRef && operation == (byte)OPERATION.ADD && previousValue != value)
+			{
+				Refs.Remove(previousRef.__refId);
+				AllChanges.Add(new DataChange
+				{
+					RefId = _ref.__refId,
+					Op = (byte)OPERATION.DELETE,
+					Field = null,
+					DynamicIndex = identity,
+					Value = null,
+					PreviousValue = previousValue
+				});
+			}
+		}
+
+		private void ResyncSweep()
+		{
+			if (ResyncDamaged)
+			{
+				ColyseusContext.Logger.Log("@colyseus/schema: resync sweep skipped — parts of the payload could not be decoded. Stale entries may persist until the next resync.");
+				return;
+			}
+			SweepSchema(State, new HashSet<int>());
+		}
+
+		private void SweepSchema(Schema schema, HashSet<int> seen)
+		{
+			if (!seen.Add(schema.__refId)) { return; }
+
+			// virtual metadata accessors — one walker covers DynamicSchema too
+			foreach (var entry in schema.fieldsByIndex)
+			{
+				schema.fieldTypes.TryGetValue(entry.Value, out var fieldType);
+				if (fieldType != "ref" && fieldType != "array" && fieldType != "map") { continue; }
+
+				object value = schema.GetByIndex(entry.Key);
+				if (value == null) { continue; }
+
+				if (fieldType == "ref")
+				{
+					SweepSchema((Schema)value, seen);
+				}
+				else
+				{
+					SweepCollection((ISchemaCollection)value, seen);
+				}
+			}
+		}
+
+		private void SweepCollection(ISchemaCollection coll, HashSet<int> seen)
+		{
+			if (!seen.Add(coll.__refId)) { return; }
+
+			// absent = the collection never appeared in the payload at all — it
+			// is not part of full-sync (@transient, view-invisible) and must be
+			// left alone. An empty set means "present with zero entries".
+			if (!ResyncVisited.TryGetValue(coll.__refId, out var visited)) { return; }
+
+			void Prune(object value, object identity)
+			{
+				AllChanges.Add(new DataChange
+				{
+					RefId = coll.__refId,
+					Op = (byte)OPERATION.DELETE,
+					Field = null,
+					DynamicIndex = identity,
+					Value = null,
+					PreviousValue = value
+				});
+				if (value is IRef childRef)
+				{
+					Refs.Remove(childRef.__refId);
+				}
 			}
 
-			DeclaredFieldTypes[(schemaType, fieldIndex)] = resolved;
-			return resolved;
+			// recurse so nested collections of retained entries sweep too; swept
+			// subtrees are left to the GC's transitive walk instead (sweeping
+			// them directly would double-decrement shared children)
+			void Keep(object value)
+			{
+				if (value is Schema childSchema) { SweepSchema(childSchema, seen); }
+			}
+
+			if (coll is IMapSchema map)
+			{
+				map.ResyncPrune(visited, Prune, Keep);
+			}
+			else if (coll is IArraySchema arr)
+			{
+				arr.ResyncPrune(visited, Prune, Keep);
+			}
+		}
+
+		/// <summary>
+		///     <c>typeof(double)</c> when a <c>"number"</c> can be delivered at full width to this
+		///     destination; <c>null</c> when it must stay <see cref="float" />, as every generated schema
+		///     mapping <c>"number"</c> to <see cref="float" /> requires.
+		/// </summary>
+		/// <remarks>
+		///     The destination governs, never the payload — so a value decodes to the same C# type
+		///     whatever encoding the server picked for it, patch after patch.
+		/// </remarks>
+		private static System.Type DoubleTargetOrNull(IRef _ref, int fieldIndex, string fieldType)
+		{
+			if (fieldType != "number") { return null; }
+
+			bool wide = _ref is Schema schema
+				? schema.AcceptsWideNumber(fieldIndex)
+				: _ref is ISchemaCollection collection && AcceptsWideNumber(collection);
+
+			return wide ? typeof(double) : null;
+		}
+
+		/// <summary>
+		///     Whether this collection's elements can hold a <see cref="double" />. <c>SetByIndex</c> casts
+		///     with <c>(T)value</c>, and unboxing converts neither way: an <c>object</c> element (what an
+		///     untyped state builds) takes anything, a <c>double</c> one is where the boxed float throws,
+		///     and <c>ArraySchema&lt;float&gt;</c> must keep receiving floats.
+		/// </summary>
+		private static bool AcceptsWideNumber(ISchemaCollection collection)
+		{
+			if (collection.HasSchemaChild) { return false; }
+
+			System.Type element = collection.GetChildType();
+			return element == typeof(object) || element == typeof(double);
 		}
 
 		protected void DecodeValue(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType, System.Type childType, byte operation, out object value, out object previousValue)
@@ -250,14 +406,35 @@ namespace Colyseus.Schema
 				}
 
 			}
+			else if (fieldType == "quantized")
+			{
+				// Quantized scalar: read the unsigned int of the descriptor's
+				// wire width, then dequantize — the instance only ever holds
+				// the wire-exact double (see Utils.Quantize).
+				var schemaRef = (Schema)_ref;
+				var desc = schemaRef.fieldQuantizedDescriptors[schemaRef.fieldsByIndex[fieldIndex]];
+
+				uint q = desc.Bits == 8 ? Utils.Decode.DecodeUint8(bytes, it)
+					: desc.Bits == 16 ? Utils.Decode.DecodeUint16(bytes, it)
+					: Utils.Decode.DecodeUint32(bytes, it);
+
+				value = Utils.Quantize.Dequantize(desc, q);
+			}
 			else if (childType == null)
 			{
 				// primitive values
-				value = Utils.Decode.DecodePrimitiveType(fieldType, bytes, it, DoubleFieldOrNull(_ref, fieldIndex, fieldType, bytes, it));
+				value = Utils.Decode.DecodePrimitiveType(fieldType, bytes, it, DoubleTargetOrNull(_ref, fieldIndex, fieldType));
 			}
 			else
 			{
 				var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+
+				// resync bookkeeping: mark the collection present in the payload —
+				// even with zero entries — so the sweep knows it participated
+				if (ResyncVisited != null && !ResyncVisited.ContainsKey(__refId))
+				{
+					ResyncVisited[__refId] = new HashSet<object>();
+				}
 
 				ISchemaCollection valueRef = Refs.Has(__refId)
 					? (ISchemaCollection)previousValue ?? (ISchemaCollection)Refs.Get(__refId)
@@ -409,6 +586,14 @@ namespace Colyseus.Schema
 				out var previousValue
 			);
 
+			// resync bookkeeping — record even when the value is unchanged
+			// (the change list can't serve as the record: its pushes are gated)
+			if (ResyncVisited != null)
+			{
+				ResyncVisitedFor(refMap.__refId).Add(dynamicIndex);
+				ResyncReleaseReplaced(refMap, operation, dynamicIndex, previousValue, value);
+			}
+
 			if (value != null)
 			{
 				refMap.SetByIndex(fieldIndex, dynamicIndex, value);
@@ -448,9 +633,16 @@ namespace Colyseus.Schema
 			}
 			else if (operation == (byte)OPERATION.DELETE_BY_REFID)
 			{
-				// TODO: refactor here, try to follow same flow as below
 				int refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
 				object itemByRefId = Refs.Get(refId);
+
+				// stale DELETE — refId unknown to this decoder (mid-tick joiner)
+				if (itemByRefId == null) { return true; }
+
+				// ref-count decrement — must run even when the item is absent from
+				// THIS array (view churn); this branch never reaches DecodeValue()
+				Refs.Remove(refId);
+
 				int i = 0;
 				index = -1;
 				foreach (var item in refArray.GetItems())
@@ -462,6 +654,9 @@ namespace Colyseus.Schema
 					}
 					i++;
 				}
+
+				if (index == -1) { return true; }
+
 				refArray.DeleteByIndex(index);
 				AllChanges.Add(new DataChange
 				{
@@ -531,9 +726,21 @@ namespace Colyseus.Schema
 				out var previousValue
 			);
 
+			// resync bookkeeping — identity is the resolved client-side index
+			// (ADD_BY_REFID resolves above, so visited indexes may be sparse)
+			if (ResyncVisited != null)
+			{
+				ResyncVisitedFor(refArray.__refId).Add(index);
+				ResyncReleaseReplaced(refArray, operation, index, previousValue, value);
+			}
+
 			if (value != null && value != previousValue)
 			{
-				refArray.SetByIndex(index, value, operation);
+				// resync snapshot ADDs are positional overwrites, not inserts
+				refArray.SetByIndex(index, value,
+					(ResyncVisited != null && operation == (byte)OPERATION.ADD)
+						? (byte)OPERATION.REPLACE
+						: operation);
 			}
 
 			if (previousValue != value)

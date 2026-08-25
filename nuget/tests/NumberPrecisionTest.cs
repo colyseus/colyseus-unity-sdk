@@ -24,6 +24,15 @@ namespace Colyseus.Tests
 		/// <summary>A real epoch millisecond, well past float32's 24-bit mantissa.</summary>
 		private const double EpochMs = 1786595532328d;
 
+		/// <summary>An integer `"number"` too big for float32 — an epoch millisecond sent as an int.</summary>
+		private static byte[] Uint64Payload(ulong value)
+		{
+			var bytes = new byte[9];
+			bytes[0] = 0xcf;
+			System.BitConverter.GetBytes(value).CopyTo(bytes, 1);
+			return bytes;
+		}
+
 		/// <summary>The same bytes @colyseus/schema emits for a `"number"` needing float64.</summary>
 		private static byte[] Float64Payload(double value)
 		{
@@ -109,36 +118,74 @@ namespace Colyseus.Tests
 		}
 
 		/// <summary>
-		///     Every other prefix must be byte-for-byte identical on both paths, since the new one is only
-		///     supposed to differ for 0xcb.
+		///     The prefix ladder at both widths: the wide read is exact, the narrow one is that same value
+		///     as a float, and each consumes its whole payload and nothing more.
 		/// </summary>
+		/// <remarks>
+		///     The two widths share one ladder, so this is where a prefix that reads the wrong bytes - or
+		///     drifts from the encoder - gets caught for both of them.
+		/// </remarks>
 		[Test]
-		public void NonFloat64PrefixesAreIdenticalOnBothPaths()
+		public void EveryPrefixDecodesAtBothWidths()
 		{
-			byte[][] payloads =
+			(byte[] Payload, double Value)[] cases =
 			{
-				new byte[] { 0x7f },                                            // positive fixint
-				new byte[] { 0xca, 0x00, 0x00, 0x80, 0x3f },                    // float32 1.0
-				new byte[] { 0xcc, 0xff },                                      // uint8
-				new byte[] { 0xcd, 0xff, 0xff },                                // uint16
-				new byte[] { 0xce, 0xff, 0xff, 0xff, 0xff },                    // uint32
-				new byte[] { 0xd0, 0x80 },                                      // int8
-				new byte[] { 0xd1, 0x00, 0x80 },                                // int16
-				new byte[] { 0xd2, 0x00, 0x00, 0x00, 0x80 },                    // int32
-				new byte[] { 0xff },                                            // negative fixint
+				(new byte[] { 0x7f }, 127),                                                 // positive fixint
+				(new byte[] { 0xff }, -1),                                                  // negative fixint
+				(new byte[] { 0xca, 0x00, 0x00, 0x80, 0x3f }, 1),                           // float32
+				(Float64Payload(EpochMs), EpochMs),                                         // float64
+				(new byte[] { 0xcc, 0xff }, 255),                                           // uint8
+				(new byte[] { 0xcd, 0xff, 0xff }, 65535),                                   // uint16
+				(new byte[] { 0xce, 0xff, 0xff, 0xff, 0xff }, 4294967295),                  // uint32
+				(Uint64Payload((ulong)EpochMs), EpochMs),                                   // uint64
+				(new byte[] { 0xd0, 0x80 }, -128),                                          // int8
+				(new byte[] { 0xd1, 0x00, 0x80 }, -32768),                                  // int16
+				(new byte[] { 0xd2, 0x00, 0x00, 0x00, 0x80 }, -2147483648),                 // int32
 			};
 
-			foreach (byte[] payload in payloads)
+			foreach ((byte[] payload, double expected) in cases)
 			{
-				var itOld = new Iterator { Offset = 0 };
-				var itNew = new Iterator { Offset = 0 };
+				var itWide = new Iterator { Offset = 0 };
+				var itNarrow = new Iterator { Offset = 0 };
 
-				float viaNumber = Decode.DecodeNumber(payload, itOld);
-				double viaDouble = Decode.DecodeNumberAsDouble(payload, itNew);
-
-				Assert.AreEqual(viaNumber, viaDouble, "prefix 0x{0:x2} decoded differently", payload[0]);
-				Assert.AreEqual(itOld.Offset, itNew.Offset, "prefix 0x{0:x2} consumed a different number of bytes", payload[0]);
+				Assert.AreEqual(expected, Decode.DecodeNumberAsDouble(payload, itWide),
+					"prefix 0x{0:x2} decoded to the wrong number", payload[0]);
+				Assert.AreEqual((float)expected, Decode.DecodeNumber(payload, itNarrow),
+					"prefix 0x{0:x2} is not the wide value narrowed", payload[0]);
+				Assert.AreEqual(payload.Length, itWide.Offset,
+					"prefix 0x{0:x2} consumed the wrong number of bytes", payload[0]);
+				Assert.AreEqual(itWide.Offset, itNarrow.Offset,
+					"prefix 0x{0:x2} consumed a different number of bytes at each width", payload[0]);
 			}
+		}
+
+		/// <summary>A schema whose collection elements can hold what its `"number"` children carry.</summary>
+		public class TimestampLog : Schema.Schema
+		{
+			[Colyseus.Schema.Type(0, "array", typeof(ArraySchema<double>), "number")]
+			public ArraySchema<double> at = null;
+		}
+
+		/// <summary>
+		///     `ArraySchema&lt;double&gt;` could not decode a `"number"` at all before: `SetByIndex` casts with
+		///     `(T)value`, and unboxing a float as a double throws rather than widening.
+		/// </summary>
+		[Test]
+		public void ArrayOfDoublesReceivesTheNumbersItCanHold()
+		{
+			var decoder = new Colyseus.Schema.Decoder<TimestampLog>();
+
+			var bytes = new System.Collections.Generic.List<byte>();
+			bytes.AddRange(new byte[] { 0x80, 1 });     // field index 0 ("at") → refId 1
+			bytes.AddRange(new byte[] { 255, 1 });      // SWITCH_TO_STRUCTURE refId 1
+			bytes.Add((byte)OPERATION.ADD);
+			bytes.Add(0);                               // index 0
+			bytes.AddRange(Float64Payload(EpochMs));
+
+			decoder.Decode(bytes.ToArray());
+
+			Assert.AreEqual(1, decoder.State.at.Count);
+			Assert.AreEqual(EpochMs, decoder.State.at[0]);
 		}
 	}
 }

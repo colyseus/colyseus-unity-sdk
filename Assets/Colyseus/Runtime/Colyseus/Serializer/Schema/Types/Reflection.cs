@@ -3,6 +3,28 @@ using Colyseus;
 namespace Colyseus.Schema
 {
     /// <summary>
+    ///     <c>t.quantized()</c> field descriptor as it rides the reflection
+    ///     handshake — schema-typed (bit-exact float64 bounds), not a string
+    ///     grammar.
+    /// </summary>
+    [Preserve]
+    public class QuantizedReflection : Schema
+    {
+        [Type(0, "float64")]
+        public double min;
+
+        [Type(1, "float64")]
+        public double max;
+
+        [Type(2, "uint8")]
+        public byte bits;
+
+        /// <summary>0 = clamp, 1 = wrap</summary>
+        [Type(3, "uint8")]
+        public byte mode;
+    }
+
+    /// <summary>
     ///     <see cref="Schema" /> used for the purposes of reflection
     /// </summary>
     [Preserve]
@@ -22,6 +44,20 @@ namespace Colyseus.Schema
 
         [Type(2, "number")]
         public float referencedType = -1;
+
+        /// <summary>
+        ///     Primitive child of a collection (array/map of "string" etc.) —
+        ///     its own slot, replacing the legacy "array:string" colon packing
+        ///     (gone in 5.0).
+        /// </summary>
+        [Type(3, "string")]
+        public string childPrimitive;
+
+        /// <summary>
+        ///     Set only on <c>t.quantized()</c> fields; null = not quantized.
+        /// </summary>
+        [Type(4, "ref", typeof(QuantizedReflection))]
+        public QuantizedReflection quantized;
     }
 
     /// <summary>

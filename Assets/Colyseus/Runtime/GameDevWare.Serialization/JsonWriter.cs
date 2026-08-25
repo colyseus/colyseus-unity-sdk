@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -20,8 +20,17 @@ using System.Linq;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
+	/// <summary>
+	/// Base implementation for a streaming JSON writer.
+	/// <para>This class provides the core infrastructure for generating structural JSON data, including 
+	/// automatic handling of object/array delimiters, comma separation, and value formatting. 
+	/// It operates in a forward-only, buffered manner to ensure high performance and low memory allocation.</para>
+	/// </summary>
 	public abstract class JsonWriter : IJsonWriter
 	{
+		/// <summary>
+		/// The size of the internal character buffer used for writing.
+		/// </summary>
 		public const int DEFAULT_BUFFER_SIZE = 1024;
 
 		[Flags]
@@ -55,10 +64,22 @@ namespace GameDevWare.Serialization
 		private readonly Stack<Structure> structStack;
 		private readonly char[] buffer;
 
+		/// <inheritdoc />
 		public SerializationContext Context { get; private set; }
+		/// <summary>
+		/// Gets the number of characters written to the output.
+		/// </summary>
 		public long CharactersWritten { get; protected set; }
+		/// <summary>
+		/// Gets or sets the initial padding for pretty printing.
+		/// </summary>
 		public int InitialPadding { get; set; }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JsonWriter"/> class.
+		/// </summary>
+		/// <param name="context">The serialization context.</param>
+		/// <param name="buffer">The character buffer to use for writing.</param>
 		protected JsonWriter(SerializationContext context, char[] buffer = null)
 		{
 			if (context == null) throw new ArgumentNullException("context");
@@ -69,10 +90,14 @@ namespace GameDevWare.Serialization
 			this.structStack = new Stack<Structure>(10);
 		}
 
+		/// <inheritdoc />
 		public abstract void Flush();
+		/// <inheritdoc />
 		public abstract void WriteJson(string jsonString);
+		/// <inheritdoc />
 		public abstract void WriteJson(char[] jsonString, int offset, int charactersToWrite);
 
+		/// <inheritdoc />
 		public void Write(string value)
 		{
 			if (value == null)
@@ -96,6 +121,7 @@ namespace GameDevWare.Serialization
 			this.buffer[0] = '"';
 			this.WriteJson(this.buffer, 0, 1);
 		}
+		/// <inheritdoc />
 		public void Write(JsonMember member)
 		{
 			this.WriteFormatting(JsonToken.Member);
@@ -117,6 +143,7 @@ namespace GameDevWare.Serialization
 				this.WriteJson(NameSeparator, 0, NameSeparator.Length);
 			}
 		}
+		/// <inheritdoc />
 		public void Write(int number)
 		{
 			this.WriteFormatting(JsonToken.Number);
@@ -124,6 +151,7 @@ namespace GameDevWare.Serialization
 			var len = JsonUtils.Int32ToBuffer(number, this.buffer, 0, this.Context.Format);
 			this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(uint number)
 		{
 			this.WriteFormatting(JsonToken.Number);
@@ -131,6 +159,7 @@ namespace GameDevWare.Serialization
 			var len = JsonUtils.UInt32ToBuffer(number, this.buffer, 0, this.Context.Format);
 			this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(long number)
 		{
 			this.WriteFormatting(JsonToken.Number);
@@ -142,6 +171,7 @@ namespace GameDevWare.Serialization
 			else
 				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(ulong number)
 		{
 			this.WriteFormatting(JsonToken.Number);
@@ -153,6 +183,7 @@ namespace GameDevWare.Serialization
 			else
 				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(float number)
 		{
 			this.WriteFormatting(JsonToken.Number);
@@ -163,6 +194,7 @@ namespace GameDevWare.Serialization
 			else
 				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(double number)
 		{
 			this.WriteFormatting(JsonToken.Number);
@@ -173,6 +205,7 @@ namespace GameDevWare.Serialization
 			else
 				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(decimal number)
 		{
 			this.WriteFormatting(JsonToken.Number);
@@ -183,12 +216,10 @@ namespace GameDevWare.Serialization
 			else
 				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(DateTime dateTime)
 		{
 			this.WriteFormatting(JsonToken.DateTime);
-
-			if (dateTime.Kind == DateTimeKind.Unspecified)
-				dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
 
 			var dateTimeFormat = this.Context.DateTimeFormats.FirstOrDefault() ?? "o";
 			if (dateTimeFormat.IndexOf('z') >= 0 && dateTime.Kind != DateTimeKind.Local)
@@ -198,6 +229,7 @@ namespace GameDevWare.Serialization
 
 			this.Write(dateString);
 		}
+		/// <inheritdoc />
 		public void Write(DateTimeOffset dateTimeOffset)
 		{
 			this.WriteFormatting(JsonToken.DateTime);
@@ -206,6 +238,7 @@ namespace GameDevWare.Serialization
 			var dateString = dateTimeOffset.ToString(dateTimeFormat, this.Context.Format);
 			this.Write(dateString);
 		}
+		/// <inheritdoc />
 		public void Write(bool value)
 		{
 			this.WriteFormatting(JsonToken.Boolean);
@@ -215,6 +248,7 @@ namespace GameDevWare.Serialization
 			else
 				this.WriteJson(False, 0, False.Length);
 		}
+		/// <inheritdoc />
 		public void WriteObjectBegin(int numberOfMembers)
 		{
 			this.WriteFormatting(JsonToken.BeginObject);
@@ -222,6 +256,7 @@ namespace GameDevWare.Serialization
 			this.structStack.Push(Structure.IsObject | Structure.IsStartOfStructure);
 			this.WriteJson(ObjectBegin, 0, ObjectBegin.Length);
 		}
+		/// <inheritdoc />
 		public void WriteObjectEnd()
 		{
 			this.WriteFormatting(JsonToken.EndOfObject);
@@ -230,6 +265,7 @@ namespace GameDevWare.Serialization
 			this.WriteNewlineAndPad(0);
 			this.WriteJson(ObjectEnd, 0, ObjectEnd.Length);
 		}
+		/// <inheritdoc />
 		public void WriteArrayBegin(int numberOfMembers)
 		{
 			this.WriteFormatting(JsonToken.BeginArray);
@@ -237,6 +273,7 @@ namespace GameDevWare.Serialization
 			this.structStack.Push(Structure.IsArray | Structure.IsStartOfStructure);
 			this.WriteJson(ArrayBegin, 0, ArrayBegin.Length);
 		}
+		/// <inheritdoc />
 		public void WriteArrayEnd()
 		{
 			this.WriteFormatting(JsonToken.EndOfArray);
@@ -244,6 +281,7 @@ namespace GameDevWare.Serialization
 			this.structStack.Pop();
 			this.WriteJson(ArrayEnd, 0, ArrayEnd.Length);
 		}
+		/// <inheritdoc />
 		public void WriteNull()
 		{
 			this.WriteFormatting(JsonToken.Null);
@@ -251,6 +289,7 @@ namespace GameDevWare.Serialization
 			this.WriteJson(Null, 0, Null.Length);
 		}
 
+		/// <inheritdoc />
 		public void Reset()
 		{
 			this.CharactersWritten = 0;

@@ -1,16 +1,16 @@
-/* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+/*
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
-	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND 
-	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE 
-	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY, 
-	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE 
+	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND
+	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE
+	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY,
+	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE
 	AND THOSE ARISING BY STATUTE OR FROM CUSTOM OR USAGE OF TRADE OR COURSE OF DEALING.
-	
-	This source code is distributed via Unity Asset Store, 
-	to use it in your project you should accept Terms of Service and EULA 
+
+	This source code is distributed via Unity Asset Store,
+	to use it in your project you should accept Terms of Service and EULA
 	https://unity3d.com/ru/legal/as_terms
 */
 
@@ -22,8 +22,17 @@ using System.Globalization;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
+	/// <summary>
+	/// Base implementation for a streaming JSON reader.
+	/// <para>This class handles the core logic of scanning input for JSON lexemes and maintaining structural state. 
+	/// It provides a high-performance alternative to traditional DOM-based parsers by processing data in a forward-only 
+	/// manner, keeping only the current token and a small buffer in memory.</para>
+	/// </summary>
 	public abstract class JsonReader : IJsonReader
 	{
+		/// <summary>
+		/// The size of the internal character buffer used for token scanning.
+		/// </summary>
 		protected const int DEFAULT_BUFFER_SIZE = 1024;
 
 		private sealed class Buffer : IList<char>
@@ -432,6 +441,11 @@ namespace GameDevWare.Serialization
 		private JsonToken token;
 		private readonly Buffer buffer;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JsonReader"/> class.
+		/// </summary>
+		/// <param name="context">The serialization context.</param>
+		/// <param name="buffer">The character buffer to use.</param>
 		protected JsonReader(SerializationContext context, char[] buffer = null)
 		{
 			if (context == null) throw new ArgumentNullException("context");
@@ -444,8 +458,14 @@ namespace GameDevWare.Serialization
 
 		#region IJsonReader Members
 
+		/// <summary>
+		/// Gets the serialization context.
+		/// </summary>
 		public SerializationContext Context { get; private set; }
 
+		/// <summary>
+		/// Gets the value info for the current token.
+		/// </summary>
 		public IValueInfo Value
 		{
 			get
@@ -456,6 +476,9 @@ namespace GameDevWare.Serialization
 			}
 		}
 
+		/// <summary>
+		/// Gets the current JSON token.
+		/// </summary>
 		public JsonToken Token
 		{
 			get
@@ -467,6 +490,9 @@ namespace GameDevWare.Serialization
 			}
 		}
 
+		/// <summary>
+		/// Gets the raw value of the current token.
+		/// </summary>
 		public object RawValue
 		{
 			get
@@ -478,11 +504,18 @@ namespace GameDevWare.Serialization
 			}
 		}
 
+		/// <summary>
+		/// Gets the total number of characters read.
+		/// </summary>
 		public long CharactersReaded
 		{
 			get { return this.buffer.CharactersReaded; }
 		}
 
+		/// <summary>
+		/// Moves the reader to the next token.
+		/// </summary>
+		/// <returns>True if the next token was read successfully; otherwise, false.</returns>
 		public bool NextToken()
 		{
 			var start = 0;
@@ -553,11 +586,18 @@ namespace GameDevWare.Serialization
 			return true;
 		}
 
+		/// <summary>
+		/// Checks if the end of the stream has been reached.
+		/// </summary>
+		/// <returns>True if the end of the stream has been reached; otherwise, false.</returns>
 		public bool IsEndOfStream()
 		{
 			return this.token == JsonToken.EndOfStream;
 		}
 
+		/// <summary>
+		/// Resets the reader's state.
+		/// </summary>
 		public void Reset()
 		{
 			this.buffer.Reset();
@@ -662,19 +702,12 @@ namespace GameDevWare.Serialization
 			return symbol == INSIGNIFICANT_NEWLINE || symbol == INSIGNIFICANT_RETURN || symbol == INSIGNIFICANT_SPACE ||
 				   symbol == INSIGNIFICANT_TAB || symbol == INSIGNIFICANT_NAME_SEPARATOR || symbol == INSIGNIFICANT_VALUE_SEPARATOR;
 		}
-		private static bool IsLiteralTerminator(char ch, bool quoted, char quoteCh, bool escaped, bool eos, IJsonReader reader)
+		private static bool IsLiteralTerminator(char ch, bool quoted, char quoteCh, IJsonReader reader)
 		{
-			if (!escaped && quoted && ch == quoteCh)
+			if (quoted && ch == quoteCh)
 				return true;
 			else if (quoted && (ch == INSIGNIFICANT_NEWLINE || ch == INSIGNIFICANT_RETURN))
 				throw JsonSerializationException.UnterminatedStringLiteral(reader);
-			else if (eos)
-			{
-				if (quoted)
-					throw JsonSerializationException.UnexpectedEndOfStream(reader);
-				else
-					return true;
-			}
 			else if (!quoted &&
 					 (ch == SIGNIFICANT_BEGIN_ARRAY || ch == SIGNIFICANT_BEGIN_OBJECT || ch == SIGNIFICANT_END_ARRAY ||
 					  ch == SIGNIFICANT_END_OBJECT || ch == INSIGNIFICANT_VALUE_SEPARATOR || ch == INSIGNIFICANT_NAME_SEPARATOR))
@@ -759,15 +792,27 @@ namespace GameDevWare.Serialization
 				literalStart++;
 			}
 #endif
-			var escaped = false; // is character is escaped
-			var eos = false; // is end of stream
 			do
 			{
-				eos = this.buffer.IsBeyondOfStream(position);
-				escaped = ch == '\\';
+				var eos = this.buffer.IsBeyondOfStream(position);
+				var escaped = ch == '\\';
 				ch = this.buffer[position];
 				position++;
-			} while (!IsLiteralTerminator(ch, quoted, quoteCh, escaped, eos, this));
+
+				if (eos)
+				{
+					if (quoted)
+						return false;
+					else
+						break;
+				}
+				else if (escaped)
+				{
+					escaped = false;
+					ch = '\0';
+				}
+
+			} while (!IsLiteralTerminator(ch, quoted, quoteCh, this));
 
 			var literalEnd = position - 1; // minus terminator character
 

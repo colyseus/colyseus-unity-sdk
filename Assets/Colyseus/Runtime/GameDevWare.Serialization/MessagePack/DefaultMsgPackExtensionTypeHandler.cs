@@ -4,23 +4,60 @@ using System.Collections.Generic;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.MessagePack
 {
+	/// <summary>
+	/// Provides a standard implementation for MessagePack extension types including system-wide defaults.
+	/// <para>This handler enables native MessagePack support for common .NET types such as <see cref="DateTime"/>, 
+	/// <see cref="decimal"/>, and <see cref="Guid"/> using standard extension type codes (e.g., -1 for timestamps). 
+	/// It serves as a high-performance default for binary serialization across .NET platforms.</para>
+	/// </summary>
 	public sealed class DefaultMessagePackExtensionTypeHandler : MessagePackExtensionTypeHandler
 	{
+		/// <summary>
+		/// Standard MessagePack type code for high-resolution timestamps.
+		/// </summary>
 		public const int EXTENSION_TYPE_TIMESTAMP = -1;
+		/// <summary>
+		/// Custom type code used to store <see cref="DateTime"/> values in binary format.
+		/// </summary>
 		public const int EXTENSION_TYPE_DATE_TIME = 40;
+		/// <summary>
+		/// Custom type code used to store <see cref="DateTimeOffset"/> values with timezone information.
+		/// </summary>
 		public const int EXTENSION_TYPE_DATE_TIME_OFFSET = 41;
+		/// <summary>
+		/// Custom type code used for high-precision <see cref="decimal"/> numbers.
+		/// </summary>
 		public const int EXTENSION_TYPE_DECIMAL = 42;
+		/// <summary>
+		/// Custom type code used to store 128-bit <see cref="Guid"/> values in a compact form.
+		/// </summary>
 		public const int EXTENSION_TYPE_GUID = 43;
+		/// <summary>
+		/// Size of Guid in bytes.
+		/// </summary>
 		public const int GUID_SIZE = 16;
+		/// <summary>
+		/// Size of decimal in bytes.
+		/// </summary>
 		public const int DECIMAL_SIZE = 16;
+		/// <summary>
+		/// Size of DateTime in bytes.
+		/// </summary>
 		public const int DATE_TIME_SIZE = 16;
+		/// <summary>
+		/// Size of DateTimeOffset in bytes.
+		/// </summary>
 		public const int DATE_TIME_OFFSET_SIZE = 16;
 
 		private static readonly Type[] DefaultExtensionTypes = new[] { typeof(decimal), typeof(DateTime), typeof(DateTimeOffset), typeof(Guid), typeof(DateTimeOffset), typeof(MessagePackTimestamp) };
+		/// <summary>
+		/// Singleton instance of the default extension type handler.
+		/// </summary>
 		public static DefaultMessagePackExtensionTypeHandler Instance = new DefaultMessagePackExtensionTypeHandler(EndianBitConverter.Little);
 
 		private readonly EndianBitConverter bitConverter;
 
+		/// <inheritdoc />
 		public override IEnumerable<Type> ExtensionTypes
 		{
 			get { return DefaultExtensionTypes; }

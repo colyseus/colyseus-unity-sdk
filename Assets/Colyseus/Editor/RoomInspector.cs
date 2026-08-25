@@ -63,10 +63,10 @@ namespace Colyseus.Editor
         // Tab selection for rooms
         private int _selectedRoomIndex = 0;
 
-        [MenuItem("Window/Colyseus/Room Inspector (experimental)")]
+        [MenuItem("Window/Colyseus/Room Inspector")]
         public static void ShowWindow()
         {
-			Debug.LogWarning("The Colyseus Room Inspector is experimental. Please report any issues to https://github.com/colyseus/colyseus-unity-sdk/issues");
+			Debug.LogWarning("Found an issue with the Colyseus Room Inspector? Please report it at https://github.com/colyseus/colyseus-unity-sdk/issues");
             var window = GetWindow<RoomInspector>("Colyseus Room Inspector");
             window.minSize = new Vector2(400, 300);
             window.Show();
