@@ -1,12 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <LangVersion>9.0</LangVersion>
     <AssemblyName>Colyseus.MonoGame</AssemblyName>
     <RootNamespace>Colyseus.MonoGame</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <IsPackable>true</IsPackable>
+    <!-- a stale Colyseus range must fail the pack, not ship a mismatched client -->
+    <WarningsAsErrors>$(WarningsAsErrors);NU1603;NU1608</WarningsAsErrors>
 
     <!-- NuGet package metadata -->
     <PackageId>Colyseus.MonoGame</PackageId>
@@ -24,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Colyseus" Version="[0.17,0.18)" />
+    <PackageReference Include="Colyseus" Version="[0.18,0.19)" />
     <PackageReference Include="Colyseus.NativeWebSocket" Version="2.0.7" />
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.2.1105" />
   </ItemGroup>
