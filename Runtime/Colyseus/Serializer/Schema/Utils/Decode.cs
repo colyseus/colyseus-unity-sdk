@@ -29,9 +29,9 @@ namespace Colyseus.Schema.Utils
         ///     The declared type of the field being decoded into, or <c>null</c> when it is not known.
         ///     Qualified as <c>System.Type</c> because <c>Colyseus.Schema.Type</c> is the field attribute.
         ///     <para>
-        ///         Only <c>typeof(double)</c> changes anything: a <c>"number"</c> carrying a float64 payload
-        ///         is decoded as <see cref="double" /> rather than narrowed to <see cref="float" />. Every
-        ///         other combination takes exactly the path it took before.
+        ///         Only <c>typeof(double)</c> changes anything: a <c>"number"</c> is decoded at full width
+        ///         rather than narrowed to <see cref="float" />. Every other combination takes exactly the
+        ///         path it took before.
         ///     </para>
         /// </param>
         public static object DecodePrimitiveType(string type, byte[] bytes, Iterator it, System.Type targetType)
@@ -43,16 +43,8 @@ namespace Colyseus.Schema.Utils
 
             if (type == "number")
             {
-                //
-                // `"number"` is variable-width, and the encoder emits the 0xcb float64 prefix ONLY after
-                // testing that the value does not survive a float32 round trip. DecodeNumber returns
-                // float and casts such a payload down, so the value arrives quantised - an epoch
-                // millisecond loses up to 65536 ms, silently.
-                //
-                // The prefix is PEEKED rather than consumed, so anything that is not a float64 payload
-                // never reaches the new path and decodes byte-for-byte as it did before.
-                //
-                if (targetType == typeof(double) && it.Offset < bytes.Length && bytes[it.Offset] == 0xcb)
+                // float loses an epoch millisecond by up to 65536ms, epoch seconds by ~128s
+                if (targetType == typeof(double))
                 {
                     return DecodeNumberAsDouble(bytes, it);
                 }
@@ -119,34 +111,20 @@ namespace Colyseus.Schema.Utils
         }
 
         /// <summary>
-        ///     Decode a <c>"number"</c> without narrowing a float64 payload.
+        ///     Decode a <c>"number"</c> at full width, for destinations that can hold a
+        ///     <see cref="double" />.
         /// </summary>
         /// <remarks>
-        ///     Identical to <see cref="DecodeNumber" /> in every case except the 0xcb prefix, which
-        ///     <see cref="DecodeNumber" /> casts down to <see cref="float" />. Kept as a separate method so
-        ///     the existing signature and behaviour are untouched.
+        ///     Float32 is exact for integers only up to 2^24, so the float64 payload is not the sole lossy
+        ///     case: epoch seconds (~1.79e9) arrive as a uint32 and quantise to ~128s, and int64/uint64
+        ///     lose far more. Every prefix is therefore read wide here, and <see cref="DecodeNumber" />
+        ///     narrows the result for the generated schemas that declare `"number"` as
+        ///     <see cref="float" />.
         /// </remarks>
         /// <param name="bytes">The incoming data</param>
         /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
         /// <returns><paramref name="bytes" /> decoded into a <see cref="double" /></returns>
         public static double DecodeNumberAsDouble(byte[] bytes, Iterator it)
-        {
-            if (it.Offset < bytes.Length && bytes[it.Offset] == 0xcb)
-            {
-                it.Offset++;
-                return DecodeFloat64(bytes, it);
-            }
-
-            return DecodeNumber(bytes, it);
-        }
-
-        /// <summary>
-        ///     Decode method to decode <paramref name="bytes" /> into a <see cref="float" />
-        /// </summary>
-        /// <param name="bytes">The incoming data</param>
-        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
-        /// <returns><paramref name="bytes" /> decoded into a <see cref="float" /></returns>
-        public static float DecodeNumber(byte[] bytes, Iterator it)
         {
             byte prefix = bytes[it.Offset++];
 
@@ -165,7 +143,7 @@ namespace Colyseus.Schema.Utils
             if (prefix == 0xcb)
             {
                 // float 64
-                return (float)DecodeFloat64(bytes, it);
+                return DecodeFloat64(bytes, it);
             }
 
             if (prefix == 0xcc)
@@ -222,7 +200,24 @@ namespace Colyseus.Schema.Utils
                 return (0xff - prefix + 1) * -1;
             }
 
-            return float.NaN;
+            return double.NaN;
+        }
+
+        /// <summary>
+        ///     Decode method to decode <paramref name="bytes" /> into a <see cref="float" />
+        /// </summary>
+        /// <remarks>
+        ///     One prefix ladder serves both widths - see <see cref="DecodeNumberAsDouble" />. Narrowing
+        ///     the wide read is what `"number"` has always resolved to here, to the last bit: only a 64-bit
+        ///     integer past 2^53 can round differently than a direct cast would, and float is off by
+        ///     hundreds there regardless.
+        /// </remarks>
+        /// <param name="bytes">The incoming data</param>
+        /// <param name="it">The iterator who's <see cref="Iterator.Offset" /> will be used to Decode the data</param>
+        /// <returns><paramref name="bytes" /> decoded into a <see cref="float" /></returns>
+        public static float DecodeNumber(byte[] bytes, Iterator it)
+        {
+            return (float)DecodeNumberAsDouble(bytes, it);
         }
 
         /// <summary>

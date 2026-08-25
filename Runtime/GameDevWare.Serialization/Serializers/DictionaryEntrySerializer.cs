@@ -1,5 +1,5 @@
-﻿/*
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+/*
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -15,18 +15,28 @@
 */
 using System;
 using System.Collections;
-using System.Runtime.Serialization;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for <see cref="DictionaryEntry"/> values.
+	/// </summary>
 	public sealed class DictionaryEntrySerializer : TypeSerializer
 	{
+		/// <summary>
+		/// Member name for the key of the dictionary entry.
+		/// </summary>
 		public const string KEY_MEMBER_NAME = "Key";
+		/// <summary>
+		/// Member name for the value of the dictionary entry.
+		/// </summary>
 		public const string VALUE_MEMBER_NAME = "Value";
 
+		/// <inheritdoc />
 		public override Type SerializedType { get { return typeof(DictionaryEntry); } }
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
@@ -59,7 +69,7 @@ namespace GameDevWare.Serialization.Serializers
 							reader.ReadValue(typeof(object));
 							break;
 						default:
-							throw new SerializationException(string.Format("Unknown member found '{0}' while '{1}' or '{2}' are expected.", memberName, KEY_MEMBER_NAME, VALUE_MEMBER_NAME));
+							throw JsonSerializationException.UnexpectedMemberName(memberName, string.Format("'{0}' or '{1}'", KEY_MEMBER_NAME, VALUE_MEMBER_NAME), reader);
 					}
 				}
 				reader.ReadObjectEnd(nextToken: false);
@@ -70,6 +80,8 @@ namespace GameDevWare.Serialization.Serializers
 				throw JsonSerializationException.UnexpectedToken(reader, JsonToken.BeginObject, JsonToken.BeginArray);
 			}
 		}
+
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");

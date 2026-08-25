@@ -8,6 +8,17 @@ using System.Linq;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
+	/// <summary>
+	/// Represents a collection of keys and values that are accessible by key and by index, maintaining the insertion order of elements.
+	/// <para>While the JSON specification typically treats objects as unordered collections of name/value pairs, 
+	/// and the standard .NET <see cref="Dictionary{TKey, TValue}"/> does not guarantee a specific iteration order, 
+	/// this class ensures that the order of keys is preserved during serialization and deserialization.</para>
+	/// <para>Unlike standard JavaScript objects, which automatically sort numeric keys in ascending order, 
+	/// this collection maintains the exact insertion order regardless of the key's type or value. 
+	/// Use this to ensure that data structures remain predictable and consistent across all platforms.</para>
+	/// </summary>
+	/// <typeparam name="KeyT">The type of the keys in the dictionary.</typeparam>
+	/// <typeparam name="ValueT">The type of the values in the dictionary.</typeparam>
 	[Serializable, DebuggerDisplay("IndexedDictionary, Count: {Count}")]
 	public class IndexedDictionary<KeyT, ValueT> : IDictionary<KeyT, ValueT>, IDictionary
 	{
@@ -78,12 +89,19 @@ namespace GameDevWare.Serialization
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 		ICollection<ValueT> IDictionary<KeyT, ValueT>.Values { get { return this.GetValues(); } }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="IndexedDictionary{KeyT, ValueT}"/> class.
+		/// </summary>
 		public IndexedDictionary()
 		{
 			this.dictionary = new Dictionary<KeyT, ValueT>();
 			this.keys = new List<KeyT>();
 			this.keysReadOnly = new ReadOnlyCollection<KeyT>(this.keys);
 		}
+		/// <summary>
+		/// Initializes a new instance of the <see cref="IndexedDictionary{KeyT, ValueT}"/> class with the specified initial capacity.
+		/// </summary>
+		/// <param name="count">The initial number of elements that the <see cref="IndexedDictionary{KeyT, ValueT}"/> can contain.</param>
 		public IndexedDictionary(int count)
 		{
 			if (count < 0) throw new ArgumentOutOfRangeException("count");
@@ -94,6 +112,10 @@ namespace GameDevWare.Serialization
 			this.keys = new List<KeyT>(count);
 			this.keysReadOnly = new ReadOnlyCollection<KeyT>(this.keys);
 		}
+		/// <summary>
+		/// Initializes a new instance of the <see cref="IndexedDictionary{KeyT, ValueT}"/> class that contains elements copied from the specified dictionary.
+		/// </summary>
+		/// <param name="dictionary">The dictionary whose elements are copied to the new <see cref="IndexedDictionary{KeyT, ValueT}"/>.</param>
 		public IndexedDictionary(IDictionary<KeyT, ValueT> dictionary)
 		{
 			if (dictionary == null) throw new ArgumentNullException("dictionary");
@@ -102,6 +124,10 @@ namespace GameDevWare.Serialization
 			this.keys = new List<KeyT>(dictionary.Keys);
 			this.keysReadOnly = new ReadOnlyCollection<KeyT>(this.keys);
 		}
+		/// <summary>
+		/// Initializes a new instance of the <see cref="IndexedDictionary{KeyT, ValueT}"/> class that contains elements copied from the specified collection.
+		/// </summary>
+		/// <param name="pairs">The collection whose elements are copied to the new <see cref="IndexedDictionary{KeyT, ValueT}"/>.</param>
 		public IndexedDictionary(IEnumerable<KeyValuePair<KeyT, ValueT>> pairs)
 		{
 			if (pairs == null) throw new ArgumentNullException("pairs");
@@ -113,6 +139,11 @@ namespace GameDevWare.Serialization
 			foreach (var pair in pairs)
 				this.Add(pair.Key, pair.Value);
 		}
+		/// <summary>
+		/// Initializes a new instance of the <see cref="IndexedDictionary{KeyT, ValueT}"/> class with the specified dictionary and keys.
+		/// </summary>
+		/// <param name="dictionary">The dictionary whose elements are copied to the new <see cref="IndexedDictionary{KeyT, ValueT}"/>.</param>
+		/// <param name="keys">The collection of keys that determines the order of elements in the new <see cref="IndexedDictionary{KeyT, ValueT}"/>.</param>
 		public IndexedDictionary(IDictionary<KeyT, ValueT> dictionary, ICollection<KeyT> keys)
 		{
 			if (dictionary == null) throw new ArgumentNullException("dictionary");
@@ -218,6 +249,10 @@ namespace GameDevWare.Serialization
 			this.dictionary.Remove(key);
 			this.keys.RemoveAt(index);
 		}
+		/// <summary>
+		/// Sorts the keys in the <see cref="IndexedDictionary{KeyT, ValueT}"/> using the specified comparer.
+		/// </summary>
+		/// <param name="comparer">The <see cref="IComparer{T}"/> implementation to use when comparing keys, or null to use the default comparer.</param>
 		public void SortKeys(IComparer<KeyT> comparer)
 		{
 			if (comparer == null) throw new ArgumentNullException("comparer");
@@ -312,6 +347,10 @@ namespace GameDevWare.Serialization
 			return this.GetEnumerator();
 		}
 
+		/// <summary>
+		/// Returns an enumerator that iterates through the <see cref="IndexedDictionary{KeyT, ValueT}"/>.
+		/// </summary>
+		/// <returns>An <see cref="Enumerator"/> for the <see cref="IndexedDictionary{KeyT, ValueT}"/>.</returns>
 		public Enumerator GetEnumerator()
 		{
 			return new Enumerator(this);
@@ -323,12 +362,19 @@ namespace GameDevWare.Serialization
 			return "Count: " + this.Count.ToString();
 		}
 
+		/// <summary>
+		/// Enumerates the elements of an <see cref="IndexedDictionary{KeyT, ValueT}"/>.
+		/// </summary>
 		public struct Enumerator : IEnumerator<KeyValuePair<KeyT, ValueT>>, IDictionaryEnumerator
 		{
 			private List<KeyT>.Enumerator innerEnumerator;
 			private readonly IndexedDictionary<KeyT, ValueT> owner;
 			private KeyValuePair<KeyT, ValueT> current;
 
+			/// <summary>
+			/// Initializes a new instance of the <see cref="Enumerator"/> struct.
+			/// </summary>
+			/// <param name="owner">The <see cref="IndexedDictionary{KeyT, ValueT}"/> to enumerate.</param>
 			public Enumerator(IndexedDictionary<KeyT, ValueT> owner)
 			{
 				this.owner = owner;

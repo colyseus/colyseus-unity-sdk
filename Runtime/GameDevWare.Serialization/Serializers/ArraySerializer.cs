@@ -1,16 +1,16 @@
-/* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+/*
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
-	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND 
-	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE 
-	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY, 
-	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE 
+	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND
+	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE
+	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY,
+	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE
 	AND THOSE ARISING BY STATUTE OR FROM CUSTOM OR USAGE OF TRADE OR COURSE OF DEALING.
-	
-	This source code is distributed via Unity Asset Store, 
-	to use it in your project you should accept Terms of Service and EULA 
+
+	This source code is distributed via Unity Asset Store,
+	to use it in your project you should accept Terms of Service and EULA
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
@@ -22,14 +22,22 @@ using System.Runtime.CompilerServices;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for array and collection types.
+	/// </summary>
 	public sealed class ArraySerializer : TypeSerializer
 	{
 		private readonly Type arrayType;
 		private readonly Type instantiatedArrayType;
 		private readonly Type elementType;
 
+		/// <inheritdoc />
 		public override Type SerializedType { get { return this.arrayType; } }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ArraySerializer"/> class.
+		/// </summary>
+		/// <param name="enumerableType">The type of the array or collection to serialize.</param>
 		public ArraySerializer(Type enumerableType)
 		{
 			if (enumerableType == null) throw new ArgumentNullException("enumerableType");
@@ -46,6 +54,7 @@ namespace GameDevWare.Serialization.Serializers
 				this.instantiatedArrayType = typeof(List<>).MakeGenericType(this.elementType);
 		}
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
@@ -53,54 +62,82 @@ namespace GameDevWare.Serialization.Serializers
 			if (reader.Token == JsonToken.Null)
 				return null;
 
-			var container = new ArrayList();
 			if (reader.Token != JsonToken.BeginArray)
-				throw JsonSerializationException.UnexpectedToken(reader, JsonToken.BeginArray);
+				throw JsonSerializationException.UnexpectedToken(reader, this.arrayType, JsonToken.BeginArray);
 
+			if (reader.Context.Hierarchy.Count >= reader.Context.MaxHierarchyDepth)
+				throw JsonSerializationException.SerializationGraphIsTooDeep(reader, (ulong)reader.Context.MaxHierarchyDepth);
+
+			var container = new ArrayList();
 			reader.Context.Hierarchy.Push(container);
-			var i = 0;
-			while (reader.NextToken() && reader.Token != JsonToken.EndOfArray)
+			try
 			{
-				reader.Context.Path.Push(new PathSegment(i++));
+				var i = 0;
+				while (reader.NextToken() && reader.Token != JsonToken.EndOfArray)
+				{
+					reader.Context.Path.Push(new PathSegment(i++));
 
-				var value = reader.ReadValue(this.elementType, false);
-				container.Add(value);
+					var value = reader.ReadValue(this.elementType, false);
+					container.Add(value);
 
-				reader.Context.Path.Pop();
+					reader.Context.Path.Pop();
+				}
+
+				if (reader.Token != JsonToken.EndOfArray)
+				{
+					if (reader.Token == JsonToken.EndOfStream)
+						throw JsonSerializationException.UnexpectedEndOfStream(reader, "reading array elements");
+
+					throw JsonSerializationException.UnexpectedToken(reader, this.arrayType, JsonToken.EndOfArray);
+				}
+
+				if (this.instantiatedArrayType == typeof(ArrayList))
+					return container;
+				else if (this.instantiatedArrayType.IsArray)
+					return container.ToArray(this.elementType);
+				else
+					return Activator.CreateInstance(this.instantiatedArrayType, container.ToArray(this.elementType));
 			}
-			reader.Context.Hierarchy.Pop();
-
-			if (reader.IsEndOfStream())
-				throw JsonSerializationException.UnexpectedToken(reader, JsonToken.EndOfArray);
-
-			if (this.instantiatedArrayType == typeof(ArrayList))
-				return container;
-			else if (this.instantiatedArrayType.IsArray)
-				return container.ToArray(this.elementType);
-			else
-				return Activator.CreateInstance(this.instantiatedArrayType, container.ToArray(this.elementType));
+			finally
+			{
+				reader.Context.Hierarchy.Pop();
+			}
 		}
 
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");
 			if (value == null) throw new ArgumentNullException("value");
 
-			var size = 0;
-			if (value is ICollection)
-				size = ((ICollection)value).Count;
-			else
-				size = ((IEnumerable)value).Cast<object>().Count();
+			if (writer.Context.Hierarchy.Contains(value, IdentityComparer.Default))
+				throw JsonSerializationException.CircularReferenceDetected(writer, this.arrayType);
+			if (writer.Context.Hierarchy.Count >= writer.Context.MaxHierarchyDepth)
+				throw JsonSerializationException.SerializationGraphIsTooDeep(writer, (ulong)writer.Context.MaxHierarchyDepth);
 
-			writer.WriteArrayBegin(size);
-			var i = 0;
-			foreach (var item in (IEnumerable)value)
+			writer.Context.Hierarchy.Push(value);
+			try
 			{
-				writer.Context.Path.Push(new PathSegment(i++));
-				writer.WriteValue(item, this.elementType);
-				writer.Context.Path.Pop();
+				var size = 0;
+				if (value is ICollection)
+					size = ((ICollection)value).Count;
+				else
+					size = ((IEnumerable)value).Cast<object>().Count();
+
+				writer.WriteArrayBegin(size);
+				var i = 0;
+				foreach (var item in (IEnumerable)value)
+				{
+					writer.Context.Path.Push(new PathSegment(i++));
+					writer.WriteValue(item, this.elementType);
+					writer.Context.Path.Pop();
+				}
+				writer.WriteArrayEnd();
 			}
-			writer.WriteArrayEnd();
+			finally
+			{
+				writer.Context.Hierarchy.Pop();
+			}
 		}
 
 		private Type GetElementType(Type arrayType)
@@ -131,6 +168,7 @@ namespace GameDevWare.Serialization.Serializers
 			return elementType;
 		}
 
+		/// <inheritdoc />
 		public override string ToString()
 		{
 			return string.Format("array of {1}, {0}", this.arrayType, this.elementType);

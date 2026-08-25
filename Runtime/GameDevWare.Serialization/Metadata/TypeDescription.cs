@@ -2,7 +2,7 @@
 #define UNITY
 #endif
 /*
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -101,15 +101,15 @@ namespace GameDevWare.Serialization.Metadata
 				var dataMember = default(DataMemberDescription);
 				if (member is PropertyInfo) dataMember = new PropertyDescription(this, member as PropertyInfo);
 				else if (member is FieldInfo) dataMember = new FieldDescription(this, member as FieldInfo);
-				else throw new InvalidOperationException("Unknown member type. Should be PropertyInfo or FieldInfo.");
+				else throw JsonSerializationException.UnsupportedMemberType(member);
 
 				if (string.IsNullOrEmpty(dataMember.Name))
-					throw JsonSerializationException.TypeIsNotValid(objectType, "has no members with empty name");
+					throw JsonSerializationException.TypeIsNotValid(objectType, "must not have members with an empty name");
 
 				if (memberNames.Contains(dataMember.Name))
 				{
 					var conflictingMember = members.First(m => m.Name == dataMember.Name);
-					throw JsonSerializationException.TypeIsNotValid(objectType, string.Format("has no duplicate member's name '{0}' ('{1}.{2}' and '{3}.{4}')", dataMember.Name, conflictingMember.Member.DeclaringType.Name, conflictingMember.Member.Name, dataMember.Member.DeclaringType.Name, dataMember.Member.Name));
+					throw JsonSerializationException.TypeIsNotValid(objectType, string.Format("must not have duplicate member name '{0}' ('{1}.{2}' and '{3}.{4}')", dataMember.Name, conflictingMember.Member.DeclaringType.Name, conflictingMember.Member.Name, dataMember.Member.DeclaringType.Name, dataMember.Member.Name));
 				}
 
 				members.Add(dataMember);

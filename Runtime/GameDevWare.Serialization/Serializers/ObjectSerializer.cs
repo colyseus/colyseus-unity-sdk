@@ -1,29 +1,36 @@
-/* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+/*
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
-	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND 
-	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE 
-	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY, 
-	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE 
+	THIS SOFTWARE IS DISTRIBUTED "AS-IS" WITHOUT ANY WARRANTIES, CONDITIONS AND
+	REPRESENTATIONS WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE
+	IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, MERCHANTABLE QUALITY,
+	FITNESS FOR A PARTICULAR PURPOSE, DURABILITY, NON-INFRINGEMENT, PERFORMANCE
 	AND THOSE ARISING BY STATUTE OR FROM CUSTOM OR USAGE OF TRADE OR COURSE OF DEALING.
-	
-	This source code is distributed via Unity Asset Store, 
-	to use it in your project you should accept Terms of Service and EULA 
+
+	This source code is distributed via Unity Asset Store,
+	to use it in your project you should accept Terms of Service and EULA
 	https://unity3d.com/ru/legal/as_terms
 */
 using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
+using System.Linq;
 using System.Text.RegularExpressions;
 using GameDevWare.Serialization.Metadata;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for object types.
+	/// </summary>
 	public class ObjectSerializer : TypeSerializer
 	{
+		/// <summary>
+		/// The name of the member used to store polymorphic type metadata during serialization.
+		/// <para>While allowing this metadata enables the reconstruction of complex inheritance hierarchies, it introduces a significant security risk.
+		/// An attacker providing untrusted data can use this field to force the instantiation of arbitrary types, which may lead to Remote Code Execution (RCE).</para>
+		/// </summary>
 		public const string TYPE_MEMBER_NAME = "_type";
 
 		private static readonly Regex VersionRegEx = new Regex(@", Version=[^\]]+", RegexOptions.None);
@@ -35,10 +42,19 @@ namespace GameDevWare.Serialization.Serializers
 		private readonly ObjectSerializer baseTypeSerializer;
 		private readonly SerializationContext context;
 
+		/// <inheritdoc />
 		public override Type SerializedType { get { return this.objectType; } }
 
+		/// <summary>
+		/// Gets or sets a value indicating whether to suppress type information.
+		/// </summary>
 		public bool SuppressTypeInformation { get; set; }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ObjectSerializer"/> class.
+		/// </summary>
+		/// <param name="context">The serialization context.</param>
+		/// <param name="type">The type of the object to serialize or deserialize.</param>
 		public ObjectSerializer(SerializationContext context, Type type)
 		{
 			if (type == null) throw new ArgumentNullException("type");
@@ -63,62 +79,92 @@ namespace GameDevWare.Serialization.Serializers
 			this.objectTypeDescription = TypeDescription.Get(type);
 		}
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
 
 			if (reader.Token != JsonToken.BeginObject)
-				throw JsonSerializationException.UnexpectedToken(reader, JsonToken.BeginObject);
+				throw JsonSerializationException.UnexpectedToken(reader, this.objectType, JsonToken.BeginObject);
+
+			if (reader.Context.Hierarchy.Count >= reader.Context.MaxHierarchyDepth)
+				throw JsonSerializationException.SerializationGraphIsTooDeep(reader, (ulong)reader.Context.MaxHierarchyDepth);
 
 			var serializerOverride = default(ObjectSerializer);
 			var container = new IndexedDictionary<string, object>(10);
 			reader.Context.Hierarchy.Push(container);
-			var instance = this.DeserializeMembers(reader, container, ref serializerOverride);
-			reader.Context.Hierarchy.Pop();
+			try
+			{
+				var instance = this.DeserializeMembers(reader, container, ref serializerOverride);
 
-			if (reader.Token != JsonToken.EndOfObject)
-				throw JsonSerializationException.UnexpectedToken(reader, JsonToken.EndOfObject);
+				if (reader.Token != JsonToken.EndOfObject)
+				{
+					if (reader.Token == JsonToken.EndOfStream)
+						throw JsonSerializationException.UnexpectedEndOfStream(reader, "reading object members");
 
-			if (instance != null)
-				return instance;
-			else if (serializerOverride != null)
-				return serializerOverride.PopulateInstance(container, null);
-			else
-				return this.PopulateInstance(container, null);
+					throw JsonSerializationException.UnexpectedToken(reader, this.objectType, JsonToken.EndOfObject);
+				}
+
+				if (instance != null)
+					return instance;
+				else if (serializerOverride != null)
+					return serializerOverride.PopulateInstance(container, null);
+				else
+					return this.PopulateInstance(container, null);
+			}
+			finally
+			{
+				reader.Context.Hierarchy.Pop();
+			}
 		}
+
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");
 			if (value == null) throw new ArgumentNullException("value");
 
-			var container = new IndexedDictionary<DataMemberDescription, object>();
+			if (writer.Context.Hierarchy.Contains(value, IdentityComparer.Default))
+				throw JsonSerializationException.CircularReferenceDetected(writer, this.objectType);
+			if (writer.Context.Hierarchy.Count >= writer.Context.MaxHierarchyDepth)
+				throw JsonSerializationException.SerializationGraphIsTooDeep(writer, (ulong)writer.Context.MaxHierarchyDepth);
 
-			this.CollectMemberValues(value, container);
-
-			if (this.SuppressTypeInformation || this.objectTypeDescription.IsAnonymousType)
+			writer.Context.Hierarchy.Push(value);
+			try
 			{
-				writer.WriteObjectBegin(container.Count);
+				var container = new IndexedDictionary<DataMemberDescription, object>();
 
+				this.CollectMemberValues(value, container);
+
+				if (this.SuppressTypeInformation || this.objectTypeDescription.IsAnonymousType)
+				{
+					writer.WriteObjectBegin(container.Count);
+
+				}
+				else
+				{
+					writer.WriteObjectBegin(container.Count + 1);
+
+					writer.Context.Path.Push(new PathSegment(TYPE_MEMBER_NAME));
+					writer.WriteMember(TYPE_MEMBER_NAME);
+					writer.WriteString(objectTypeNameWithoutVersion);
+					this.context.Path.Pop();
+				}
+
+				foreach (var kv in container)
+				{
+					writer.Context.Path.Push(new PathSegment(kv.Key.Name));
+					writer.WriteMember(kv.Key.Name);
+					writer.WriteValue(kv.Value, kv.Key.ValueType);
+					this.context.Path.Pop();
+				}
+
+				writer.WriteObjectEnd();
 			}
-			else
+			finally
 			{
-				writer.WriteObjectBegin(container.Count + 1);
-
-				writer.Context.Path.Push(new PathSegment(TYPE_MEMBER_NAME));
-				writer.WriteMember(TYPE_MEMBER_NAME);
-				writer.WriteString(objectTypeNameWithoutVersion);
-				this.context.Path.Pop();
+				writer.Context.Hierarchy.Pop();
 			}
-
-			foreach (var kv in container)
-			{
-				writer.Context.Path.Push(new PathSegment(kv.Key.Name));
-				writer.WriteMember(kv.Key.Name);
-				writer.WriteValue(kv.Value, kv.Key.ValueType);
-				this.context.Path.Pop();
-			}
-
-			writer.WriteObjectEnd();
 		}
 
 		private void CollectMemberValues(object instance, IndexedDictionary<DataMemberDescription, object> container)
@@ -160,8 +206,7 @@ namespace GameDevWare.Serialization.Serializers
 					}
 					catch (Exception getTypeError)
 					{
-						throw new SerializationException(string.Format("Failed to resolve type '{0}' of value for '{1}' of '{2}' type.\r\n" +
-							"More detailed information in inner exception.", typeName, memberName, this.objectType.Name), getTypeError);
+						throw JsonSerializationException.FailedToResolveMemberType(reader, typeName, memberName, this.objectType, getTypeError);
 					}
 					this.context.Path.Pop();
 
@@ -202,7 +247,7 @@ namespace GameDevWare.Serialization.Serializers
 				}
 				catch (Exception e)
 				{
-					throw new SerializationException(string.Format("Failed to read value for member '{0}' of '{1}' type.\r\nMore detailed information in inner exception.", memberName, this.objectType.Name), e);
+					throw JsonSerializationException.FailedToReadMemberValue(reader, memberName, this.objectType, e);
 				}
 
 				container[memberName] = value;
@@ -257,8 +302,7 @@ namespace GameDevWare.Serialization.Serializers
 				}
 				catch (Exception e)
 				{
-					throw new SerializationException(string.Format("Failed to set member '{0}' to value '{1}' of type {2}.\r\n More detailed information in inner exception.",
-						memberName, value, value != null ? value.GetType().FullName : "<null>"), e);
+					throw JsonSerializationException.FailedToSetMemberValue(memberName, value, e);
 				}
 			}
 
@@ -280,6 +324,11 @@ namespace GameDevWare.Serialization.Serializers
 			return this.baseTypeSerializer.TryGetMember(memberName, out member);
 		}
 
+		/// <summary>
+		/// Creates an instance of an object from the specified values.
+		/// </summary>
+		/// <param name="values">The values to populate the instance with.</param>
+		/// <returns>The created instance.</returns>
 		public static object CreateInstance(IndexedDictionary<string, object> values)
 		{
 			if (values == null) throw new ArgumentNullException("values");
@@ -293,6 +342,13 @@ namespace GameDevWare.Serialization.Serializers
 			}
 			return CreateInstance(values, instanceType);
 		}
+
+		/// <summary>
+		/// Creates an instance of the specified type from the specified values.
+		/// </summary>
+		/// <param name="values">The values to populate the instance with.</param>
+		/// <param name="instanceType">The type of the instance to create.</param>
+		/// <returns>The created instance.</returns>
 		public static object CreateInstance(IndexedDictionary<string, object> values, Type instanceType)
 		{
 			if (instanceType == null) throw new ArgumentNullException("instanceType");
@@ -302,6 +358,12 @@ namespace GameDevWare.Serialization.Serializers
 			var serializer = new ObjectSerializer(context, instanceType);
 			return serializer.PopulateInstance(values, null);
 		}
+
+		/// <summary>
+		/// Gets the version-invariant name of the specified type.
+		/// </summary>
+		/// <param name="type">The type to get the name for.</param>
+		/// <returns>The version-invariant name.</returns>
 		public static string GetVersionInvariantObjectTypeName(Type type)
 		{
 			if (type == null) throw new ArgumentNullException("type");
@@ -312,6 +374,7 @@ namespace GameDevWare.Serialization.Serializers
 			return fullName;
 		}
 
+		/// <inheritdoc />
 		public override string ToString()
 		{
 			return string.Format("object, {0}", this.objectType);

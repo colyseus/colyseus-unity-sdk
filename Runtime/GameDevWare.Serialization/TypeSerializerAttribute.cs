@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2019 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -19,11 +19,21 @@ using System;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
+	/// <summary>
+	/// Attribute that specifies the serializer for a type.
+	/// </summary>
 	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface, Inherited = false)]
 	public class TypeSerializerAttribute : Attribute
 	{
+		/// <summary>
+		/// Gets the type of the serializer.
+		/// </summary>
 		public Type SerializerType { get; private set; }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="TypeSerializerAttribute"/> class.
+		/// </summary>
+		/// <param name="type">The type of the serializer.</param>
 		public TypeSerializerAttribute(Type type)
 		{
 			if (type == null) throw new ArgumentNullException("type");

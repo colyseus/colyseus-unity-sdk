@@ -156,6 +156,21 @@ room.OnMessage<ExampleNetworkedUser>("onUserJoin", currentNetworkedUser =>
 room.Send("createEntity", new EntityCreationMessage() { creationId = creationId, attributes = attributes });
 ```
 
+### Request
+- `Request<TResponse>` sends a message and awaits the value the server returns from its matching `onMessage()` handler.
+- It throws a `RequestError` when the server rejects (`Name == "rejected"`, the reason in `Payload`) or faults (`Name` is the server error's name, e.g. `"no_handler"`), and a `TimeoutException` after `Room.DefaultRequestTimeout` (10s) — or the optional per-call `timeoutMs`.
+- Pass a callback to `Send` instead to get the reply as `(response, error)`.
+
+```csharp
+var profile = await room.Request<Profile>("get-profile", new { id = 42 });
+
+room.Send<Profile>("get-profile", new { id = 42 }, (profile, error) =>
+{
+    if (error != null) { Debug.LogError(error.Message); return; }
+    Debug.Log(profile.name);
+});
+```
+
 ### Room State:
 > See how to generate your `RoomState` from [State Handling](https://docs.colyseus.io/state/schema/#client-side-schema-generation)
 
