@@ -2,6 +2,11 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.2
+
+- Fix prediction drifting on `t.quantized()` input fields. The input instance kept the raw assigned value while the wire carried the quantized one, so the reconciler replayed from a value the server never sees — a mispredict every frame. Assigned values are now snapped to their wire-exact value on encode, and a jitter landing in the same quantization bucket no longer re-transmits.
+- Fix input fields left at their default value never reaching the server. The first packet diffed against the construction defaults, so `input.moveR = 0` was silently dropped; with `defineInput({ sanitize })` the server then floor-clamped the never-received field to its minimum — an untouched `moveR: [-1, 1]` arriving as `-1`, i.e. a phantom held stick. The first `Encode()` after construction (or `Reset()`) now emits every field, matching the JS SDK, where a field initializer marks the field dirty.
+
 ## 0.18.1
 
 - Fix the `Colyseus.MonoGame` NuGet package pulling in a 0.17 core, which cannot connect to a 0.18 server. It also targets `net8.0` again, so MonoGame's own project templates can reference it.

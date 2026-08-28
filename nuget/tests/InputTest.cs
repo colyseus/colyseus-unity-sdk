@@ -24,6 +24,17 @@ namespace SchemaTest.Input
 		[Colyseus.Schema.Type(3, "uint8")]
 		public byte action;
 	}
+
+	// Quantized look angles, mirroring the fps demo's yaw/pitch. Codegen emits
+	// `= default(T)`, which is what makes every C# field "assigned".
+	public class LookInput : Colyseus.Schema.Schema
+	{
+		[Colyseus.Schema.Type(0, "quantized", QuantizeMin = 0, QuantizeMax = 6.283185307179586, QuantizeBits = 16, QuantizeWrap = true)]
+		public double yaw = default(double);
+
+		[Colyseus.Schema.Type(1, "quantized", QuantizeMin = -1.5, QuantizeMax = 1.5, QuantizeBits = 8, QuantizeWrap = false)]
+		public double pitch = default(double);
+	}
 }
 
 namespace Colyseus.Tests
@@ -156,7 +167,7 @@ namespace Colyseus.Tests
 			handle.Send();
 
 			// [19|0x80][varint Δreckon][uint16 renderDelta=90][delta body]
-			CollectionAssert.AreEqual(new byte[] { 147, 205, 232, 3, 90, 0, 128, 202, 0, 0, 192, 63 }, stub.Sent[0]);
+			CollectionAssert.AreEqual(new byte[] { 147, 205, 232, 3, 90, 0, 128, 202, 0, 0, 192, 63, 129, 0, 130, 0, 131, 0 }, stub.Sent[0]);
 			CollectionAssert.AreEqual(new byte[] { 147, 17, 90, 0, 128, 2 }, stub.Sent[1]);
 			CollectionAssert.AreEqual(new byte[] { 147, 16, 90, 0 }, stub.Sent[2]);
 
@@ -178,7 +189,7 @@ namespace Colyseus.Tests
 			input.vx = 2;
 			handle.Send();     // Δ = 50
 
-			CollectionAssert.AreEqual(new byte[] { 147, 205, 142, 3, 128, 202, 0, 0, 192, 63 }, stub.Sent[0]);
+			CollectionAssert.AreEqual(new byte[] { 147, 205, 142, 3, 128, 202, 0, 0, 192, 63, 129, 0, 130, 0, 131, 0 }, stub.Sent[0]);
 			CollectionAssert.AreEqual(new byte[] { 147, 50, 128, 2 }, stub.Sent[1]);
 			Assert.AreEqual(0, handle.ReckonTimeAt(1)); // reckon ring off
 		}
@@ -191,7 +202,7 @@ namespace Colyseus.Tests
 
 			input.vx = 1;
 			handle.Send();
-			CollectionAssert.AreEqual(new byte[] { 147, 0, 0, 0, 128, 1 }, stub.Sent[0]);
+			CollectionAssert.AreEqual(new byte[] { 147, 0, 0, 0, 128, 1, 129, 0, 130, 0, 131, 0 }, stub.Sent[0]);
 		}
 
 		[Test]
@@ -214,7 +225,7 @@ namespace Colyseus.Tests
 			input.jump = true;
 			handle.Send();                     // stamped, Δ=200
 
-			CollectionAssert.AreEqual(new byte[] { 19, 128, 1 }, stub.Sent[0]);
+			CollectionAssert.AreEqual(new byte[] { 19, 128, 1, 129, 0, 130, 0, 131, 0 }, stub.Sent[0]);
 			CollectionAssert.AreEqual(new byte[] { 147, 205, 76, 4, 130, 1 }, stub.Sent[1]);
 			CollectionAssert.AreEqual(new byte[] { 19, 130, 0 }, stub.Sent[2]);
 			CollectionAssert.AreEqual(new byte[] { 147, 204, 200, 130, 1 }, stub.Sent[3]);
@@ -233,8 +244,8 @@ namespace Colyseus.Tests
 			Assert.AreEqual(2, handle.SentCount);
 
 			// [20][baseSeq][len][slot]… — unreliable is never stamped
-			CollectionAssert.AreEqual(new byte[] { 20, 1, 6, 128, 202, 0, 0, 192, 63 }, stub.Sent[0]);
-			CollectionAssert.AreEqual(new byte[] { 20, 1, 6, 128, 202, 0, 0, 192, 63, 6, 128, 202, 0, 0, 32, 64 }, stub.Sent[1]);
+			CollectionAssert.AreEqual(new byte[] { 20, 1, 12, 128, 202, 0, 0, 192, 63, 129, 0, 130, 0, 131, 0 }, stub.Sent[0]);
+			CollectionAssert.AreEqual(new byte[] { 20, 1, 12, 128, 202, 0, 0, 192, 63, 129, 0, 130, 0, 131, 0, 6, 128, 202, 0, 0, 32, 64 }, stub.Sent[1]);
 		}
 
 		[Test]
@@ -445,6 +456,40 @@ namespace Colyseus.Tests
 			var room = new TestRoom();
 			Assert.Throws<NotSupportedException>(
 				() => room.Input(null, new InputOptions { Mode = "unreliable" }));
+		}
+
+		[Test]
+		public void InputEncoderSnapsQuantizedFieldsTest()
+		{
+			var input = new SchemaTest.Input.LookInput();
+			var encoder = new InputEncoder(input);
+
+			input.yaw = 1.2345;
+			input.pitch = -0.6789;
+			encoder.Encode();
+
+			// the wire only ever carries dequant(quant(v)), so the instance must
+			// hold that too — the reconciler replays from a COPY of it
+			Assert.AreEqual(
+				Colyseus.Schema.Utils.Quantize.Snap(input.fieldQuantizedDescriptors["yaw"], 1.2345), input.yaw);
+			Assert.AreEqual(
+				Colyseus.Schema.Utils.Quantize.Snap(input.fieldQuantizedDescriptors["pitch"], -0.6789), input.pitch);
+			Assert.AreNotEqual(1.2345, input.yaw, "quantization is lossy — the snap must move the value");
+		}
+
+		[Test]
+		public void InputEncoderSkipsSubBucketQuantizedJitterTest()
+		{
+			var input = new SchemaTest.Input.LookInput();
+			var encoder = new InputEncoder(input);
+
+			input.yaw = 1.2345;
+			encoder.Encode();                    // snapshot
+			var snapped = input.yaw;
+
+			input.yaw = snapped + 1e-9;          // same bucket → same wire byte
+			CollectionAssert.IsEmpty(encoder.Encode());
+			Assert.AreEqual(snapped, input.yaw);
 		}
 	}
 }
