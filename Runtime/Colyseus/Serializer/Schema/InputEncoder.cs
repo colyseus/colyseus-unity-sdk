@@ -12,9 +12,9 @@ namespace Colyseus.Schema
 	///     <para>
 	///     Delta tracking differs from the JS reference by design: the reference
 	///     uses setter-populated ChangeTrees; this port diffs the instance
-	///     against the last-sent snapshot (seeded from construction defaults, so
-	///     an unassigned field is not dirty). Benign divergence: re-assigning an
-	///     identical value emits nothing — the server decodes to the same state.
+	///     against the last-sent snapshot, so the first <see cref="Encode()" />
+	///     emits every field. Benign divergence: re-assigning an identical value
+	///     emits nothing — the server decodes to the same state.
 	///     </para>
 	///
 	///     <para>
@@ -44,12 +44,19 @@ namespace Colyseus.Schema
 		/// </summary>
 		public int Seq { get; private set; }
 
-		// field indexes in wire order
+		// per-field metadata in wire order, resolved once: the Schema indexer is
+		// reflection, so the per-tick loop stays off the metadata dictionaries
 		private readonly int[] fieldIndexes;
+		private readonly string[] fieldNames;
+		private readonly string[] fieldTypesByPos;
+		private readonly Utils.QuantizeDescriptor[] quantDescs; // null = not quantized
 
-		// last-sent snapshot per field index, seeded from construction
-		// defaults; null → snapshot mode: next encode emits every populated
-		// field (after Reset()).
+		// Last-sent snapshot per field index; null until the first Encode() (and
+		// after Reset()), which therefore emits every field. Codegen emits
+		// `= default(T)` on every C# field, and in JS a field initializer runs
+		// through the setter and marks it dirty — so a full first packet IS the
+		// reference behaviour, not a divergence. Seeding this from the construction
+		// defaults instead silently swallows `input.moveR = 0`.
 		private Dictionary<int, object> baseline;
 
 		// unreliable ring (oldest→newest via head/count arithmetic)
@@ -64,33 +71,36 @@ namespace Colyseus.Schema
 			HistorySize = Mode == "unreliable" ? Math.Max(1, historySize) : 1;
 
 			fieldIndexes = instance.fieldsByIndex.Keys.OrderBy(i => i).ToArray();
-			foreach (var index in fieldIndexes)
+			fieldNames = new string[fieldIndexes.Length];
+			fieldTypesByPos = new string[fieldIndexes.Length];
+			quantDescs = new Utils.QuantizeDescriptor[fieldIndexes.Length];
+
+			for (int i = 0; i < fieldIndexes.Length; i++)
 			{
+				var index = fieldIndexes[i];
+				var name = instance.fieldsByIndex[index];
+
 				if (index >= MAX_FIELDS)
 				{
 					throw new Exception(
-						$"InputEncoder: field '{instance.fieldsByIndex[index]}' is at index {index}; a Schema may only have {MAX_FIELDS} fields.");
+						$"InputEncoder: field '{name}' is at index {index}; a Schema may only have {MAX_FIELDS} fields.");
 				}
 
-				var fieldType = instance.fieldTypes[instance.fieldsByIndex[index]];
+				var fieldType = instance.fieldTypes[name];
 				if (fieldType == "ref" || fieldType == "array" || fieldType == "map")
 				{
 					throw new Exception(
-						$"InputEncoder: non-primitive field '{instance.fieldsByIndex[index]}' is not supported.");
+						$"InputEncoder: non-primitive field '{name}' is not supported.");
 				}
+
+				fieldNames[i] = name;
+				fieldTypesByPos[i] = fieldType;
+				if (fieldType == "quantized") { quantDescs[i] = instance.fieldQuantizedDescriptors[name]; }
 			}
 
 			if (Mode == "unreliable")
 			{
 				slots = new List<byte>[HistorySize];
-			}
-
-			// diff against construction defaults from the start — an unassigned
-			// field is not dirty (the JS ChangeTree behaves the same way)
-			baseline = new Dictionary<int, object>();
-			foreach (var index in fieldIndexes)
-			{
-				baseline[index] = instance[instance.fieldsByIndex[index]];
 			}
 		}
 
@@ -116,9 +126,8 @@ namespace Colyseus.Schema
 		/// <summary>Copy the bound instance's field values into <paramref name="target" /> (same-type instance).</summary>
 		public void CopyInto(Schema target)
 		{
-			foreach (var index in fieldIndexes)
+			foreach (var name in fieldNames)
 			{
-				var name = Instance.fieldsByIndex[index];
 				target[name] = Instance[name];
 			}
 		}
@@ -129,23 +138,41 @@ namespace Colyseus.Schema
 			bool snapshot = baseline == null; // post-reset
 			if (snapshot) { baseline = new Dictionary<int, object>(); }
 
-			foreach (var index in fieldIndexes)
+			for (int i = 0; i < fieldIndexes.Length; i++)
 			{
-				var name = Instance.fieldsByIndex[index];
+				int index = fieldIndexes[i];
+				var name = fieldNames[i];
 				var current = Instance[name];
+
+				// Quantization is LOSSY and the server only ever sees dequant(q), so
+				// snap the instance to the wire value BEFORE diffing: the reconciler
+				// replays from a COPY of this instance and must step the value the
+				// server steps, and two writes landing in the same bucket then emit
+				// nothing. The JS setter snaps on assignment (annotations.ts,
+				// makeQuantizedSetter); C# generates plain fields, so it happens here.
+				uint q = 0;
+				var desc = quantDescs[i];
+				if (desc != null && current != null)
+				{
+					q = Utils.Quantize.QuantizeValue(desc, Convert.ToDouble(current));
+					current = Utils.Quantize.Dequantize(desc, q);
+					Instance[name] = current;
+				}
+
 				bool changed = snapshot
 					? current != null                                        // snapshot: every populated field
 					: !Equals(current, baseline.TryGetValue(index, out var prev) ? prev : null);
 				if (!changed) { continue; }
 
 				output.Add((byte)(0x80 | index)); // ADD|fieldIndex — the schema field op
-				EncodeValue(output, Instance.fieldTypes[name], name, current);
+				if (desc != null) { EncodeQuantized(output, desc, q); }
+				else { EncodeValue(output, fieldTypesByPos[i], current); }
 				baseline[index] = current;
 			}
 			return output;
 		}
 
-		private void EncodeValue(List<byte> output, string fieldType, string fieldName, object value)
+		private static void EncodeValue(List<byte> output, string fieldType, object value)
 		{
 			switch (fieldType)
 			{
@@ -162,18 +189,16 @@ namespace Colyseus.Schema
 				case "uint64": Utils.Encode.Uint64(output, Convert.ToUInt64(value)); break;
 				case "float32": Utils.Encode.Float32(output, Convert.ToSingle(value)); break;
 				case "float64": Utils.Encode.Float64(output, Convert.ToDouble(value)); break;
-				case "quantized":
-				{
-					var desc = Instance.fieldQuantizedDescriptors[fieldName];
-					uint q = Utils.Quantize.QuantizeValue(desc, Convert.ToDouble(value));
-					if (desc.Bits == 8) { Utils.Encode.Uint8(output, (byte)q); }
-					else if (desc.Bits == 16) { Utils.Encode.Uint16(output, (ushort)q); }
-					else { Utils.Encode.Uint32(output, q); }
-					break;
-				}
 				default:
 					throw new Exception($"InputEncoder: unsupported field type '{fieldType}'");
 			}
+		}
+
+		private static void EncodeQuantized(List<byte> output, Utils.QuantizeDescriptor desc, uint q)
+		{
+			if (desc.Bits == 8) { Utils.Encode.Uint8(output, (byte)q); }
+			else if (desc.Bits == 16) { Utils.Encode.Uint16(output, (ushort)q); }
+			else { Utils.Encode.Uint32(output, q); }
 		}
 
 		private byte[] PushAndEmitRing(List<byte> body)
