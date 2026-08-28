@@ -30,7 +30,7 @@ Run `unity-setup.sh` to fetch external dependencies (e.g. [NativeWebSocket](http
 bash unity-setup.sh
 ```
 
-This is required before opening the project in Unity. The fetched files are gitignored and bundled automatically during CI for UPM and `.unitypackage` releases.
+This is required before opening the project in Unity, and again whenever a new NativeWebSocket version ships — the script always clones the tip of the `upm-2` branch, so re-running it is how you move to the latest.
 
 ### NuGet / Godot / MonoGame
 
