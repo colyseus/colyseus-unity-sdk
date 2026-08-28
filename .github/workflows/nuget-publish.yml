@@ -32,8 +32,6 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -42,19 +40,22 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Check for version change
+      # Ask NuGet what is live rather than diffing against HEAD~1: a release
+      # whose version bump isn't in the tip commit skipped silently, and the
+      # job still reported success.
+      - name: Check whether this version is already on NuGet
         id: version
         run: |
           CURRENT=$(python3 -c "import json; print(json.load(open('Assets/Colyseus/package.json'))['version'])")
-          PREVIOUS=$(git show HEAD~1:Assets/Colyseus/package.json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "")
+          PUBLISHED=$(curl -sf https://api.nuget.org/v3-flatcontainer/colyseus/index.json \
+            | python3 -c "import sys,json; print(' '.join(json.load(sys.stdin)['versions']))" 2>/dev/null || echo "")
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
-          echo "previous=$PREVIOUS" >> $GITHUB_OUTPUT
-          if [ "$CURRENT" != "$PREVIOUS" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Version changed: $PREVIOUS -> $CURRENT"
-          else
+          if echo " $PUBLISHED " | grep -q " $CURRENT "; then
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "Version unchanged: $CURRENT"
+            echo "$CURRENT is already on NuGet — nothing to publish"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Publishing $CURRENT (NuGet has: ${PUBLISHED:-none})"
           fi
 
       - name: Pack
