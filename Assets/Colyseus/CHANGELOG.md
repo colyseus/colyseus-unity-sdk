@@ -2,6 +2,10 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.3
+
+- Fix the SDK not compiling when installed from UPM or the released `.unitypackage`: four runtime files shipped without a `.meta`, so Unity skipped them and `Room.cs` itself failed to build with `RoomClock`, `InputHandle`, `InputOptions` and `QuantizeDescriptor` unresolved. Every 0.18 release so far was affected; installing from a clone was not. Thanks @byteflowx for the diagnosis! [#270](https://github.com/colyseus/colyseus-unity-sdk/issues/270)
+
 ## 0.18.2
 
 - Fix prediction drifting on `t.quantized()` input fields. The input instance kept the raw assigned value while the wire carried the quantized one, so the reconciler replayed from a value the server never sees — a mispredict every frame. Assigned values are now snapped to their wire-exact value on encode, and a jitter landing in the same quantization bucket no longer re-transmits.
