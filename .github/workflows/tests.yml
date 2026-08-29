@@ -7,6 +7,16 @@ on:
     branches: [master, universal]
 
 jobs:
+  meta-files:
+    name: Unity .meta files
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check every asset has a committed .meta
+        run: ./scripts/check-meta.sh
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest

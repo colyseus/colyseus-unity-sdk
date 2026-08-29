@@ -32,6 +32,8 @@ bash unity-setup.sh
 
 This is required before opening the project in Unity, and again whenever a new NativeWebSocket version ships — the script always clones the tip of the `upm-2` branch, so re-running it is how you move to the latest.
 
+It also points `core.hooksPath` at `.githooks/`, which installs a pre-push check that every asset under `Assets/` has a committed `.meta`. Unity generates those locally, so a missing one is invisible from a clone — but it drops the file from the UPM branch and from the released `.unitypackage`. Run it by hand with `./scripts/check-meta.sh`.
+
 ### NuGet / Godot / MonoGame
 
 External dependencies are resolved via NuGet packages — no setup script needed. The SDK is available as the `Colyseus` NuGet package, which depends on `Colyseus.NativeWebSocket`.

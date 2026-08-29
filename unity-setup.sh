@@ -12,3 +12,6 @@ git clone --branch "$NATIVEWEBSOCKET_BRANCH" --depth 1 "$NATIVEWEBSOCKET_REPO" "
 
 rm -rf "$NATIVEWEBSOCKET_DIR"
 cp -r "$TMPDIR/WebSocket" "$NATIVEWEBSOCKET_DIR"
+
+# Committed .meta files are what make the SDK ship complete; refuse to push without them.
+git config core.hooksPath .githooks

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Refuse to push a commit whose Unity assets have no .meta — the SDK compiles
+# from a clone (Unity generates them locally) but not from UPM or the
+# .unitypackage, which only ship what has a committed .meta. See issue #270.
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
+
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue   # branch deletion
+    if ! "$root/scripts/check-meta.sh" "$local_sha"; then
+        echo "pre-push aborted at $(git rev-parse --short "$local_sha"). Commit the .meta files, or push with --no-verify." >&2
+        exit 1
+    fi
+done
