@@ -53,11 +53,14 @@ fi
 
 # A .meta over a gitignored path is deliberate: it pins the GUID of a folder
 # fetched at build time (Runtime/WebSocket) or otherwise kept out of the repo.
+# The trailing slash matters — a `dir/` pattern matches only what git can see is
+# a directory, and on a fresh checkout the directory isn't there yet.
 orphans=$(mktemp)
 trap 'rm -f "$paths" "$metas" "$required" "$orphans"' EXIT
 while IFS= read -r meta; do
     [ -n "$meta" ] || continue
     git check-ignore -q "${meta%.meta}" && continue
+    git check-ignore -q "${meta%.meta}/" && continue
     printf '%s\n' "$meta" >> "$orphans"
 done < <(comm -13 "$required" "$metas")
 if [ -s "$orphans" ]; then

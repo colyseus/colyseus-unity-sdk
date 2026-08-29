@@ -5,6 +5,9 @@ on:
     branches:
       - master
       - dev
+  # A release that fails after the version was bumped cannot be retried by
+  # pushing again — the semver check only fires on the commit that changed it.
+  workflow_dispatch:
 
 jobs:
   checkSemver:
@@ -32,7 +35,7 @@ jobs:
     name: Update UPM branch
     runs-on: ubuntu-latest
     needs: [checkSemver, checkMeta]
-    if: needs.checkSemver.outputs.semver-updated == 'true'
+    if: needs.checkSemver.outputs.semver-updated == 'true' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v2
 
@@ -53,7 +56,7 @@ jobs:
     name: Create Unity Package and Release
     runs-on: ubuntu-latest
     needs: [checkSemver, checkMeta]
-    if: needs.checkSemver.outputs.semver-updated == 'true'
+    if: needs.checkSemver.outputs.semver-updated == 'true' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write # create the release and upload its asset
     steps:
