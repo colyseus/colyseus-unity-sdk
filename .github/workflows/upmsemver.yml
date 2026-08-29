@@ -13,6 +13,7 @@ jobs:
   checkSemver:
     name: Check for Semver Change
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     outputs:
       semver-updated: ${{ steps.check.outputs.changed }}
     steps:
@@ -35,7 +36,7 @@ jobs:
     name: Update UPM branch
     runs-on: ubuntu-latest
     needs: [checkSemver, checkMeta]
-    if: needs.checkSemver.outputs.semver-updated == 'true' || github.event_name == 'workflow_dispatch'
+    if: ${{ !cancelled() && needs.checkMeta.result == 'success' && (needs.checkSemver.outputs.semver-updated == 'true' || github.event_name == 'workflow_dispatch') }}
     steps:
       - uses: actions/checkout@v2
 
@@ -56,7 +57,7 @@ jobs:
     name: Create Unity Package and Release
     runs-on: ubuntu-latest
     needs: [checkSemver, checkMeta]
-    if: needs.checkSemver.outputs.semver-updated == 'true' || github.event_name == 'workflow_dispatch'
+    if: ${{ !cancelled() && needs.checkMeta.result == 'success' && (needs.checkSemver.outputs.semver-updated == 'true' || github.event_name == 'workflow_dispatch') }}
     permissions:
       contents: write # create the release and upload its asset
     steps:
