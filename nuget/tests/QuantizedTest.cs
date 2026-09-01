@@ -41,27 +41,27 @@ clamp8_0_10, 0.123456789, 3, 0.11764705882352941
 clamp8_0_10, NaN, 0, 0
 clamp8_0_10, Infinity, 255, 10
 clamp8_0_10, -Infinity, 0, 0
-clamp16_pitch, 0, 32768, 0.00002288853284504455
-clamp16_pitch, 1, 54613, 1.000022888532845
-clamp16_pitch, 10, 65535, 1.5
-clamp16_pitch, 0.0196078431372549, 33196, 0.01961547264820318
-clamp16_pitch, 5.5, 65535, 1.5
+clamp16_pitch, 0, 32767, 0
+clamp16_pitch, 1, 54612, 1.000015259254738
+clamp16_pitch, 10, 65534, 1.5
+clamp16_pitch, 0.0196078431372549, 33195, 0.019592883083590307
+clamp16_pitch, 5.5, 65534, 1.5
 clamp16_pitch, -1.5, 0, -1.5
-clamp16_pitch, 1.5, 65535, 1.5
-clamp16_pitch, 0.3, 39321, 0.2999999999999998
+clamp16_pitch, 1.5, 65534, 1.5
+clamp16_pitch, 0.3, 39320, 0.29998168889431454
 clamp16_pitch, -99, 0, -1.5
-clamp16_pitch, 99, 65535, 1.5
-clamp16_pitch, 3.141592653589793, 65535, 1.5
-clamp16_pitch, 6.283185307179586, 65535, 1.5
-clamp16_pitch, 7.283185307179586, 65535, 1.5
-clamp16_pitch, -1, 10923, -0.999977111467155
-clamp16_pitch, 360, 65535, 1.5
-clamp16_pitch, 720.5, 65535, 1.5
-clamp16_pitch, 1000000, 65535, 1.5
+clamp16_pitch, 99, 65534, 1.5
+clamp16_pitch, 3.141592653589793, 65534, 1.5
+clamp16_pitch, 6.283185307179586, 65534, 1.5
+clamp16_pitch, 7.283185307179586, 65534, 1.5
+clamp16_pitch, -1, 10922, -1.000015259254738
+clamp16_pitch, 360, 65534, 1.5
+clamp16_pitch, 720.5, 65534, 1.5
+clamp16_pitch, 1000000, 65534, 1.5
 clamp16_pitch, -1000000, 0, -1.5
-clamp16_pitch, 0.123456789, 35464, 0.12343785763332571
+clamp16_pitch, 0.123456789, 35464, 0.12346263008514669
 clamp16_pitch, NaN, 0, -1.5
-clamp16_pitch, Infinity, 65535, 1.5
+clamp16_pitch, Infinity, 65534, 1.5
 clamp16_pitch, -Infinity, 0, -1.5
 clamp32_unit, 0, 0, 0
 clamp32_unit, 1, 4294967295, 1
@@ -203,6 +203,33 @@ wrap32_angle, -Infinity, 0, 0";
 		}
 
 		[Test]
+		public void SymmetricRangeCarriesExactZeroTest()
+		{
+			// 2^bits-1 intervals is odd, so on [-m, m] zero sits on a step boundary
+			// and half-up rounding lifts it to +1 quantum: a released input axis or
+			// a resting velocity never read back as 0. An even span puts min, 0 and
+			// max all on steps.
+			var cases = new (double Min, double Max, byte Bits)[]
+			{
+				(-1, 1, 8), (-150, 150, 16), (-1.55, 1.55, 16), (-1, 1, 32),
+			};
+			foreach (var k in cases)
+			{
+				var desc = Quantize.Resolve(k.Min, k.Max, k.Bits, false);
+				Assert.AreEqual(Math.Pow(2, k.Bits) - 2, desc.Span, $"±{k.Max} {k.Bits}-bit span");
+				Assert.AreEqual(0d, Quantize.Snap(desc, 0), $"±{k.Max} {k.Bits}-bit zero");
+				Assert.AreEqual(k.Min, Quantize.Snap(desc, k.Min));
+				Assert.AreEqual(k.Max, Quantize.Snap(desc, k.Max));
+			}
+
+			// only symmetric clamped ranges give up a code
+			Assert.AreEqual(255d, Quantize.Resolve(0, 1, 8, false).Span);
+			var wrap = Quantize.Resolve(-1, 1, 8, true);
+			Assert.AreEqual(256d, wrap.Span);
+			Assert.AreEqual(0d, Quantize.Snap(wrap, 0));
+		}
+
+		[Test]
 		public void ReflectionAndQuantizedStateTest()
 		{
 			// 5.0 reflection handshake: quantized descriptors, childPrimitive
@@ -212,12 +239,12 @@ wrap32_angle, -Infinity, 0, 0";
 			serializer.Handshake(new byte[] { 128, 1, 255, 1, 128, 0, 2, 128, 1, 15, 255, 2, 128, 0, 130, 3, 255, 3, 128, 0, 4, 128, 1, 6, 128, 2, 8, 128, 3, 10, 128, 4, 11, 128, 5, 12, 128, 6, 13, 128, 7, 14, 255, 4, 128, 163, 121, 97, 119, 129, 169, 113, 117, 97, 110, 116, 105, 122, 101, 100, 132, 5, 255, 5, 128, 0, 0, 0, 0, 0, 0, 0, 0, 129, 24, 45, 68, 84, 251, 33, 25, 64, 130, 16, 131, 1, 255, 6, 128, 165, 112, 105, 116, 99, 104, 129, 169, 113, 117, 97, 110, 116, 105, 122, 101, 100, 132, 7, 255, 7, 128, 0, 0, 0, 0, 0, 0, 248, 191, 129, 0, 0, 0, 0, 0, 0, 248, 63, 130, 8, 131, 0, 255, 8, 128, 167, 112, 114, 101, 99, 105, 115, 101, 129, 169, 113, 117, 97, 110, 116, 105, 122, 101, 100, 132, 9, 255, 9, 128, 0, 0, 0, 0, 0, 0, 0, 0, 129, 0, 0, 0, 0, 0, 0, 240, 63, 130, 32, 131, 0, 255, 10, 128, 164, 110, 117, 109, 115, 129, 165, 97, 114, 114, 97, 121, 130, 255, 131, 166, 110, 117, 109, 98, 101, 114, 255, 11, 128, 164, 116, 97, 103, 115, 129, 163, 109, 97, 112, 130, 255, 131, 166, 115, 116, 114, 105, 110, 103, 255, 12, 128, 165, 99, 104, 105, 108, 100, 129, 163, 114, 101, 102, 130, 1, 255, 13, 128, 165, 105, 116, 101, 109, 115, 129, 165, 97, 114, 114, 97, 121, 130, 1, 255, 14, 128, 165, 108, 97, 98, 101, 108, 129, 166, 115, 116, 114, 105, 110, 103, 255, 15, 128, 1, 130, 16, 255, 16, 128, 0, 17, 255, 17, 128, 161, 118, 129, 166, 110, 117, 109, 98, 101, 114 }, 0);
 
 			// full state
-			serializer.SetState(new byte[] { 128, 238, 50, 129, 187, 130, 55, 221, 154, 31, 131, 1, 132, 2, 133, 5, 134, 4, 135, 161, 113, 255, 1, 128, 0, 1, 128, 1, 202, 0, 0, 32, 64, 128, 2, 3, 255, 2, 128, 0, 161, 97, 161, 120, 255, 5, 128, 7, 255, 4, 128, 0, 6, 128, 1, 7, 255, 6, 128, 1, 255, 7, 128, 2 });
+			serializer.SetState(new byte[] { 128, 238, 50, 129, 186, 130, 55, 221, 154, 31, 131, 1, 132, 2, 133, 5, 134, 4, 135, 161, 113, 255, 1, 128, 0, 1, 128, 1, 202, 0, 0, 32, 64, 128, 2, 3, 255, 2, 128, 0, 161, 97, 161, 120, 255, 5, 128, 7, 255, 4, 128, 0, 6, 128, 1, 7, 255, 6, 128, 1, 255, 7, 128, 2 });
 
 			var state = serializer.GetState();
 
 			Assert.AreEqual(1.2500025945283118, state.Get<double>("yaw"));
-			Assert.AreEqual(0.6999999999999997, state.Get<double>("pitch"));
+			Assert.AreEqual(0.6968503937007875, state.Get<double>("pitch"));
 			Assert.AreEqual(0.12345678897655028, state.Get<double>("precise"));
 			Assert.AreEqual("q", state.Get<string>("label"));
 
@@ -252,12 +279,12 @@ wrap32_angle, -Infinity, 0, 0";
 			// (locks the Type attribute's Quantize* named args → metadata path)
 			var serializer = new SchemaSerializer<SchemaTest.Quantized.QState>();
 
-			serializer.SetState(new byte[] { 128, 238, 50, 129, 187, 130, 55, 221, 154, 31, 131, 1, 132, 2, 133, 5, 134, 4, 135, 161, 113, 255, 1, 128, 0, 1, 128, 1, 202, 0, 0, 32, 64, 128, 2, 3, 255, 2, 128, 0, 161, 97, 161, 120, 255, 5, 128, 7, 255, 4, 128, 0, 6, 128, 1, 7, 255, 6, 128, 1, 255, 7, 128, 2 });
+			serializer.SetState(new byte[] { 128, 238, 50, 129, 186, 130, 55, 221, 154, 31, 131, 1, 132, 2, 133, 5, 134, 4, 135, 161, 113, 255, 1, 128, 0, 1, 128, 1, 202, 0, 0, 32, 64, 128, 2, 3, 255, 2, 128, 0, 161, 97, 161, 120, 255, 5, 128, 7, 255, 4, 128, 0, 6, 128, 1, 7, 255, 6, 128, 1, 255, 7, 128, 2 });
 
 			var state = serializer.GetState();
 
 			Assert.AreEqual(1.2500025945283118, state.yaw);
-			Assert.AreEqual(0.6999999999999997, state.pitch);
+			Assert.AreEqual(0.6968503937007875, state.pitch);
 			Assert.AreEqual(0.12345678897655028, state.precise);
 			Assert.AreEqual("q", state.label);
 			Assert.AreEqual(3, state.nums.Count);
