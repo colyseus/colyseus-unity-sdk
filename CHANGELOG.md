@@ -2,6 +2,10 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.4
+
+- Fix `t.quantized()` fields on a range symmetric about zero (`min: -1, max: 1`) never decoding an exact `0`. A released input axis or a resting velocity arrived as one quantum above zero, so a `== 0` check never fired and anything integrating the value drifted. Requires a server on @colyseus/schema 5.0.27 — the wire mapping for these fields changed.
+
 ## 0.18.3
 
 - Fix the SDK not compiling when installed from UPM or the released `.unitypackage`: four runtime files shipped without a `.meta`, so Unity skipped them and `Room.cs` itself failed to build with `RoomClock`, `InputHandle`, `InputOptions` and `QuantizeDescriptor` unresolved. Every 0.18 release so far was affected; installing from a clone was not. Thanks @byteflowx for the diagnosis! [#270](https://github.com/colyseus/colyseus-unity-sdk/issues/270)

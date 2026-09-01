@@ -12,7 +12,10 @@ namespace Colyseus.Schema.Utils
         public double Max;
         /// <summary>Max − Min, the domain width.</summary>
         public double Range;
-        /// <summary>2^bits for wrap (top step folds onto 0); 2^bits − 1 for clamp.</summary>
+        /// <summary>
+        ///     2^bits for wrap (top step folds onto 0); 2^bits − 1 for clamp, or
+        ///     2^bits − 2 when Min == -Max so that zero lands on a step.
+        /// </summary>
         public double Span;
         /// <summary>Wire width: 8 | 16 | 32.</summary>
         public byte Bits;
@@ -41,7 +44,9 @@ namespace Colyseus.Schema.Utils
                 Min = min,
                 Max = max,
                 Range = max - min,
-                Span = wrap ? steps : steps - 1,
+                // clamped maps the endpoints onto 0 and 2^bits-1 inclusive — one
+                // fewer on a range symmetric about zero so zero lands on a step too
+                Span = wrap ? steps : (min == -max ? steps - 2 : steps - 1),
                 Bits = bits,
                 Wrap = wrap,
             };
