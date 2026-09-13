@@ -502,6 +502,18 @@ namespace Colyseus.Schema
 			}
 		}
 
+		/// <summary>
+		///     The JS decoder's <c>previousValue !== value</c>: identity for refs, value
+		///     equality for primitives. A decoded string or boxed number is always a new
+		///     object, and the patch after a client's full state re-sends ops that state
+		///     already holds, so <c>!=</c> on <c>object</c> would re-insert array entries
+		///     and re-fire OnAdd / Listen for values that never changed.
+		/// </summary>
+		private static bool Changed(object previousValue, object value)
+			=> (previousValue is IRef || value is IRef)
+				? !ReferenceEquals(previousValue, value)
+				: !Equals(previousValue, value);
+
 		protected bool DecodeSchema(byte[] bytes, Iterator it, Schema refSchema)
 		{
 			byte firstByte = bytes[it.Offset++];
@@ -535,7 +547,7 @@ namespace Colyseus.Schema
 				refSchema[fieldName] = value;
 			}
 
-			if (previousValue != value)
+			if (Changed(previousValue, value))
 			{
 				AllChanges.Add(new DataChange
 				{
@@ -612,7 +624,7 @@ namespace Colyseus.Schema
 				refMap.SetByIndex(fieldIndex, dynamicIndex, value);
 			}
 
-			if (previousValue != value)
+			if (Changed(previousValue, value))
 			{
 				AllChanges.Add(new DataChange
 				{
@@ -747,7 +759,7 @@ namespace Colyseus.Schema
 				ResyncReleaseReplaced(refArray, operation, index, previousValue, value);
 			}
 
-			if (value != null && value != previousValue)
+			if (value != null && Changed(previousValue, value))
 			{
 				// resync snapshot ADDs are positional overwrites, not inserts
 				refArray.SetByIndex(index, value,
@@ -756,7 +768,7 @@ namespace Colyseus.Schema
 						: operation);
 			}
 
-			if (previousValue != value)
+			if (Changed(previousValue, value))
 			{
 				AllChanges.Add(new DataChange
 				{

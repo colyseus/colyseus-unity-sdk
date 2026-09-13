@@ -2,6 +2,10 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.6
+
+- Fix arrays of strings or numbers showing duplicate entries right after joining a room, and `OnAdd` / `Listen` firing again for entries and fields that didn't change after joining or reconnecting. Both now match the JS SDK.
+
 ## 0.18.5
 
 - `MapSchema` and `ArraySchema` now implement `IReadOnlyDictionary<string, T>` / `IReadOnlyList<T>`, so `foreach` and LINQ work on them directly, and maps iterate in insertion order like the JS SDK. Loop `map.Values` for the items — the obsolete `map.items` still works.
