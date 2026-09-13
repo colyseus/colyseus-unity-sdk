@@ -1,24 +1,27 @@
-//
+// 
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
-//
-// GENERATED USING @colyseus/schema 3.0.0-alpha.40
-//
-
-using Colyseus.Schema;
+// 
+// GENERATED USING @colyseus/schema 5.0.30
+// 
 
 namespace SchemaTest.InheritedTypes {
-	public partial class InheritedTypes : Schema {
-		[Type(0, "ref", typeof(Entity))]
+	public partial class InheritedTypes : global::Colyseus.Schema.Schema {
+#if UNITY_5_3_OR_NEWER
+		[global::UnityEngine.Scripting.Preserve]
+#endif
+		public InheritedTypes() { }
+
+		[global::Colyseus.Schema.Type(0, "ref", typeof(Entity))]
 		public Entity entity = null;
 
-		[Type(1, "ref", typeof(Player))]
+		[global::Colyseus.Schema.Type(1, "ref", typeof(Player))]
 		public Player player = null;
 
-		[Type(2, "ref", typeof(Bot))]
+		[global::Colyseus.Schema.Type(2, "ref", typeof(Bot))]
 		public Bot bot = null;
 
-		[Type(3, "ref", typeof(Entity))]
+		[global::Colyseus.Schema.Type(3, "ref", typeof(Entity))]
 		public Entity any = null;
 	}
 }

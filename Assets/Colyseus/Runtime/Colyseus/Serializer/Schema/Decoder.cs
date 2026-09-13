@@ -302,11 +302,24 @@ namespace Colyseus.Schema
 		/// </remarks>
 		private static System.Type DoubleTargetOrNull(IRef _ref, int fieldIndex, string fieldType)
 		{
-			if (fieldType != "number") { return null; }
-
-			bool wide = _ref is Schema schema
-				? schema.AcceptsWideNumber(fieldIndex)
-				: _ref is ISchemaCollection collection && AcceptsWideNumber(collection);
+			bool wide;
+			if (fieldType == "number")
+			{
+				wide = _ref is Schema schema
+					? schema.AcceptsWideNumber(fieldIndex)
+					: _ref is ISchemaCollection collection && AcceptsWideNumber(collection);
+			}
+			else if (fieldType == "float32")
+			{
+				// only a destination DECLARED double: untyped (object) holders keep receiving floats
+				wide = _ref is Schema schema
+					? schema.DeclaresDouble(fieldIndex)
+					: _ref is ISchemaCollection collection && !collection.HasSchemaChild && collection.GetChildType() == typeof(double);
+			}
+			else
+			{
+				return null;
+			}
 
 			return wide ? typeof(double) : null;
 		}
@@ -335,9 +348,9 @@ namespace Colyseus.Schema
 			if ((operation & (byte)OPERATION.DELETE) == (byte)OPERATION.DELETE)
 			{
 				// Flag `refId` for garbage collection.
-				if (previousValue != null && previousValue is IRef)
+				if (previousValue is IRef previousRef && Refs.IsTracked(previousRef))
 				{
-					Refs.Remove(((IRef)previousValue).__refId);
+					Refs.Remove(previousRef.__refId);
 				}
 
 				if (operation != (byte)OPERATION.DELETE_AND_ADD)

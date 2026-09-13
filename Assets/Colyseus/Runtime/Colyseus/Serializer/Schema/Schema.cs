@@ -273,6 +273,13 @@ namespace Colyseus.Schema
 		/// </summary>
 		internal virtual bool AcceptsWideNumber(int index) => _metadata.WideNumberFields.Contains(index);
 
+		/// <summary>
+		///     Whether the field at <paramref name="index" /> is declared <see cref="double" /> in C#.
+		///     A <c>"float32"</c> declared double is decoded straight to a double — the
+		///     double-backed shape a reconciler mirror needs to keep full precision between steps.
+		/// </summary>
+		internal bool DeclaresDouble(int index) => _metadata != null && _metadata.DoubleFields.Contains(index);
+
 		public Schema()
 		{
 			var type = GetType();
@@ -314,9 +321,10 @@ namespace Colyseus.Schema
 							Utils.Quantize.Resolve(t.QuantizeMin, t.QuantizeMax, (byte)t.QuantizeBits, t.QuantizeWrap));
 					}
 
-					if (t.FieldType == "number" && field.FieldType == typeof(double))
+					if (field.FieldType == typeof(double))
 					{
-						metadata.WideNumberFields.Add(t.Index);
+						metadata.DoubleFields.Add(t.Index);
+						if (t.FieldType == "number") { metadata.WideNumberFields.Add(t.Index); }
 					}
 				}
 			}
@@ -435,6 +443,11 @@ namespace Colyseus.Schema
 			///     Indexes of the <c>"number"</c> fields declared <see cref="double" />
 			/// </summary>
 			public HashSet<int> WideNumberFields = new HashSet<int>();
+
+			/// <summary>
+			///     Indexes of every field declared <see cref="double" />
+			/// </summary>
+			public HashSet<int> DoubleFields = new HashSet<int>();
 		}
 	}
 }

@@ -2,20 +2,23 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 3.0.0-alpha.45
+// GENERATED USING @colyseus/schema 5.0.30
 // 
 
-using Colyseus.Schema;
-
 namespace SchemaTest.Callbacks {
-	public partial class Vec3 : Schema {
-		[Type(0, "number")]
-		public float x = default(float);
+	public partial class Vec3 : global::Colyseus.Schema.Schema {
+#if UNITY_5_3_OR_NEWER
+		[global::UnityEngine.Scripting.Preserve]
+#endif
+		public Vec3() { }
 
-		[Type(1, "number")]
-		public float y = default(float);
+		[global::Colyseus.Schema.Type(0, "number")]
+		public double x = 1;
 
-		[Type(2, "number")]
-		public float z = default(float);
+		[global::Colyseus.Schema.Type(1, "number")]
+		public double y = 2;
+
+		[global::Colyseus.Schema.Type(2, "number")]
+		public double z = 3;
 	}
 }

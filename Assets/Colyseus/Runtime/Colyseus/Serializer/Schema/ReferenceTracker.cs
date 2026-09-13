@@ -76,6 +76,15 @@ namespace Colyseus.Schema
         }
 
         /// <summary>
+        ///     Whether <paramref name="_ref" /> itself is what this tracker holds under its refId —
+        ///     false for an instance the server never sent (e.g. a default-initialized collection).
+        /// </summary>
+        public bool IsTracked(IRef _ref)
+        {
+            return _ref != null && refs.TryGetValue(_ref.__refId, out var tracked) && ReferenceEquals(tracked, _ref);
+        }
+
+        /// <summary>
         ///     Remove a reference by ID
         /// </summary>
         /// <param name="refId">The ID of the reference to remove</param>
@@ -117,7 +126,8 @@ namespace Colyseus.Schema
                         foreach (KeyValuePair<string, System.Type> field in ((Schema)_ref).GetFieldChildTypes())
                         {
                             object fieldValue = ((Schema)_ref)[field.Key];
-                            if (fieldValue is IRef)
+                            // a default-initialized collection never sent holds __refId 0 — the root's
+                            if (fieldValue is IRef childRef && IsTracked(childRef))
                             {
                                 int childRefId = ((IRef)fieldValue).__refId;
                                 if (!deletedRefs.Contains(childRefId) && Remove(childRefId))

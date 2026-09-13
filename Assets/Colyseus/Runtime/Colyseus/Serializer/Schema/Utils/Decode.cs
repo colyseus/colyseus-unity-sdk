@@ -30,8 +30,8 @@ namespace Colyseus.Schema.Utils
         ///     Qualified as <c>System.Type</c> because <c>Colyseus.Schema.Type</c> is the field attribute.
         ///     <para>
         ///         Only <c>typeof(double)</c> changes anything: a <c>"number"</c> is decoded at full width
-        ///         rather than narrowed to <see cref="float" />. Every other combination takes exactly the
-        ///         path it took before.
+        ///         rather than narrowed to <see cref="float" />, and a <c>"float32"</c> is handed over as
+        ///         a <see cref="double" />. Every other combination takes exactly the path it took before.
         ///     </para>
         /// </param>
         public static object DecodePrimitiveType(string type, byte[] bytes, Iterator it, System.Type targetType)
@@ -94,6 +94,12 @@ namespace Colyseus.Schema.Utils
 
             if (type == "float32")
             {
+                // boxed as the destination's type: unboxing never converts
+                if (targetType == typeof(double))
+                {
+                    return (double)DecodeFloat32(bytes, it);
+                }
+
                 return DecodeFloat32(bytes, it);
             }
 

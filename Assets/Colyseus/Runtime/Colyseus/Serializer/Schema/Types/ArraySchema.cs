@@ -6,10 +6,12 @@ using Colyseus;
 namespace Colyseus.Schema
 {
 	/// <summary>
-	///     A <see cref="Schema" /> array of <typeparamref name="T" /> type objects
+	///     A <see cref="Schema" /> array of <typeparamref name="T" /> type objects.
+	///     <c>foreach</c> yields the items in order without allocating; LINQ works
+	///     through <see cref="IReadOnlyList{T}" />.
 	/// </summary>
 	/// <typeparam name="T">The type of object in this array</typeparam>
-	public class ArraySchema<T> : IArraySchema
+	public class ArraySchema<T> : IArraySchema, IReadOnlyList<T>
 	{
 		/// <summary>
 		///     The contents of the <see cref="ArraySchema{T}" />
@@ -200,6 +202,13 @@ namespace Colyseus.Schema
 		{
 			return items;
 		}
+
+		/// <summary>Allocation-free, in-order enumeration of the items.</summary>
+		public List<T>.Enumerator GetEnumerator() => items.GetEnumerator();
+
+		IEnumerator<T> IEnumerable<T>.GetEnumerator() => items.GetEnumerator();
+
+		IEnumerator IEnumerable.GetEnumerator() => items.GetEnumerator();
 
 		public int IndexOf(T value)
 		{

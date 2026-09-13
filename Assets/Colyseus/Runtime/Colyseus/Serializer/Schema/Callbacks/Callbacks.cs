@@ -208,7 +208,9 @@ namespace Colyseus.Schema
 			Action removeOnAdd = () => removeHandler();
 
 			// Collection not available yet. Listen for its availability before attaching the handler.
-			if (instance[propertyName] == null)
+			// A default-initialized collection the server hasn't sent yet counts as unavailable
+			// (JS: `collection[$refId] === undefined`) — its __refId 0 is the root's.
+			if (!IsSynced(instance[propertyName]))
 			{
 				Action removePropertyCallback = null;
 				removePropertyCallback = AddCallback(instance.__refId, propertyName, new PropertyChangeEventHandler<IRef>((IRef collection, IRef _) =>
@@ -241,6 +243,10 @@ namespace Colyseus.Schema
 				return AddCallback(((IRef)instance[propertyName]).__refId, operation, handler);
 			}
 		}
+
+		/// <summary>Whether <paramref name="value" /> is a ref this decoder has received from the server.</summary>
+		private bool IsSynced(object value)
+			=> value is IRef reference && ReferenceEquals(Decoder.Refs.Get(reference.__refId), reference);
 
 		public Action Listen<TReturn>(Expression<Func<TState, TReturn>> propertyExpression, PropertyChangeEventHandler<TReturn> handler, bool immediate = true)
 		{

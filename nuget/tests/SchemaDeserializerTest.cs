@@ -36,8 +36,8 @@ namespace Colyseus.Tests
 			Assert.AreEqual(state.varint_uint32, 4294967295);
 			Assert.AreEqual(state.varint_int64, -9223372036854775808);
 			Assert.AreEqual(state.varint_uint64, 9007199254740991);
-			Assert.AreEqual(state.varint_float32, -3.40282347E+38f);
-			Assert.AreEqual(state.varint_float64, float.PositiveInfinity);
+			Assert.AreEqual(state.varint_float32, -3.40282347E+38);
+			Assert.AreEqual(state.varint_float64, 1.7976931348623157e+307);
 
 			Assert.AreEqual(state.str, "Hello world");
 			Assert.AreEqual(state.boolean, true);

@@ -2,17 +2,20 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 3.0.0-alpha.40
+// GENERATED USING @colyseus/schema 5.0.30
 // 
 
-using Colyseus.Schema;
-
 namespace SchemaTest.ArraySchemaTypes {
-	public partial class IAmAChild : Schema {
-		[Type(0, "number")]
-		public float x = default(float);
+	public partial class IAmAChild : global::Colyseus.Schema.Schema {
+#if UNITY_5_3_OR_NEWER
+		[global::UnityEngine.Scripting.Preserve]
+#endif
+		public IAmAChild() { }
 
-		[Type(1, "number")]
-		public float y = default(float);
+		[global::Colyseus.Schema.Type(0, "number")]
+		public double x = default(double);
+
+		[global::Colyseus.Schema.Type(1, "number")]
+		public double y = default(double);
 	}
 }

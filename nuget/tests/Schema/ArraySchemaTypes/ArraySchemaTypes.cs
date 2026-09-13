@@ -2,23 +2,26 @@
 // THIS FILE HAS BEEN GENERATED AUTOMATICALLY
 // DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
 // 
-// GENERATED USING @colyseus/schema 3.0.0-alpha.40
+// GENERATED USING @colyseus/schema 5.0.30
 // 
 
-using Colyseus.Schema;
-
 namespace SchemaTest.ArraySchemaTypes {
-	public partial class ArraySchemaTypes : Schema {
-		[Type(0, "array", typeof(ArraySchema<IAmAChild>))]
-		public ArraySchema<IAmAChild> arrayOfSchemas = null;
+	public partial class ArraySchemaTypes : global::Colyseus.Schema.Schema {
+#if UNITY_5_3_OR_NEWER
+		[global::UnityEngine.Scripting.Preserve]
+#endif
+		public ArraySchemaTypes() { }
 
-		[Type(1, "array", typeof(ArraySchema<float>), "number")]
-		public ArraySchema<float> arrayOfNumbers = null;
+		[global::Colyseus.Schema.Type(0, "array", typeof(global::Colyseus.Schema.ArraySchema<IAmAChild>))]
+		public global::Colyseus.Schema.ArraySchema<IAmAChild> arrayOfSchemas = new global::Colyseus.Schema.ArraySchema<IAmAChild>();
 
-		[Type(2, "array", typeof(ArraySchema<string>), "string")]
-		public ArraySchema<string> arrayOfStrings = null;
+		[global::Colyseus.Schema.Type(1, "array", typeof(global::Colyseus.Schema.ArraySchema<double>), "number")]
+		public global::Colyseus.Schema.ArraySchema<double> arrayOfNumbers = new global::Colyseus.Schema.ArraySchema<double>();
 
-		[Type(3, "array", typeof(ArraySchema<int>), "int32")]
-		public ArraySchema<int> arrayOfInt32 = null;
+		[global::Colyseus.Schema.Type(2, "array", typeof(global::Colyseus.Schema.ArraySchema<string>), "string")]
+		public global::Colyseus.Schema.ArraySchema<string> arrayOfStrings = new global::Colyseus.Schema.ArraySchema<string>();
+
+		[global::Colyseus.Schema.Type(3, "array", typeof(global::Colyseus.Schema.ArraySchema<int>), "int32")]
+		public global::Colyseus.Schema.ArraySchema<int> arrayOfInt32 = new global::Colyseus.Schema.ArraySchema<int>();
 	}
 }
