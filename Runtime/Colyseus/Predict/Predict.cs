@@ -61,9 +61,19 @@ namespace Colyseus.Predict
 	/// </summary>
 	public class PredictGetOptions
 	{
+		/// <summary>
+		///     Human-friendly identifier for logs and debug tooling. Default
+		///     <c>predict#N</c> (incremented per process). Construction-time only —
+		///     <see cref="Predict.SetDefaults" /> ignores it.
+		/// </summary>
+		public string Name;
 		/// <summary>Mode for attaches that don't name one. Default lerp.</summary>
 		public PredictMode? Mode;
-		/// <summary>Lerp render-time lag (ms). Default 100.</summary>
+		/// <summary>
+		///     Lerp render-time lag (ms). Default 100. Also the render delay a
+		///     reconciler's input handle reports to lag compensation, unless the
+		///     handle sets its own.
+		/// </summary>
 		public double? Delay;
 		/// <summary>
 		///     Output-smoothing time constant (ms) — see
@@ -118,6 +128,32 @@ namespace Colyseus.Predict
 		public double? Substep;
 		/// <summary>Rebase discontinuities beyond this pop. 0 off.</summary>
 		public double? Snap;
+	}
+
+	/// <summary>
+	///     The fields-list attach shorthand — the reference's
+	///     <c>attachAll(key, { fields, mode, snap, smoothMs, … })</c>: one set of
+	///     options applied to every listed field. The inherited
+	///     <see cref="PredictFieldOptions" /> members resolve exactly as in the
+	///     per-field <see cref="AttachConfig" /> form (null = the Predict's
+	///     default); a null <see cref="PredictFieldOptions.Mode" /> means the
+	///     Predict's mode.
+	///     <code>
+	///     predict.AttachAll("creeps", new AttachOptions { Fields = new[] { "x", "z" }, Mode = PredictMode.Lerp, Snap = 5 });
+	///     predict.AttachAll("balls", new AttachOptions { Fields = new[] { "x", "y" }, Mode = PredictMode.Reckon, Step = StepBall });
+	///     </code>
+	///     <see cref="PredictFieldOptions.Delay" />, <see cref="PredictFieldOptions.MaxExtrapolate" />
+	///     and <see cref="PredictFieldOptions.TickInterval" /> are honored too
+	///     (the reference's fields form only forwards mode/snap/smoothMs/angle).
+	/// </summary>
+	public class AttachOptions : PredictFieldOptions
+	{
+		/// <summary>Numeric fields to predict. Fields the instance's type doesn't declare are skipped.</summary>
+		public IReadOnlyList<string> Fields;
+		/// <summary>Reckon step (see <see cref="ReckonOptions{T}.Step" />); null = the Predict's <see cref="PredictGetOptions.Step" />.</summary>
+		public Action<Schema.Schema, double, double> Step;
+		/// <summary>Reckon substep length (ms). Default the Predict's (16).</summary>
+		public double? Substep;
 	}
 
 	/// <summary>
@@ -194,10 +230,15 @@ namespace Colyseus.Predict
 			public Func<double> ForwardMs;
 		}
 
+		private static int autoId;
+
 		private readonly IPredictCallbacks callbacks;
 		private readonly RoomClock clock;
 		private readonly Func<string> sessionId;
 		private double renderTime;
+
+		/// <summary>This Predict's label — <see cref="PredictGetOptions.Name" />, else <c>predict#N</c>.</summary>
+		public string Name { get; }
 
 		// SmoothMs and Step stay null here: SmoothMs resolves per MODE at
 		// attach (lerp's spring off, 50 elsewhere) and a reckon without any
@@ -236,6 +277,7 @@ namespace Colyseus.Predict
 			this.callbacks = callbacks;
 			this.clock = clock;
 			this.sessionId = sessionId;
+			Name = opts?.Name ?? $"predict#{System.Threading.Interlocked.Increment(ref autoId)}";
 			SetDefaults(opts);
 		}
 
@@ -488,6 +530,41 @@ namespace Colyseus.Predict
 			=> AttachEach(collection, child => Attach((T)child, options));
 
 		/// <summary>
+		///     Attach every child of a collection with one options set for all
+		///     listed fields — the fields-list shorthand (see <see cref="AttachOptions" />).
+		/// </summary>
+		public Action AttachAll(string collection, AttachOptions options)
+			=> AttachEach(collection, child => Attach(child, options));
+
+		/// <summary>
+		///     Attach ONE instance with the fields-list shorthand: a reckon when the
+		///     resolved mode is <see cref="PredictMode.Reckon" />, else the same
+		///     options on every listed field — equivalent to an
+		///     <see cref="AttachConfig" /> naming each field with these options.
+		/// </summary>
+		public Action Attach(Schema.Schema instance, AttachOptions options)
+		{
+			if (options?.Fields == null)
+			{
+				throw new Exception("Predict.Attach(): `Fields` is required — the numeric fields to predict.");
+			}
+			if ((options.Mode ?? defaults.Mode.Value) == PredictMode.Reckon)
+			{
+				return TrackStepped(instance, new ReckonOptions<Schema.Schema>
+				{
+					Fields = options.Fields,
+					Step = options.Step,
+					SmoothMs = options.SmoothMs,
+					Substep = options.Substep,
+					Snap = options.Snap,
+				});
+			}
+			var config = new AttachConfig();
+			foreach (var field in options.Fields) { config[field] = options; }
+			return Attach(instance, config);
+		}
+
+		/// <summary>
 		///     Attach prediction to ONE instance from a declarative config — the
 		///     per-field smoothing map:
 		///     <code>
@@ -651,31 +728,22 @@ namespace Colyseus.Predict
 		}
 
 		/// <summary>
-		///     Tell the input handle how far in the past this client draws, taken
-		///     from the lerp delay already attached here.
+		///     Bind the input handle's render delay to this Predict's default lerp
+		///     delay (<see cref="PredictGetOptions.Delay" />), read live — so the
+		///     interp buffer remotes render at and the server's rewind instant are
+		///     ONE number, before anything is attached and after any
+		///     <see cref="SetDefaults" />.
 		///
 		///     Worth doing automatically because the failure is silent and
 		///     expensive: a lag-compensating server rewinds to
 		///     <c>serverNow − (renderDelay + rtt/2)</c>, so leaving renderDelay at
 		///     zero makes every rewound read land one full render-delay early, and
 		///     shots miss by exactly that much with nothing in the logs to say so.
-		///     An explicit <see cref="InputOptions.RenderDelay" /> still wins.
+		///     An explicit <see cref="InputOptions.RenderDelay" /> (or a set of
+		///     <see cref="InputHandle.RenderDelay" />) still wins.
 		/// </summary>
 		private void BindRenderDelay(InputHandle input)
-		{
-			if (input == null || input.RenderDelay > 0) { return; }
-			foreach (var perRef in slotsByRef.Values)
-			{
-				foreach (var slot in perRef.Values)
-				{
-					if (slot.Opts != null && slot.Opts.Mode == PredictMode.Lerp && slot.Opts.Delay > 0)
-					{
-						input.RenderDelay = slot.Opts.Delay;
-						return;
-					}
-				}
-			}
-		}
+			=> input?.BindRenderDelay(() => defaults.Delay.Value);
 
 		/// <summary>
 		///     Spawn a driven <see cref="SimReconciler{I}" /> — the composite face,

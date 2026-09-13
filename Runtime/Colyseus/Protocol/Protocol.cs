@@ -64,7 +64,7 @@ namespace Colyseus
         public static byte PING = 18;
 
         //
-        // Input-related (19~20) — consumed by the input layer (not ported yet)
+        // Input-related (19~20) — sent by InputHandle (Room.Input())
         //
 
         /// <summary>[byte, stamp?, input bytes] — client→server single input.</summary>

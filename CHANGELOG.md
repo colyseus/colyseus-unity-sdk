@@ -2,6 +2,14 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.5
+
+- `MapSchema` and `ArraySchema` now implement `IReadOnlyDictionary<string, T>` / `IReadOnlyList<T>`, so `foreach` and LINQ work on them directly, and maps iterate in insertion order like the JS SDK. Loop `map.Values` for the items — the obsolete `map.items` still works.
+- Fix callbacks never firing on a collection that starts empty rather than `null`, which is how `schema-codegen` 5.0.29+ generates collections.
+- `float32` fields and collections declared `double` now decode at full precision, matching what `schema-codegen` 5.0.29+ generates. Previously a `float32` collection declared `double` threw `InvalidCastException`.
+- The input render delay now follows the `Predict`'s lerp `Delay`, as in the JS SDK, so lag compensation rewinds to where remote entities are drawn. An explicit `InputOptions.RenderDelay` still wins; the field is now `double?`.
+- Add `ctx.TryMemo()`, which tells a stored `null` apart from nothing stored and never recomputes on replay; `AttachOptions`, to pass the field list and options to `Predict.AttachAll()` / `Attach()` in one object; and `PredictGetOptions.Name`, a label for logs and debug tooling.
+
 ## 0.18.4
 
 - Fix `t.quantized()` fields on a range symmetric about zero (`min: -1, max: 1`) never decoding an exact `0`. A released input axis or a resting velocity arrived as one quantum above zero, so a `== 0` check never fired and anything integrating the value drifted. Requires a server on @colyseus/schema 5.0.27 — the wire mapping for these fields changed.
