@@ -38,12 +38,26 @@ namespace Colyseus.Predict
 		/// <summary>
 		///     Memoize a VALUE on the rollback timeline that replay can't
 		///     re-derive: computed ONCE on the live step for this seq, frozen,
-		///     and returned WITHOUT re-running on every replay. Returns default
-		///     when the live step memoized nothing. Keyed form disambiguates
-		///     multiple memos per step ("" = the shared key-less slot).
+		///     and returned WITHOUT re-running on every replay. A replay whose
+		///     live step memoized nothing under this key does NOT compute either —
+		///     it returns <c>default</c>, which for a value type reads the same as
+		///     a memoized zero; use <see cref="TryMemo{T}(string,Func{T},out T)" />
+		///     where that matters. Keyed form disambiguates multiple memos per
+		///     step ("" = the shared key-less slot).
 		/// </summary>
 		public T Memo<T>(Func<T> compute) => Owner.MemoRun("", IsReplay, Tick, compute);
 		public T Memo<T>(string key, Func<T> compute) => Owner.MemoRun(key, IsReplay, Tick, compute);
+
+		/// <summary>
+		///     <see cref="Memo{T}(string,Func{T})" /> that says whether a value exists
+		///     (the JS <c>memo()</c>'s <c>T | undefined</c>). LIVE: runs
+		///     <paramref name="compute" />, freezes the result — null included —
+		///     and returns true. REPLAY: returns the frozen value and true, or
+		///     <c>default</c> and false when the live step stored nothing under this
+		///     key; <paramref name="compute" /> never runs on a replay.
+		/// </summary>
+		public bool TryMemo<T>(Func<T> compute, out T value) => Owner.MemoTry("", IsReplay, Tick, compute, out value);
+		public bool TryMemo<T>(string key, Func<T> compute, out T value) => Owner.MemoTry(key, IsReplay, Tick, compute, out value);
 
 		/// <summary>
 		///     Declare an optimistic discrete EVENT the timeline just produced
@@ -195,23 +209,31 @@ namespace Colyseus.Predict
 
 		internal T MemoRun<T>(string key, bool isReplay, int tick, Func<T> compute)
 		{
+			MemoTry(key, isReplay, tick, compute, out T value);
+			return value;
+		}
+
+		internal bool MemoTry<T>(string key, bool isReplay, int tick, Func<T> compute, out T value)
+		{
 			if (isReplay)
 			{
-				return memos.TryGetValue(tick, out var slot) && slot.TryGetValue(key, out var stored)
-					? (T)stored
-					: default;
-			}
-			T value = compute();
-			if (value != null)
-			{
-				if (!memos.TryGetValue(tick, out var slot))
+				if (memos.TryGetValue(tick, out var stored) && stored.TryGetValue(key, out var frozen))
 				{
-					slot = new Dictionary<string, object>();
-					memos[tick] = slot;
+					value = (T)frozen;
+					return true;
 				}
-				slot[key] = value;
+				value = default;
+				return false;
 			}
-			return value;
+			value = compute();
+			// JS stores anything but undefined — null is a value
+			if (!memos.TryGetValue(tick, out var slot))
+			{
+				slot = new Dictionary<string, object>();
+				memos[tick] = slot;
+			}
+			slot[key] = value;
+			return true;
 		}
 
 		/// <summary>

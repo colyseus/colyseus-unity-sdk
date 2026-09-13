@@ -22,7 +22,7 @@ namespace Colyseus.Tests
 		{
 			var encoder = new InputEncoder(input);
 			var stub = new StubConnection();
-			return new InputHandle(input, encoder, false, false, 0, null,
+			return new InputHandle(input, encoder, false, false, null, null,
 				null, null, null, () => stub, () => null);
 		}
 

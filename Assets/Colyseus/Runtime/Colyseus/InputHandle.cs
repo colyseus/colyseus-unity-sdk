@@ -16,8 +16,13 @@ namespace Colyseus
 		/// <summary>Unreliable-mode redundancy ring size (default 3).</summary>
 		public int HistorySize = 3;
 
-		/// <summary>Interpolation buffer (ms) — how far in the past remote entities render.</summary>
-		public double RenderDelay;
+		/// <summary>
+		///     Interpolation buffer (ms) — how far in the past remote entities
+		///     render. Leave null to have <c>Predict.Reconciler()</c> /
+		///     <c>Predict.Sim()</c> bind it to that Predict's lerp delay; any value,
+		///     0 included, is explicit and wins over the binding.
+		/// </summary>
+		public double? RenderDelay;
 
 		/// <summary>Per-send gate: stamp only inputs the server may rewind to.</summary>
 		public Func<object, bool> AllowRewind;
@@ -71,13 +76,31 @@ namespace Colyseus
 		///     lag-compensating server rewinds its targets by this much plus half
 		///     the RTT, so it reads the world at the instant you actually saw —
 		///     get it wrong and every shot misses by exactly the difference.
-		///     <see cref="Predict.Reconciler{S,I}" /> binds it from the lerp
-		///     delay you already attached with; set it yourself only to override.
+		///     <see cref="Predict.Predict.Reconciler{S,I}" /> binds it to that
+		///     Predict's default lerp delay (<see cref="Predict.PredictGetOptions.Delay" />),
+		///     read live, so the interp buffer and the rewind stay one number.
+		///     Setting it — here or via <see cref="InputOptions.RenderDelay" /> —
+		///     is an explicit override that the binding never replaces.
 		/// </summary>
 		public double RenderDelay
 		{
-			get => renderDelay;
-			set => renderDelay = Math.Max(0, value);
+			get => renderDelayProvider != null ? Math.Max(0, renderDelayProvider()) : renderDelay;
+			set
+			{
+				renderDelay = Math.Max(0, value);
+				renderDelayExplicit = true;
+				renderDelayProvider = null;
+			}
+		}
+
+		/// <summary>
+		///     Bind <see cref="RenderDelay" /> to a live provider (the owning
+		///     Predict's lerp delay). No-op when the app set it explicitly.
+		/// </summary>
+		internal void BindRenderDelay(Func<double> provider)
+		{
+			if (renderDelayExplicit) { return; }
+			renderDelayProvider = provider;
 		}
 
 		private readonly InputEncoder encoder;
@@ -87,6 +110,8 @@ namespace Colyseus
 		private readonly bool stampRender;
 		private readonly bool stampReckon;
 		private double renderDelay;
+		private bool renderDelayExplicit;
+		private Func<double> renderDelayProvider;
 		private readonly Func<object, bool> allowRewind;
 		private double lastStamp;      // delta-coded stamp baseline
 		private double pendingReckon;
@@ -105,7 +130,7 @@ namespace Colyseus
 			Schema.Schema data,
 			InputEncoder encoder,
 			bool stampRender, bool stampReckon,
-			double renderDelay, Func<object, bool> allowRewind,
+			double? renderDelay, Func<object, bool> allowRewind,
 			int? tickRate, int? patchRate, int? subSteps,
 			Func<Connection> getConnection, Func<RoomClock> getClock)
 		{
@@ -115,7 +140,8 @@ namespace Colyseus
 			this.getClock = getClock;
 			this.stampRender = stampRender;
 			this.stampReckon = stampReckon;
-			this.renderDelay = renderDelay;
+			this.renderDelay = Math.Max(0, renderDelay ?? 0);
+			renderDelayExplicit = renderDelay.HasValue;
 			this.allowRewind = allowRewind;
 			TickRate = tickRate;
 			PatchRate = patchRate;
@@ -159,7 +185,7 @@ namespace Colyseus
 				double rk = synced ? Math.Max(0, Math.Floor(clock.ServerNow() + 0.5)) : 0;
 				pendingReckon = rk;
 				double renderDelta = synced
-					? Math.Min(0xffff, Math.Max(0, Math.Floor(renderDelay + clock.SmoothedRtt() / 2 + 0.5)))
+					? Math.Min(0xffff, Math.Max(0, Math.Floor(RenderDelay + clock.SmoothedRtt() / 2 + 0.5)))
 					: 0;
 				// the mode's single u32 timeline, delta-coded vs the baseline;
 				// BOTH mode trails the absolute u16 renderDelta
