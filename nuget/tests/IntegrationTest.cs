@@ -208,6 +208,42 @@ namespace Colyseus.Tests
 		}
 
 		[Test]
+		public async Task SendAndReceiveMessage_TypedCollections()
+		{
+			var room = await client.JoinOrCreate<MyRoomState>("my_room");
+			var received = new TaskCompletionSource<CollectionsMessage>();
+
+			// CollectionsMessage is schema-codegen output for the server's `CollectionsMessage` interface
+			room.OnMessage<CollectionsMessage>("collections", (message) => received.TrySetResult(message));
+			await room.Send("collections");
+
+			var m = await WithTimeout(received.Task, 5000);
+			Assert.IsNotNull(m, "Should receive collections message");
+
+			CollectionAssert.AreEqual(new[] { "a", "b" }, m.tags);
+			CollectionAssert.AreEqual(new[] { 1, 2.5, -3 }, m.values);
+
+			Assert.AreEqual(2, m.points.Length);
+			Assert.AreEqual(3.5, m.points[1].x);
+			Assert.AreEqual(-4, m.points[1].y);
+			Assert.AreEqual(7, m.point.x);
+			Assert.AreEqual(8, m.point.y);
+
+			Assert.AreEqual(10, m.scores["alice"]);
+			Assert.AreEqual(2.5, m.scores["bob"]);
+			Assert.IsTrue(m.flags["on"]);
+			Assert.IsFalse(m.flags["off"]);
+			Assert.AreEqual(5, m.pointsByName["p"].x);
+			Assert.AreEqual(6, m.pointsByName["p"].y);
+
+			Assert.AreEqual(1, m.items.Length);
+			Assert.AreEqual("sword", m.items[0].name);
+			Assert.AreEqual(10, m.items[0].value);
+
+			await room.Leave();
+		}
+
+		[Test]
 		public async Task MultipleClients_SeeEachOther()
 		{
 			var client2 = new Client("ws://localhost:2567");
