@@ -261,11 +261,9 @@ namespace Colyseus.Editor
                 {
                     sb.AppendLine($"{indentStr}{field.Name}: {fieldValue ?? "null"}");
                 }
-                else if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(MapSchema<>))
+                else if (typeof(IMapSchema).IsAssignableFrom(fieldType))
                 {
-                    var itemsProperty = fieldType.GetField("items");
-                    var itemsValue = itemsProperty?.GetValue(fieldValue);
-                    var enumerable = itemsValue as IDictionary;
+                    var enumerable = (fieldValue as ISchemaCollection)?.GetItems() as IDictionary;
                     var count = enumerable?.Count ?? 0;
                     sb.AppendLine($"{indentStr}{field.Name} (MapSchema): {count} items");
 
@@ -286,11 +284,11 @@ namespace Colyseus.Editor
                         }
                     }
                 }
-                else if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(ArraySchema<>))
+                else if (typeof(IArraySchema).IsAssignableFrom(fieldType))
                 {
-                    var enumerable = fieldValue as IEnumerable;
-                    var countProp = fieldType.GetProperty("Count");
-                    var count = countProp?.GetValue(fieldValue) as int? ?? 0;
+                    var array = fieldValue as ISchemaCollection;
+                    var enumerable = array?.GetItems();
+                    var count = array?.Count ?? 0;
                     sb.AppendLine($"{indentStr}{field.Name} (ArraySchema): {count} items");
 
                     if (enumerable != null && count > 0)
@@ -404,11 +402,11 @@ namespace Colyseus.Editor
                 {
                     DrawReadOnlyField(field.Name, fieldValue?.ToString() ?? "null");
                 }
-                else if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(MapSchema<>))
+                else if (typeof(IMapSchema).IsAssignableFrom(fieldType))
                 {
                     DrawMapSchema(field.Name, fieldValue, fieldPath, depth);
                 }
-                else if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(ArraySchema<>))
+                else if (typeof(IArraySchema).IsAssignableFrom(fieldType))
                 {
                     DrawArraySchema(field.Name, fieldValue, fieldPath, depth);
                 }
@@ -422,6 +420,8 @@ namespace Colyseus.Editor
                 }
             }
         }
+
+        private const int ItemDisplayLimit = 100; // keep repaints cheap on large collections
 
         private void DrawMapSchema(string fieldName, object mapObj, string path, int depth)
         {
@@ -437,9 +437,8 @@ namespace Colyseus.Editor
                 return;
             }
 
-            var mapType = mapObj.GetType();
-            var countProp = mapType.GetProperty("Count");
-            var count = countProp?.GetValue(mapObj) as int? ?? 0;
+            var map = mapObj as ISchemaCollection;
+            var count = map?.Count ?? 0;
 
             _foldouts[foldoutKey] = EditorGUILayout.Foldout(
                 _foldouts[foldoutKey],
@@ -457,16 +456,19 @@ namespace Colyseus.Editor
                 }
                 else
                 {
-                    // Access the items property of MapSchema
-                    var itemsProperty = mapType.GetField("items");
-                    var itemsValue = itemsProperty?.GetValue(mapObj);
-                    var enumerable = itemsValue as IDictionary;
+                    var enumerable = map.GetItems() as IDictionary;
 
                     if (enumerable != null)
                     {
                         var index = 0;
                         foreach (DictionaryEntry kvp in enumerable)
                         {
+                            if (index >= ItemDisplayLimit)
+                            {
+                                EditorGUILayout.LabelField($"... and {count - ItemDisplayLimit} more items", EditorStyles.miniLabel);
+                                break;
+                            }
+
                             var key = kvp.Key?.ToString() ?? "null";
                             var value = kvp.Value;
                             var itemPath = $"{path}[{key}]";
@@ -481,11 +483,6 @@ namespace Colyseus.Editor
                             }
 
                             index++;
-                            if (index > 100) // Limit display to prevent performance issues
-                            {
-                                EditorGUILayout.LabelField($"... and {count - 100} more items", EditorStyles.miniLabel);
-                                break;
-                            }
                         }
                     }
                     else
@@ -512,9 +509,8 @@ namespace Colyseus.Editor
                 return;
             }
 
-            var arrayType = arrayObj.GetType();
-            var countProp = arrayType.GetProperty("Count");
-            var count = countProp?.GetValue(arrayObj) as int? ?? 0;
+            var array = arrayObj as ISchemaCollection;
+            var count = array?.Count ?? 0;
 
             _foldouts[foldoutKey] = EditorGUILayout.Foldout(
                 _foldouts[foldoutKey],
@@ -532,16 +528,19 @@ namespace Colyseus.Editor
                 }
                 else
                 {
-                    // Access the items field of ArraySchema (which is a List<T>)
-                    var itemsField = arrayType.GetField("items");
-                    var itemsValue = itemsField?.GetValue(arrayObj);
-                    var enumerable = itemsValue as IList;
+                    var enumerable = array.GetItems();
 
                     if (enumerable != null)
                     {
                         var index = 0;
                         foreach (var item in enumerable)
                         {
+                            if (index >= ItemDisplayLimit)
+                            {
+                                EditorGUILayout.LabelField($"... and {count - ItemDisplayLimit} more items", EditorStyles.miniLabel);
+                                break;
+                            }
+
                             var itemPath = $"{path}[{index}]";
 
                             if (item != null && typeof(Schema.Schema).IsAssignableFrom(item.GetType()))
@@ -554,11 +553,6 @@ namespace Colyseus.Editor
                             }
 
                             index++;
-                            if (index > 100) // Limit display to prevent performance issues
-                            {
-                                EditorGUILayout.LabelField($"... and {count - 100} more items", EditorStyles.miniLabel);
-                                break;
-                            }
                         }
                     }
                     else

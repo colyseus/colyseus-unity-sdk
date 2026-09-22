@@ -2,6 +2,10 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.7
+
+- Fix the Room Inspector showing "Error: Could not access MapSchema items" for every `MapSchema` field, and those maps coming out empty in "Copy State". Thanks @konistehrad for reporting! [#271](https://github.com/colyseus/colyseus-unity-sdk/issues/271)
+
 ## 0.18.6
 
 - Fix arrays of strings or numbers showing duplicate entries right after joining a room, and `OnAdd` / `Listen` firing again for entries and fields that didn't change after joining or reconnecting. Both now match the JS SDK.
