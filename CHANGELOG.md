@@ -2,6 +2,16 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.8
+
+- New **Window > Colyseus > Game Server** panel: start and stop your Node.js server from inside Unity, with its output streamed into a searchable, colored console. The server survives script recompiles and Play mode, re-attaches after an editor restart, and stops when you quit Unity — there is a toggle if you would rather it didn't.
+- Schema Codegen gained a **Detect** button that finds the schema files in your server project, and now accepts `**` globs such as `src/rooms/**/*.ts`. [#260](https://github.com/colyseus/colyseus-unity-sdk/issues/260)
+- The editor windows no longer print a warning to the console every time you open them, and now show the Colyseus icon in their tab. "Report an Issue" moved into each window's overflow menu.
+
+## 0.18.7
+
+- Fix the Room Inspector showing "Error: Could not access MapSchema items" for every `MapSchema` field, and those maps coming out empty in "Copy State". Thanks @konistehrad for reporting! [#271](https://github.com/colyseus/colyseus-unity-sdk/issues/271)
+
 ## 0.18.6
 
 - Fix arrays of strings or numbers showing duplicate entries right after joining a room, and `OnAdd` / `Listen` firing again for entries and fields that didn't change after joining or reconnecting. Both now match the JS SDK.
