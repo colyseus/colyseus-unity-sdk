@@ -338,6 +338,26 @@ namespace Colyseus.Schema
 			return element == typeof(object) || element == typeof(double);
 		}
 
+		/// <summary>
+		///     Read the ref id a <c>"ref"</c> or collection field carries. Anything but a non-negative
+		///     integer means the client schema does not match the server's state (e.g. a string arriving
+		///     where a map is declared), which <see cref="Convert.ToInt32(float)" /> would only report as
+		///     an opaque <see cref="OverflowException" />.
+		/// </summary>
+		private int DecodeRefId(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType)
+		{
+			float refId = Utils.Decode.DecodeNumber(bytes, it);
+
+			if (!(refId >= 0 && refId < 2147483648f))
+			{
+				throw new InvalidOperationException(
+					$"Schema mismatch: field {fieldIndex} of {_ref.GetType().Name} is declared as \"{fieldType}\", " +
+					"but the server did not send a reference id for it. Make sure the client schema classes match the server state (regenerate them with schema-codegen).");
+			}
+
+			return (int)refId;
+		}
+
 		protected void DecodeValue(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType, System.Type childType, byte operation, out object value, out object previousValue)
 		{
 			previousValue = _ref.GetByIndex(fieldIndex);
@@ -372,7 +392,7 @@ namespace Colyseus.Schema
 			}
 			else if (fieldType == "ref")
 			{
-				var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+				var __refId = DecodeRefId(bytes, it, _ref, fieldIndex, fieldType);
 				value = Refs.Get(__refId);
 
 				if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
@@ -440,7 +460,7 @@ namespace Colyseus.Schema
 			}
 			else
 			{
-				var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+				var __refId = DecodeRefId(bytes, it, _ref, fieldIndex, fieldType);
 
 				// resync bookkeeping: mark the collection present in the payload —
 				// even with zero entries — so the sweep knows it participated
