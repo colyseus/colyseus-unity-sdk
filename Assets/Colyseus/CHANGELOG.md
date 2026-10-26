@@ -5,6 +5,7 @@ All notable changes to the Colyseus Unity SDK are documented in this file.
 ## 0.18.10
 
 - `room.Leave()` while the room is reconnecting now stops the reconnection and completes right away with `CloseCode.CONSENTED`, instead of only once every retry has failed.
+- WebGL: automatic reconnection now retries after a drop; the wait before each attempt never ended.
 
 ## 0.18.9
 

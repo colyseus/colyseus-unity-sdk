@@ -1299,7 +1299,13 @@ namespace Colyseus
 					Reconnection.Backoff(Reconnection.RetryCount, Reconnection.Delay)));
 
 			ColyseusContext.Logger.Log($"[Colyseus reconnection]: Will retry in {delay / 1000f:F1} seconds...");
+#if UNITY_WEBGL && !UNITY_EDITOR
+			// no thread-pool timers on WebGL (a Task.Delay never resumes): wait frame by frame on the player loop
+			long retryAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + delay;
+			while (!_left && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() < retryAt) { await Task.Yield(); }
+#else
 			try { await Task.Delay(delay, _retryCancellation.Token); } catch (OperationCanceledException) { }
+#endif
 			if (_left) { return; } // left during the delay, or before this resumed
 
 			ColyseusContext.Logger.Log($"[Colyseus reconnection]: Re-establishing sessionId '{SessionId}' with roomId '{RoomId}'... (attempt {Reconnection.RetryCount} of {Reconnection.MaxRetries})");
