@@ -17,6 +17,12 @@ namespace Colyseus.Tests
 	[TestFixture]
 	public class RoomProtocolTest
 	{
+		// JOIN_ROOM for a plain room (state reflection only, no trailing sections), token "tokA"
+		internal static readonly byte[] JoinFrame = { 10, 4, 116, 111, 107, 65, 6, 115, 99, 104, 101, 109, 97, 49, 128, 1, 255, 1, 128, 0, 2, 255, 2, 128, 0, 130, 3, 255, 3, 128, 0, 4, 128, 1, 5, 255, 4, 128, 163, 109, 115, 103, 129, 166, 115, 116, 114, 105, 110, 103, 255, 5, 128, 161, 110, 129, 166, 110, 117, 109, 98, 101, 114 };
+
+		// reconnect JOIN_ROOM: zero-length state reflection (serializer has state), token "tokB"
+		internal static readonly byte[] RejoinFrame = { 10, 4, 116, 111, 107, 66, 6, 115, 99, 104, 101, 109, 97, 0 };
+
 		private class StubConnection : Connection
 		{
 			public readonly List<byte[]> Sent = new List<byte[]>();
@@ -110,13 +116,11 @@ namespace Colyseus.Tests
 			room.OnJoin += () => joins++;
 			room.OnReconnect += () => reconnects++;
 
-			// plain room: state reflection only, no trailing sections
-			room.Feed(new byte[] { 10, 4, 116, 111, 107, 65, 6, 115, 99, 104, 101, 109, 97, 49, 128, 1, 255, 1, 128, 0, 2, 255, 2, 128, 0, 130, 3, 255, 3, 128, 0, 4, 128, 1, 5, 255, 4, 128, 163, 109, 115, 103, 129, 166, 115, 116, 114, 105, 110, 103, 255, 5, 128, 161, 110, 129, 166, 110, 117, 109, 98, 101, 114 });
+			room.Feed(JoinFrame);
 			Assert.AreEqual(1, joins);
 			Assert.AreEqual(0, reconnects);
 
-			// reconnect JOIN: zero-length state reflection (serializer has state)
-			room.Feed(new byte[] { 10, 4, 116, 111, 107, 66, 6, 115, 99, 104, 101, 109, 97, 0 });
+			room.Feed(RejoinFrame);
 			Assert.AreEqual(1, joins);
 			Assert.AreEqual(1, reconnects);
 			Assert.AreEqual("tokB", room.ReconnectionToken.Token);

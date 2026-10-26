@@ -111,7 +111,7 @@ namespace Colyseus
 
         public Task Close()
         {
-            return _transport.Close();
+            return _transport?.Close() ?? Task.CompletedTask;
         }
 
 		public void Drop()

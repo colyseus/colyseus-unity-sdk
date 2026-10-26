@@ -2,6 +2,10 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.10
+
+- `room.Leave()` while the room is reconnecting now stops the reconnection and completes right away with `CloseCode.CONSENTED`, instead of only once every retry has failed.
+
 ## 0.18.9
 
 - A client whose schema classes don't match the server's state now leaves the room and gets `OnError` with `ErrorCode.SCHEMA_MISMATCH`, naming the mismatched field, instead of crashing with `OverflowException: Value was either too large or too small for an Int32`. `WaitForFirstState()` now throws instead of never resolving. Thanks @armadavalor for the fix, and @sasalicat for reporting! [#247](https://github.com/colyseus/colyseus-unity-sdk/issues/247) [#272](https://github.com/colyseus/colyseus-unity-sdk/pull/272)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Colyseus.Schema;
 using GameDevWare.Serialization;
@@ -244,6 +245,15 @@ namespace Colyseus
         /// </summary>
         private Action<int> _pingCallback = null;
 
+        /// <summary>Cancels the pending auto-reconnection delay once the room has left.</summary>
+        private readonly CancellationTokenSource _retryCancellation = new CancellationTokenSource();
+
+        /// <summary>A consented <see cref="Leave" /> was requested: a drop from here on ends the room instead of reconnecting.</summary>
+        private bool _leaving;
+
+        /// <summary>Set once <see cref="OnLeave" /> has fired; the room ignores any later exit.</summary>
+        private bool _left;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="Room{T}" /> class.
         ///     It synchronizes state automatically with the server and send and receive messaes.
@@ -318,12 +328,42 @@ namespace Colyseus
         }
 
         /// <summary>
-        ///     Leave the room
+        ///     Leave the room.
+        ///
+        ///     A consented leave (the default) also ends automatic reconnection:
+        ///     if the connection has dropped, the pending retry is cancelled and
+        ///     the room leaves locally with <see cref="CloseCode.CONSENTED" />,
+        ///     without waiting for the server. If the server is already closing
+        ///     the connection, the room leaves with the server's close code.
+        ///
+        ///     Calling it on a room that has already left completes immediately;
+        ///     <see cref="OnLeave" /> doesn't fire again.
         /// </summary>
-        /// <param name="consented">If the user agreed to this disconnection</param>
+        /// <param name="consented">
+        ///     If the user agreed to this disconnection. <c>false</c> closes an
+        ///     open connection without consent, so the server may hold the seat
+        ///     for a reconnect; it does nothing while the connection is down.
+        /// </param>
         /// <returns>Connection closure depending on user consent</returns>
         public async Task Leave(bool consented = true)
         {
+            // already left: OnLeave won't fire again
+            if (_left) { return; }
+
+            if (consented)
+            {
+                _leaving = true;
+
+                if (Reconnection.IsReconnecting || (JoinedAtTime == 0 && !Connection.IsOpen))
+                {
+                    // dropped, or never connected: no socket to tell the server on, so stop retrying
+                    Finish((int)CloseCode.CONSENTED);
+                    _ = Connection.Close(); // aborts or closes the attempt in flight
+                    return;
+                }
+            }
+
+            // consented: a close is being handled, and its handler ends the room; leave(false) does nothing while down
             if (!Connection.IsOpen) {
                 return;
             }
@@ -362,8 +402,19 @@ namespace Colyseus
             }
             else
             {
-                OnLeave?.Invoke((int)CloseCode.CONSENTED);
+                Finish((int)CloseCode.CONSENTED);
             }
+        }
+
+        /// <summary>Every way the room ends goes through here: <see cref="OnLeave" /> fires once and retries stop.</summary>
+        private void Finish(int code)
+        {
+            if (_left) { return; }
+            _left = true;
+
+            _retryCancellation.Cancel();
+            Reconnection.IsReconnecting = false;
+            OnLeave?.Invoke(code);
         }
 
         // Internal OnJoin event. It is used by Client.cs during matchmaking.
@@ -402,6 +453,9 @@ namespace Colyseus
 				// in-flight requests can't be answered on a closed socket
 				RejectAllPendingRequests("connection closed before a response was received.");
 
+				// left locally (see Leave()): this is the aborted attempt closing
+				if (_left) { return; }
+
 				if (JoinedAtTime == 0) {
 					OnError?.Invoke(code, "Connection closed before joining room");
 					return;
@@ -413,18 +467,28 @@ namespace Colyseus
 					code == (int) CloseCode.GOING_AWAY ||
 					code == (int) CloseCode.MAY_TRY_RECONNECT
 				) {
+					// leave() is pending: a drop ends the room instead of reconnecting
+					if (_leaving) {
+						Finish((int) CloseCode.CONSENTED);
+						return;
+					}
+
 					OnDrop?.Invoke(code);
 					HandleReconnection(code);
 
 				} else {
-					OnLeave?.Invoke(code);
+					Finish(code);
 				}
 	        };
 
 	        // TODO: expose WebSocket error code!
 	        // Connection.OnError += (code, message) => OnError?.Invoke(code, message);
 
-	        Connection.OnError += message => this.OnError?.Invoke(0, message);
+	        Connection.OnError += message =>
+	        {
+		        if (_left) { return; } // a room that has left ignores its socket
+		        this.OnError?.Invoke(0, message);
+	        };
 	        Connection.OnMessage += bytes => this.ParseMessage(bytes);
         }
 
@@ -890,6 +954,9 @@ namespace Colyseus
         /// <param name="bytes">The message as provided from the <see cref="Connection" /></param>
         protected async void ParseMessage(byte[] bytes)
         {
+            // a room that has left ignores its socket: no revival
+            if (_left) { _ = Connection.Close(); return; }
+
             SweepExpiredRequests();
 
             Iterator it = new Iterator { Offset = 1 };
@@ -1182,9 +1249,12 @@ namespace Colyseus
 
 		private void HandleReconnection(int code)
 		{
+			// Leave() was called from an OnDrop listener
+			if (_leaving) { Finish((int)CloseCode.CONSENTED); return; }
+
 			if (!Reconnection.Enabled)
 			{
-				OnLeave?.Invoke(code);
+				Finish(code);
 				return;
 			}
 
@@ -1193,7 +1263,7 @@ namespace Colyseus
 			if (currentTime - JoinedAtTime < Reconnection.MinUptime)
 			{
 				ColyseusContext.Logger.Log($"[Colyseus reconnection]: Room not up long enough for auto-reconnect (min uptime: {Reconnection.MinUptime}ms)");
-				OnLeave?.Invoke((int)CloseCode.ABNORMAL_CLOSURE);
+				Finish((int)CloseCode.ABNORMAL_CLOSURE);
 				return;
 			}
 
@@ -1218,8 +1288,7 @@ namespace Colyseus
 			{
 				// No more retries
 				ColyseusContext.Logger.Log($"[Colyseus reconnection]: Reconnection failed after {Reconnection.MaxRetries} attempts.");
-				Reconnection.IsReconnecting = false;
-				OnLeave?.Invoke((int)CloseCode.FAILED_TO_RECONNECT);
+				Finish((int)CloseCode.FAILED_TO_RECONNECT);
 				return;
 			}
 
@@ -1230,7 +1299,8 @@ namespace Colyseus
 					Reconnection.Backoff(Reconnection.RetryCount, Reconnection.Delay)));
 
 			ColyseusContext.Logger.Log($"[Colyseus reconnection]: Will retry in {delay / 1000f:F1} seconds...");
-			await Task.Delay(delay);
+			try { await Task.Delay(delay, _retryCancellation.Token); } catch (OperationCanceledException) { }
+			if (_left) { return; } // left during the delay, or before this resumed
 
 			ColyseusContext.Logger.Log($"[Colyseus reconnection]: Re-establishing sessionId '{SessionId}' with roomId '{RoomId}'... (attempt {Reconnection.RetryCount} of {Reconnection.MaxRetries})");
 
@@ -1274,7 +1344,7 @@ namespace Colyseus
 
 		private void Destroy()
 		{
-			Serializer.Teardown();
+			Serializer?.Teardown(); // null until the first JOIN_ROOM
 		}
     }
 }
