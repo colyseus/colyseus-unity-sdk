@@ -344,10 +344,11 @@ namespace Colyseus.Schema
 		///     where a map is declared), which <see cref="Convert.ToInt32(float)" /> would only report as
 		///     an opaque <see cref="OverflowException" />.
 		/// </summary>
-		private int DecodeRefId(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType)
+		private static int DecodeRefId(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType)
 		{
 			float refId = Utils.Decode.DecodeNumber(bytes, it);
 
+			// negated so NaN (a non-number prefix) fails too
 			if (!(refId >= 0 && refId < 2147483648f))
 			{
 				throw new InvalidOperationException(
