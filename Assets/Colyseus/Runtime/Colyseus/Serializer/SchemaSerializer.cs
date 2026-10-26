@@ -75,7 +75,7 @@ namespace Colyseus
 			System.Type targetType = typeof(T);
 
 			System.Type[] allTypes = targetType.Assembly.GetTypes();
-			List<System.Type> namespaceSchemaTypes = new List<System.Type>(Array.FindAll(allTypes, t => t.Namespace == targetType.Namespace && typeof(Schema.Schema).IsAssignableFrom( targetType)));
+			List<System.Type> namespaceSchemaTypes = new List<System.Type>(Array.FindAll(allTypes, t => t.Namespace == targetType.Namespace && typeof(Schema.Schema).IsAssignableFrom(t)));
 
 			for (int i = 0; i < reflection.types.Count; i++)
 			{
