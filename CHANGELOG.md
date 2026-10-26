@@ -2,6 +2,13 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.10
+
+- `room.Leave()` while the room is reconnecting now stops the reconnection and completes right away with `CloseCode.CONSENTED`, instead of only once every retry has failed. [colyseus/react-tools#15](https://github.com/colyseus/react-tools/issues/15)
+- WebGL: automatic reconnection now retries after a drop; the wait before each attempt never ended.
+- `room.Leave()` before the room has a connection no longer throws `NullReferenceException`.
+- WebGL: `Connection.Drop()` no longer throws (NativeWebSocket 2.0.8).
+
 ## 0.18.9
 
 - A client whose schema classes don't match the server's state now leaves the room and gets `OnError` with `ErrorCode.SCHEMA_MISMATCH`, naming the mismatched field, instead of crashing with `OverflowException: Value was either too large or too small for an Int32`. `WaitForFirstState()` now throws instead of never resolving. Thanks @armadavalor for the fix, and @sasalicat for reporting! [#247](https://github.com/colyseus/colyseus-unity-sdk/issues/247) [#272](https://github.com/colyseus/colyseus-unity-sdk/pull/272)

@@ -63,7 +63,26 @@ namespace Colyseus
 
         public Task Send(byte[] data) => _ws.Send(data);
 
-        public Task Close() => _ws.Close();
+        /// <summary>Closes an open socket or aborts a connecting one; no-op once closing/closed.</summary>
+        public Task Close()
+        {
+            switch (_ws?.State)
+            {
+                case NativeWebSocket.WebSocketState.Open:
+                    return _ws.Close();
+
+                case NativeWebSocket.WebSocketState.Connecting:
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    return _ws.Close(); // a browser close() aborts a connecting socket
+#else
+                    _ws.CancelConnection(); // native Close() ignores a socket that isn't open
+                    return Task.CompletedTask;
+#endif
+
+                default:
+                    return Task.CompletedTask;
+            }
+        }
 
         public void CancelConnection() => _ws.CancelConnection();
 
