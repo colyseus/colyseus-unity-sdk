@@ -32,5 +32,20 @@ namespace Colyseus.Tests
 			var ex = Assert.Throws<SchemaMismatchException>(() => new Decoder<MyRoomState>().Decode(bytes));
 			StringAssert.StartsWith("Schema mismatch: field 1 of MyRoomState is declared as \"ref\"", ex.Message);
 		}
+
+		[Test]
+		public void HandshakeWarningNamesTheServerFields()
+		{
+			// Reflection.encode() of the template state, from @colyseus/schema 5.0
+			byte[] reflection = { 128, 1, 255, 1, 128, 0, 2, 255, 2, 128, 0, 130, 3, 255, 3, 128, 0, 4, 255, 4, 128, 182, 109, 121, 83, 121, 110, 99, 104, 114, 111, 110, 105, 122, 101, 100, 80, 114, 111, 112, 101, 114, 116, 121, 129, 166, 115, 116, 114, 105, 110, 103 };
+
+			using (PredictTestSupport.CaptureLogs(out var log))
+			{
+				new SchemaSerializer<MyRoomState>().Handshake(reflection, 0);
+
+				Assert.AreEqual(1, log.Warnings.Count);
+				StringAssert.Contains("Fields: mySynchronizedProperty: string", log.Warnings[0]);
+			}
+		}
 	}
 }
