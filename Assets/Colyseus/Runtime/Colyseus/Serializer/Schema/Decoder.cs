@@ -5,6 +5,16 @@ namespace Colyseus.Schema
 {
     public delegate void TriggerChangesDelegate(ref List<DataChange> changes);
 
+    /// <summary>
+    ///     The client's schema classes don't match the state the server sent; regenerate them with
+    ///     schema-codegen. A room reports it through <c>OnError</c> as <c>ErrorCode.SCHEMA_MISMATCH</c>
+    ///     and leaves.
+    /// </summary>
+    public class SchemaMismatchException : InvalidOperationException
+    {
+        public SchemaMismatchException(string message) : base(message) { }
+    }
+
     public class Decoder<T> where T : Schema
     {
         public ReferenceTracker Refs = new ReferenceTracker();
@@ -351,7 +361,7 @@ namespace Colyseus.Schema
 			// negated so NaN (a non-number prefix) fails too
 			if (!(refId >= 0 && refId < 2147483648f))
 			{
-				throw new InvalidOperationException(
+				throw new SchemaMismatchException(
 					$"Schema mismatch: field {fieldIndex} of {_ref.GetType().Name} is declared as \"{fieldType}\", " +
 					"but the server did not send a reference id for it. Make sure the client schema classes match the server state (regenerate them with schema-codegen).");
 			}

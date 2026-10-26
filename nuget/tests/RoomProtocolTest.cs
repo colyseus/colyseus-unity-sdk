@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Colyseus;
+using Colyseus.Schema;
 
 namespace Colyseus.Tests
 {
@@ -55,6 +56,20 @@ namespace Colyseus.Tests
 			return (room, stub);
 		}
 
+		/// <summary>The Unity example's state, as in issue #247.</summary>
+		private class ExampleRoom : Room<MyRoomState>
+		{
+			public ExampleRoom() : base("my_room")
+			{
+				RoomId = "my_room";
+			}
+
+			public void Feed(byte[] frame)
+			{
+				ParseMessage(frame);
+			}
+		}
+
 		[Test]
 		public void JoinRoomFullHandshakeTest()
 		{
@@ -105,6 +120,43 @@ namespace Colyseus.Tests
 			Assert.AreEqual(1, joins);
 			Assert.AreEqual(1, reconnects);
 			Assert.AreEqual("tokB", room.ReconnectionToken.Token);
+		}
+
+		[Test]
+		public void SchemaMismatchInStateLeavesWithErrorTest()
+		{
+			var room = new ExampleRoom();
+			var stub = new StubConnection();
+			room.SetConnection(stub);
+
+			var errors = new List<(int code, string message)>();
+			room.OnError += (code, message) => errors.Add((code, message));
+			var firstState = room.WaitForFirstState();
+
+			// JOIN_ROOM carrying the create-colyseus-app template's reflection (@colyseus/schema 5.0):
+			// the handshake only warns
+			room.Feed(new byte[] { 10, 3, 116, 111, 107, 6, 115, 99, 104, 101, 109, 97, 52, 128, 1, 255, 1, 128, 0, 2, 255, 2, 128, 0, 130, 3, 255, 3, 128, 0, 4, 255, 4, 128, 182, 109, 121, 83, 121, 110, 99, 104, 114, 111, 110, 105, 122, 101, 100, 80, 114, 111, 112, 101, 114, 116, 121, 129, 166, 115, 116, 114, 105, 110, 103 });
+			Assert.IsEmpty(errors);
+
+			stub.IsOpen = false; // makes Leave() a no-op on the transport-less stub
+
+			// the template's full state, then a patch that arrives while leaving
+			byte[] templateState = { 128, 171, 72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100 };
+			room.Feed(Frame(14, templateState));
+			room.Feed(Frame(15, templateState));
+
+			Assert.AreEqual(1, errors.Count);
+			Assert.AreEqual(ErrorCode.SCHEMA_MISMATCH, errors[0].code);
+			StringAssert.StartsWith("Schema mismatch: field 0 of MyRoomState is declared as \"map\"", errors[0].message);
+			Assert.ThrowsAsync<SchemaMismatchException>(async () => await firstState);
+		}
+
+		private static byte[] Frame(byte code, byte[] payload)
+		{
+			var frame = new byte[payload.Length + 1];
+			frame[0] = code;
+			Buffer.BlockCopy(payload, 0, frame, 1, payload.Length);
+			return frame;
 		}
 
 		[Test]
