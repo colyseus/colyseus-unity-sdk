@@ -963,8 +963,7 @@ namespace Colyseus
 	                }
 	                catch (Exception e)
 	                {
-		                await Leave(false);
-		                OnError?.Invoke(ErrorCode.SCHEMA_MISMATCH, e.Message);
+		                await FailSchemaMismatch(e);
 		                return;
 	                }
                     it.Offset = reflectionEnd;
@@ -1043,13 +1042,20 @@ namespace Colyseus
             {
                 await Leave();
             }
-            else if (code == Protocol.ROOM_STATE)
+            else if (code == Protocol.ROOM_STATE || code == Protocol.ROOM_STATE_PATCH)
             {
-	            SetState(bytes, it.Offset);
-            }
-            else if (code == Protocol.ROOM_STATE_PATCH)
-            {
-                Patch(bytes, it.Offset);
+                // undecodable once, undecodable for good — drop frames that arrive while leaving
+                if (schemaMismatched) { return; }
+
+                try
+                {
+                    if (code == Protocol.ROOM_STATE) { SetState(bytes, it.Offset); }
+                    else { Patch(bytes, it.Offset); }
+                }
+                catch (SchemaMismatchException e)
+                {
+                    await FailSchemaMismatch(e);
+                }
             }
             else if (code == Protocol.PING)
             {
@@ -1145,6 +1151,21 @@ namespace Colyseus
         {
             Serializer.Patch(delta, offset);
             OnStateChange?.Invoke(Serializer.GetState(), false);
+        }
+
+        private bool schemaMismatched;
+
+        /// <summary>
+        ///     The server's state can't be decoded into <typeparamref name="T" />: leave, and report it
+        ///     through <see cref="OnError" /> as <see cref="ErrorCode.SCHEMA_MISMATCH" />. A pending
+        ///     <see cref="WaitForFirstState" /> fails with <paramref name="e" /> instead of never resolving.
+        /// </summary>
+        private async Task FailSchemaMismatch(Exception e)
+        {
+            schemaMismatched = true;
+            firstStateSource?.TrySetException(e);
+            await Leave(false);
+            OnError?.Invoke(ErrorCode.SCHEMA_MISMATCH, e.Message);
         }
 
         /// <summary>

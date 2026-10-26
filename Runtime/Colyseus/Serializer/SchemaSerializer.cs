@@ -75,7 +75,7 @@ namespace Colyseus
 			System.Type targetType = typeof(T);
 
 			System.Type[] allTypes = targetType.Assembly.GetTypes();
-			List<System.Type> namespaceSchemaTypes = new List<System.Type>(Array.FindAll(allTypes, t => t.Namespace == targetType.Namespace && typeof(Schema.Schema).IsAssignableFrom( targetType)));
+			List<System.Type> namespaceSchemaTypes = new List<System.Type>(Array.FindAll(allTypes, t => t.Namespace == targetType.Namespace && typeof(Schema.Schema).IsAssignableFrom(t)));
 
 			for (int i = 0; i < reflection.types.Count; i++)
 			{
@@ -95,7 +95,8 @@ namespace Colyseus
 				else
 				{
 					ColyseusContext.Logger.LogWarning(
-						"Local schema mismatch from server. Use \"schema-codegen\" to generate up-to-date local definitions.");
+						$"Local schema mismatch from server: no local type matches {DebugReflectionType(reflectionType, reflectionFields)}. " +
+						"Use \"schema-codegen\" to generate up-to-date local definitions.");
 				}
 			}
 		}
@@ -141,7 +142,7 @@ namespace Colyseus
 			List<string> fieldNames = new List<string>();
 			for (int i = 0; i < reflectionFields.Count; i++)
 			{
-				fieldNames.Add(reflectionFields[i].name);
+				fieldNames.Add($"{reflectionFields[i].name}: {reflectionFields[i].type}");
 			}
 			return $"TypeId: {reflectionType.id} (extendsId: {reflectionType.extendsId}), Fields: {string.Join(", ", fieldNames)}";
 		}

@@ -2,6 +2,12 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.9
+
+- A client whose schema classes don't match the server's state now leaves the room and gets `OnError` with `ErrorCode.SCHEMA_MISMATCH`, naming the mismatched field, instead of crashing with `OverflowException: Value was either too large or too small for an Int32`. `WaitForFirstState()` now throws instead of never resolving. Thanks @armadavalor for the fix, and @sasalicat for reporting! [#247](https://github.com/colyseus/colyseus-unity-sdk/issues/247) [#272](https://github.com/colyseus/colyseus-unity-sdk/pull/272)
+- Fix a crash when the server sends a field the client doesn't know yet and its value contains the byte `0xFF`, such as a `number` set to 255. Such fields are skipped again, as intended.
+- The "Local schema mismatch from server" warning now lists the server type's fields.
+
 ## 0.18.8
 
 - New **Window > Colyseus > Game Server** panel: start and stop your Node.js server from inside Unity, with its output streamed into a searchable, colored console. The server survives script recompiles and Play mode, re-attaches after an editor restart, and stops when you quit Unity — there is a toggle if you would rather it didn't.

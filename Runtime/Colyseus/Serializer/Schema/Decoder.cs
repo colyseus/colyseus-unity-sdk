@@ -5,6 +5,16 @@ namespace Colyseus.Schema
 {
     public delegate void TriggerChangesDelegate(ref List<DataChange> changes);
 
+    /// <summary>
+    ///     The client's schema classes don't match the state the server sent; regenerate them with
+    ///     schema-codegen. A room reports it through <c>OnError</c> as <c>ErrorCode.SCHEMA_MISMATCH</c>
+    ///     and leaves.
+    /// </summary>
+    public class SchemaMismatchException : InvalidOperationException
+    {
+        public SchemaMismatchException(string message) : base(message) { }
+    }
+
     public class Decoder<T> where T : Schema
     {
         public ReferenceTracker Refs = new ReferenceTracker();
@@ -168,7 +178,7 @@ namespace Colyseus.Schema
 				if (Utils.Decode.SwitchStructureCheck(bytes, it))
 				{
 					nextIterator.Offset = it.Offset + 1;
-					if (Refs.Has(Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, nextIterator))))
+					if (TryDecodeRefId(bytes, nextIterator, out int nextRefId) && Refs.Has(nextRefId))
 					{
 						break;
 					}
@@ -338,6 +348,49 @@ namespace Colyseus.Schema
 			return element == typeof(object) || element == typeof(double);
 		}
 
+		/// <summary>
+		///     Read the ref id a <c>"ref"</c> or collection field carries. Anything but a non-negative
+		///     integer means the client schema does not match the server's state (e.g. a string arriving
+		///     where a map is declared), which <see cref="Convert.ToInt32(float)" /> would only report as
+		///     an opaque <see cref="OverflowException" />.
+		/// </summary>
+		private static int DecodeRefId(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType)
+		{
+			float refId = Utils.Decode.DecodeNumber(bytes, it);
+
+			// negated so NaN (a non-number prefix) fails too
+			if (!(refId >= 0 && refId < 2147483648f))
+			{
+				throw new SchemaMismatchException(
+					$"Schema mismatch: field {fieldIndex} of {_ref.GetType().Name} is declared as \"{fieldType}\", " +
+					"but the server did not send a reference id for it. Make sure the client schema classes match the server state (regenerate them with schema-codegen).");
+			}
+
+			return (int)refId;
+		}
+
+		/// <summary>
+		///     Non-throwing ref id read for <see cref="SkipCurrentStructure" />, which probes arbitrary
+		///     skipped bytes: a 0xFF there is usually data (e.g. <c>number</c> 255 is <c>cc ff</c>), so
+		///     whatever follows may be a non-number or run past the end of the payload.
+		/// </summary>
+		private static bool TryDecodeRefId(byte[] bytes, Iterator it, out int refId)
+		{
+			refId = -1;
+			if (it.Offset >= bytes.Length) { return false; }
+
+			// the encoder writes ref ids as positive fixint, uint8, uint16 or uint32
+			byte prefix = bytes[it.Offset];
+			int size = prefix < 0x80 ? 0 : prefix == 0xcc ? 1 : prefix == 0xcd ? 2 : prefix == 0xce ? 4 : -1;
+			if (size < 0 || it.Offset + size >= bytes.Length) { return false; }
+
+			double value = Utils.Decode.DecodeNumberAsDouble(bytes, it);
+			if (value > int.MaxValue) { return false; }
+
+			refId = (int)value;
+			return true;
+		}
+
 		protected void DecodeValue(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType, System.Type childType, byte operation, out object value, out object previousValue)
 		{
 			previousValue = _ref.GetByIndex(fieldIndex);
@@ -372,7 +425,7 @@ namespace Colyseus.Schema
 			}
 			else if (fieldType == "ref")
 			{
-				var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+				var __refId = DecodeRefId(bytes, it, _ref, fieldIndex, fieldType);
 				value = Refs.Get(__refId);
 
 				if ((operation & (byte)OPERATION.ADD) == (byte)OPERATION.ADD)
@@ -440,7 +493,7 @@ namespace Colyseus.Schema
 			}
 			else
 			{
-				var __refId = Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, it));
+				var __refId = DecodeRefId(bytes, it, _ref, fieldIndex, fieldType);
 
 				// resync bookkeeping: mark the collection present in the payload —
 				// even with zero entries — so the sweep knows it participated
