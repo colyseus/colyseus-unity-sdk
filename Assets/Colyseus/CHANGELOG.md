@@ -4,9 +4,10 @@ All notable changes to the Colyseus Unity SDK are documented in this file.
 
 ## 0.18.10
 
-- `room.Leave()` while the room is reconnecting now stops the reconnection and completes right away with `CloseCode.CONSENTED`, instead of only once every retry has failed.
+- `room.Leave()` while the room is reconnecting now stops the reconnection and completes right away with `CloseCode.CONSENTED`, instead of only once every retry has failed. [colyseus/react-tools#15](https://github.com/colyseus/react-tools/issues/15)
 - WebGL: automatic reconnection now retries after a drop; the wait before each attempt never ended.
 - `room.Leave()` before the room has a connection no longer throws `NullReferenceException`.
+- WebGL: `Connection.Drop()` no longer throws (NativeWebSocket 2.0.8).
 
 ## 0.18.9
 
