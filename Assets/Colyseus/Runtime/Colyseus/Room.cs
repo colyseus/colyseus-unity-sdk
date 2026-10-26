@@ -350,6 +350,13 @@ namespace Colyseus
             // already left: OnLeave won't fire again
             if (_left) { return; }
 
+            // no connection yet (before SetConnection): nothing to close or tell the server
+            if (Connection == null)
+            {
+                if (consented) { Finish((int)CloseCode.CONSENTED); }
+                return;
+            }
+
             if (consented)
             {
                 _leaving = true;

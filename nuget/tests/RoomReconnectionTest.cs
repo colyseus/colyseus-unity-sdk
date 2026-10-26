@@ -307,6 +307,19 @@ namespace Colyseus.Tests
 		}
 
 		[Test]
+		public async Task LeaveBeforeSetConnectionLeavesConsentedTest()
+		{
+			var room = new TestRoom();
+
+			// no connection to close
+			await room.Leave(false);
+			CollectionAssert.IsEmpty(room.Leaves);
+
+			await room.Leave();
+			CollectionAssert.AreEqual(new[] { (int)CloseCode.CONSENTED }, room.Leaves);
+		}
+
+		[Test]
 		public async Task ReconnectionCompletingAfterLeaveIsIgnoredTest()
 		{
 			var (room, stub) = JoinedRoom();
