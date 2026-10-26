@@ -168,7 +168,7 @@ namespace Colyseus.Schema
 				if (Utils.Decode.SwitchStructureCheck(bytes, it))
 				{
 					nextIterator.Offset = it.Offset + 1;
-					if (Refs.Has(Convert.ToInt32(Utils.Decode.DecodeNumber(bytes, nextIterator))))
+					if (TryDecodeRefId(bytes, nextIterator, out int nextRefId) && Refs.Has(nextRefId))
 					{
 						break;
 					}
@@ -357,6 +357,28 @@ namespace Colyseus.Schema
 			}
 
 			return (int)refId;
+		}
+
+		/// <summary>
+		///     Non-throwing ref id read for <see cref="SkipCurrentStructure" />, which probes arbitrary
+		///     skipped bytes: a 0xFF there is usually data (e.g. <c>number</c> 255 is <c>cc ff</c>), so
+		///     whatever follows may be a non-number or run past the end of the payload.
+		/// </summary>
+		private static bool TryDecodeRefId(byte[] bytes, Iterator it, out int refId)
+		{
+			refId = -1;
+			if (it.Offset >= bytes.Length) { return false; }
+
+			// the encoder writes ref ids as positive fixint, uint8, uint16 or uint32
+			byte prefix = bytes[it.Offset];
+			int size = prefix < 0x80 ? 0 : prefix == 0xcc ? 1 : prefix == 0xcd ? 2 : prefix == 0xce ? 4 : -1;
+			if (size < 0 || it.Offset + size >= bytes.Length) { return false; }
+
+			double value = Utils.Decode.DecodeNumberAsDouble(bytes, it);
+			if (value > int.MaxValue) { return false; }
+
+			refId = (int)value;
+			return true;
 		}
 
 		protected void DecodeValue(byte[] bytes, Iterator it, IRef _ref, int fieldIndex, string fieldType, System.Type childType, byte operation, out object value, out object previousValue)
