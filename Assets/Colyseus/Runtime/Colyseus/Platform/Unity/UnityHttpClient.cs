@@ -56,7 +56,7 @@ namespace Colyseus
                         catch { }
                     }
 
-                    throw new HttpException((int)req.responseCode, errorMessage);
+                    throw new HttpException((int)req.responseCode, errorMessage, req.downloadHandler.text);
                 }
 
                 return req.downloadHandler.text;
