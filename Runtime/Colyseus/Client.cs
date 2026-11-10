@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using GameDevWare.Serialization;
 
 // ReSharper disable InconsistentNaming
 
@@ -310,6 +311,7 @@ namespace Colyseus
 		/// <typeparam name="T">Type of <see cref="Room{T}" /> we want to match with</typeparam>
 		/// <returns><see cref="Room{T}" /> we have matched with via async task</returns>
 		/// <exception cref="Exception">Thrown if there is a network related error</exception>
+		/// <exception cref="HttpException">Thrown if the server rejects the request. <see cref="HttpException.StatusCode"/> holds the server's error code.</exception>
 		/// <exception cref="MatchMakeException">Thrown if there is an error in the match making process on the server side</exception>
 		protected async Task<Room<T>> CreateMatchMakeRequest<T>(string method, string roomName, Dictionary<string, object> options, Dictionary<string, string> headers)
 			where T : Schema.Schema
@@ -324,7 +326,16 @@ namespace Colyseus
 				headers = new Dictionary<string, string>();
 			}
 
-			var response = await Http.Post<SeatReservation>($"matchmake/{method}/{roomName}", options, headers);
+			SeatReservation response;
+			try
+			{
+				response = await Http.Post<SeatReservation>($"matchmake/{method}/{roomName}", options, headers);
+			}
+			catch (HttpException e)
+			{
+				e.StatusCode = GetMatchMakeErrorCode(e);
+				throw;
+			}
 
 			if (response == null)
 			{
@@ -337,6 +348,23 @@ namespace Colyseus
 			}
 
 			return await ConsumeSeatReservation<T>(response, headers);
+		}
+
+		// the body has the ErrorCode; the status may be a standard one (colyseus#999)
+		private static int GetMatchMakeErrorCode(HttpException e)
+		{
+			try
+			{
+				// a custom IHttpClient may leave Body unset and put the body in the message
+				var body = Json.Deserialize<IndexedDictionary<string, object>>(e.Body ?? e.Message);
+				if (body != null && body.TryGetValue("code", out var code) && code is double number)
+				{
+					return (int)number;
+				}
+			}
+			catch (Exception) { } // not JSON, e.g. a proxy's error page
+
+			return e.StatusCode;
 		}
 
 		/// <summary>

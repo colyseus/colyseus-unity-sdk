@@ -32,7 +32,7 @@ namespace Colyseus
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpException((int)response.StatusCode, responseBody);
+                throw new HttpException((int)response.StatusCode, responseBody, responseBody);
             }
 
             return responseBody;
