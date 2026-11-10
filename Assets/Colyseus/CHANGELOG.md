@@ -2,6 +2,12 @@
 
 All notable changes to the Colyseus Unity SDK are documented in this file.
 
+## 0.18.11
+
+- A failed `JoinOrCreate()`, `Create()`, `Join()`, `JoinById()` or `Reconnect()` now reports the server's `ErrorCode` in `HttpException.StatusCode` even when the server sends standard HTTP statuses (`matchMaker.controller.standardHttpStatus` in `@colyseus/core` 0.18.28). A custom code like `ServerError(4000, …)` now reaches it too, where it used to be 500. [#999](https://github.com/colyseus/colyseus/issues/999)
+- `ErrorCode.MATCHMAKE_*`, `AUTH_FAILED` and `APPLICATION_ERROR` now match the server's codes (520–526), so you can compare them with `HttpException.StatusCode`. They were still 4210–4216, which the server stopped sending in 0.17.
+- `HttpException.Body` holds the raw response body.
+
 ## 0.18.10
 
 - `room.Leave()` while the room is reconnecting now stops the reconnection and completes right away with `CloseCode.CONSENTED`, instead of only once every retry has failed. [colyseus/react-tools#15](https://github.com/colyseus/react-tools/issues/15)
